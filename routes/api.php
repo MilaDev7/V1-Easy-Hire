@@ -6,17 +6,15 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\JobPostController;
 use App\Http\Controllers\Api\ApplicationController;
 
-Route::post('/register', [AuthController::class, 'register']);
+Route::post('/register/client', [AuthController::class, 'registerClient']);
+Route::post('/register/professional', [AuthController::class, 'registerProfessional']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::middleware('auth:sanctum')->post('/logout', [AuthController::class, 'logout']);
 
-
-
-Route::middleware('auth:sanctum')->group(function () {
+//job post
+Route::middleware(['auth:sanctum', 'role:client'])->group(function () {
     Route::post('/job-posts', [JobPostController::class, 'store']);
 });
-
-
 
 Route::middleware('auth:sanctum')->group(function () {
     // Professional routes
