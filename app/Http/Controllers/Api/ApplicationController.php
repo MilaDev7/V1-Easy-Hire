@@ -117,4 +117,14 @@ class ApplicationController extends Controller
         'message' => 'Application accepted successfully'
     ]);
 }
+
+public function myAcceptedJobs()
+{
+    $applications = \App\Models\Application::with('job')
+        ->where('professional_id', auth()->id())
+        ->where('status', 'accepted')
+        ->get();
+
+    return response()->json($applications);
+}
 }

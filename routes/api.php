@@ -28,7 +28,8 @@ Route::middleware(['auth:sanctum', 'role:client'])->group(function () {
 
 Route::middleware(['auth:sanctum', 'role:client'])->post('/applications/{id}/accept', [ApplicationController::class, 'accept']);
 });
-
-
+// Professional see applied appliction
+Route::middleware(['auth:sanctum', 'role:professional'])
+    ->get('/my-jobs', [ApplicationController::class, 'myAcceptedJobs']);
 
 
