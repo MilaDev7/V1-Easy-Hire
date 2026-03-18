@@ -23,8 +23,10 @@ class JobPost extends Model
         return $this->belongsTo(User::class, 'client_id');
     }
 
-    public function applications()
+  // app/Models/Application.php
+   public function applications()
     {
-        return $this->hasMany(Application::class);
+        // Add 'job_id' because it doesn't match 'job_post_id'
+        return $this->hasMany(Application::class, 'job_id');
     }
 }

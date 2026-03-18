@@ -18,11 +18,17 @@ class Application extends Model
 
     public function job()
     {
-        return $this->belongsTo(JobPost::class);
+       return $this->belongsTo(JobPost::class, 'job_id');
     }
 
     public function professional()
     {
         return $this->belongsTo(User::class, 'professional_id');
     }
+
+
+
+    
+   
+    
 }
