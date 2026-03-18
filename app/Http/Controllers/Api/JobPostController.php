@@ -32,4 +32,33 @@ class JobPostController extends Controller
             'job' => $job
         ], 201);
     }
+
+    public function complete($id)
+{
+    $job = \App\Models\JobPost::findOrFail($id);
+
+    // 🔍 Find accepted application
+    $application = \App\Models\Application::where('job_id', $job->id)
+        ->where('professional_id', auth()->id())
+        ->where('status', 'accepted')
+        ->first();
+
+    // ❌ If not assigned to this professional
+    if (!$application) {
+        return response()->json(['message' => 'Unauthorized'], 403);
+    }
+
+    // ❌ Only allow if job is assigned
+    if ($job->status !== 'assigned') {
+        return response()->json(['message' => 'Job not in assigned state'], 400);
+    }
+
+    // ✅ Mark as completed
+    $job->status = 'completed';
+    $job->save();
+
+    return response()->json([
+        'message' => 'Job marked as completed'
+    ]);
+}
 }

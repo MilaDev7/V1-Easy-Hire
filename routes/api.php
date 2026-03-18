@@ -32,4 +32,7 @@ Route::middleware(['auth:sanctum', 'role:client'])->post('/applications/{id}/acc
 Route::middleware(['auth:sanctum', 'role:professional'])
     ->get('/my-jobs', [ApplicationController::class, 'myAcceptedJobs']);
 
+// Professional complet status
 
+Route::middleware(['auth:sanctum', 'role:professional'])
+    ->post('/jobs/{id}/complete', [JobPostController::class, 'complete']);
