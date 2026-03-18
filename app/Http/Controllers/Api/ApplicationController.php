@@ -13,6 +13,8 @@ class ApplicationController extends Controller
     // Professional applies for a job
     public function apply(Request $request, $jobId)
     {
+
+    
         $request->validate([
             'cover_letter' => 'required|string',
         ]);
@@ -54,6 +56,7 @@ class ApplicationController extends Controller
     // Client can view applications for their job
     public function jobApplications($jobId)
     {
+    
         $job = JobPost::where('id', $jobId)
             ->where('client_id', Auth::id())
             ->firstOrFail();
@@ -85,4 +88,33 @@ class ApplicationController extends Controller
             'application' => $application
         ]);
     }
+
+    public function accept($id)
+{
+    $application = \App\Models\Application::findOrFail($id);
+
+    $job = $application->job;
+
+    // 🔒 Make sure only job owner (client) can accept
+    if ($job->client_id !== auth()->id()) {
+        return response()->json(['message' => 'Unauthorized'], 403);
+    }
+
+    // ✅ Accept selected application
+    $application->status = 'accepted';
+    $application->save();
+
+    // ❌ Reject all other applications for this job
+    \App\Models\Application::where('job_id', $job->id)
+        ->where('id', '!=', $application->id)
+        ->update(['status' => 'rejected']);
+
+    // 🔄 Update job status
+    $job->status = 'assigned';
+    $job->save();
+
+    return response()->json([
+        'message' => 'Application accepted successfully'
+    ]);
+}
 }

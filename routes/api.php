@@ -25,6 +25,10 @@ Route::middleware(['auth:sanctum', 'role:professional'])->group(function () {
 // Client views applications
 Route::middleware(['auth:sanctum', 'role:client'])->group(function () {
     Route::get('/jobs/{id}/applications', [ApplicationController::class, 'jobApplications']);
+
+Route::middleware(['auth:sanctum', 'role:client'])->post('/applications/{id}/accept', [ApplicationController::class, 'accept']);
 });
+
+
 
 
