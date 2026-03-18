@@ -16,12 +16,15 @@ Route::middleware(['auth:sanctum', 'role:client'])->group(function () {
     Route::post('/job-posts', [JobPostController::class, 'store']);
 });
 
-Route::middleware('auth:sanctum')->group(function () {
-    // Professional routes
-    Route::post('/jobs/{jobId}/apply', [ApplicationController::class, 'apply']);
-    Route::get('/my-applications', [ApplicationController::class, 'myApplications']);
 
-    // Client routes
-    Route::get('/jobs/{jobId}/applications', [ApplicationController::class, 'jobApplications']);
-    Route::patch('/applications/{applicationId}/status', [ApplicationController::class, 'updateStatus']);
+// Professional applies
+Route::middleware(['auth:sanctum', 'role:professional'])->group(function () {
+    Route::post('/jobs/{id}/apply', [ApplicationController::class, 'apply']);
 });
+
+// Client views applications
+Route::middleware(['auth:sanctum', 'role:client'])->group(function () {
+    Route::get('/jobs/{id}/applications', [ApplicationController::class, 'jobApplications']);
+});
+
+
