@@ -13,6 +13,7 @@ return new class extends Migration {
             $table->foreignId('professional_id')->constrained('users')->onDelete('cascade');
             $table->text('cover_letter');
             $table->enum('status', ['pending', 'accepted', 'rejected'])->default('pending');
+            $table->integer('rating')->nullable();
             $table->timestamps();
         });
     }

@@ -127,4 +127,37 @@ public function myAcceptedJobs()
 
     return response()->json($applications);
 }
+
+public function confirmCompletion(Request $request, $id)
+{
+    $request->validate([
+        'rating' => 'required|integer|min:1|max:5'
+    ]);
+
+    $application = \App\Models\Application::findOrFail($id);
+    $job = $application->job;
+
+    // 🔒 Only job owner (client)
+    if ($job->client_id !== auth()->id()) {
+        return response()->json(['message' => 'Unauthorized'], 403);
+    }
+
+    // ❌ Only accepted application can be confirmed
+    if ($application->status !== 'accepted') {
+        return response()->json(['message' => 'Invalid application'], 400);
+    }
+
+    // ❌ Job must be completed by professional first
+    if ($job->status !== 'completed') {
+        return response()->json(['message' => 'Job not completed yet'], 400);
+    }
+
+    // ✅ Save rating
+    $application->rating = $request->rating;
+    $application->save();
+
+    return response()->json([
+        'message' => 'Job confirmed and rated successfully'
+    ]);
+}
 }

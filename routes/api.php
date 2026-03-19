@@ -36,3 +36,7 @@ Route::middleware(['auth:sanctum', 'role:professional'])
 
 Route::middleware(['auth:sanctum', 'role:professional'])
     ->post('/jobs/{id}/complete', [JobPostController::class, 'complete']);
+    
+//client give confirmation
+    Route::middleware(['auth:sanctum', 'role:client'])
+    ->post('/applications/{id}/confirm', [ApplicationController::class, 'confirmCompletion']);
