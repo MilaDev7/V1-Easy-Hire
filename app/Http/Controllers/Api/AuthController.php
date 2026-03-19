@@ -7,35 +7,49 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
+use App\Models\Professional; 
+use Illuminate\Support\Facades\DB; // Recommended for transactions
+
 
 class AuthController extends Controller
 {
     // Register Professional
-    public function registerProfessional(Request $request)
-    {
-        $request->validate([
-            'name'     => 'required|string|max:255',
-            'email'    => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:6|confirmed', // password_confirmation needed
+
+
+public function registerProfessional(Request $request)
+{
+    $request->validate([
+        'name' => 'required|string',
+        'email' => 'required|email|unique:users',
+         'password' => 'required|string|min:6|confirmed',
+    ]);
+
+    $user = User::create([
+        'name' => $request->name,
+        'email'=> $request->email,
+        'password'=> Hash::make($request->password),
+        'role' => 'professional',
+    ]);
+
+    // ✅ assign role
+    $user->assignRole('professional');
+
+    // 🔥 CREATE PROFESSIONAL PROFILE
+       Professional::create([
+            'user_id' => $user->id,
+            'skill' => '',
+            'experience' => 0,
+            'bio' => '',
         ]);
 
-        $user = User::create([
-            'name'     => $request->name,
-            'email'    => $request->email,
-            'password' => Hash::make($request->password),
-            'role' => 'professional',
-        ]);
+    $token = $user->createToken('auth_token')->plainTextToken;
 
-        $user->assignRole('professional'); // assign Spatie role
-
-        $token = $user->createToken('API Token')->plainTextToken;
-
-        return response()->json([
-            'message'      => 'Professional registered',
-            'access_token' => $token,
-            'token_type'   => 'Bearer',
-        ]);
-    }
+    return response()->json([
+        'message' => 'Professional registered',
+        'access_token' => $token,
+        'token_type' => 'Bearer',
+    ]);
+}
 
     // Register Client
     public function registerClient(Request $request)
