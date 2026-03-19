@@ -5,6 +5,9 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\JobPostController;
 use App\Http\Controllers\Api\ApplicationController;
+ use App\Http\Controllers\Api\ProfessionalController;
+
+//registertion user
 
 Route::post('/register/client', [AuthController::class, 'registerClient']);
 Route::post('/register/professional', [AuthController::class, 'registerProfessional']);
@@ -36,7 +39,11 @@ Route::middleware(['auth:sanctum', 'role:professional'])
 
 Route::middleware(['auth:sanctum', 'role:professional'])
     ->post('/jobs/{id}/complete', [JobPostController::class, 'complete']);
-    
+
 //client give confirmation
     Route::middleware(['auth:sanctum', 'role:client'])
     ->post('/applications/{id}/confirm', [ApplicationController::class, 'confirmCompletion']);
+
+   //ProfessionalController
+Route::middleware(['auth:sanctum', 'role:professional'])
+    ->post('/professional/profile', [ProfessionalController::class, 'updateProfile']);
