@@ -39,4 +39,23 @@ class ProfessionalController extends Controller
             'data' => $professional
         ]);
     }
+
+public function index(Request $request)
+{
+    $query = \App\Models\Professional::with('user');
+
+    if ($request->skill) {
+        $query->where('skill', 'LIKE', '%' . $request->skill . '%');
+    }
+
+    if ($request->city) {
+        $query->where('city', 'LIKE', '%' . $request->city . '%');
+    }
+
+    $professionals = $query->get();
+
+    return response()->json([
+        'data' => $professionals
+    ]);
+}
 }
