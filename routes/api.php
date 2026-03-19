@@ -49,3 +49,5 @@ Route::middleware(['auth:sanctum', 'role:professional'])
     ->post('/professional/profile', [ProfessionalController::class, 'updateProfile']);
 //clent get pro profile
     Route::get('/professionals', [ProfessionalController::class, 'index']);
+//show pro
+    Route::get('/professionals/{id}', [ProfessionalController::class, 'show']);

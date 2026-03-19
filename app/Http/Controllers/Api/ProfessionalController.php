@@ -58,4 +58,29 @@ public function index(Request $request)
         'data' => $professionals
     ]);
 }
+
+
+
+public function show($id)
+{
+    $professional = \App\Models\Professional::with('user')->find($id);
+
+    if (!$professional) {
+        return response()->json(['message' => 'Professional not found'], 404);
+    }
+
+    // get completed jobs
+    $completedJobs = \App\Models\Application::where('professional_id', $professional->user_id)
+        ->where('status', 'accepted')
+        ->whereHas('job', function ($q) {
+            $q->where('status', 'completed');
+        })
+        ->with('job')
+        ->get();
+
+    return response()->json([
+        'professional' => $professional,
+        'completed_jobs' => $completedJobs
+    ]);
+}
 }
