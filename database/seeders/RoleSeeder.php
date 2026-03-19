@@ -9,8 +9,8 @@ class RoleSeeder extends Seeder
 {
     public function run(): void
     {
-        // Create roles only if they don't exist
-        Role::firstOrCreate(['name' => 'client']);
-        Role::firstOrCreate(['name' => 'professional']);
+        // Adding guard_name 'web' ensures Spatie finds it correctly
+        Role::firstOrCreate(['name' => 'client', 'guard_name' => 'web']);
+        Role::firstOrCreate(['name' => 'professional', 'guard_name' => 'web']);
     }
 }
