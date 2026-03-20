@@ -10,22 +10,27 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        // 1. Create the Roles first
+        // Group all your seeders here
         $this->call([
+            PlanSeeder::class,
             RoleSeeder::class,
         ]);
 
-        // 2. Create a default Admin User
-        $admin = User::create([
-            'name' => 'System Admin',
-            'email' => 'admin@test.com',
-            'password' => Hash::make('password'),
-            'role' => 'admin', // Sets the column in users table
-        ]);
+        // ✅ FIX: Use updateOrCreate to avoid "Duplicate entry" errors
+        $admin = User::updateOrCreate(
+            ['email' => 'admin@test.com'], // The unique column to check
+            [
+                'name' => 'System Admin',
+                'password' => Hash::make('password'),
+                'role' => 'admin',
+            ]
+        );
 
-        // 3. Assign the Spatie Role
+        // Assign the Spatie Role
+        // (Spatie handles this safely even if the role is already assigned)
         $admin->assignRole('admin');
 
-        echo "Admin User Created: admin@test.com / password \n";
+        $this->command->info("Admin User Ready: admin@test.com / password");
+         $this->call(PlanSeeder::class);
     }
 }

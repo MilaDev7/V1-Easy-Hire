@@ -1,0 +1,30 @@
+<?php
+
+namespace Database\Seeders;
+
+use Illuminate\Database\Seeder;
+use App\Models\Plan;
+
+class PlanSeeder extends Seeder
+{
+    public function run(): void
+    {
+        Plan::create([
+            'name' => 'Basic',
+            'price' => 100,
+            'job_posts_limit' => 5
+        ]);
+
+        Plan::create([
+            'name' => 'Pro',
+            'price' => 250,
+            'job_posts_limit' => 15
+        ]);
+
+        Plan::create([
+            'name' => 'Premium',
+            'price' => 500,
+            'job_posts_limit' => 50
+        ]);
+    }
+}

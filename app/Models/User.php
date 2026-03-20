@@ -54,4 +54,9 @@ class User extends Authenticatable
 {
     return $this->hasOne(\App\Models\Professional::class);
 }
+
+public function subscription()
+{
+    return $this->hasOne(Subscription::class);
+}
 }

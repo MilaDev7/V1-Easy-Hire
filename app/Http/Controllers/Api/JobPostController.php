@@ -6,9 +6,14 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\JobPost;
 use Illuminate\Support\Facades\Auth;
+use App\Models\Subscription;
 
 class JobPostController extends Controller
 {
+
+
+
+
     // Client creates a new job post
     public function store(Request $request)
     {

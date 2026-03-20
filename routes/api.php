@@ -10,7 +10,7 @@ use App\Http\Controllers\Api\ApplicationController;
   use App\Http\Controllers\Api\ContractController;
   
     use App\Http\Controllers\Api\ReviewController;
-
+use App\Http\Controllers\Api\SubscriptionController;
 //registertion user
 
 Route::post('/register/client', [AuthController::class, 'registerClient']);
@@ -76,3 +76,8 @@ Route::middleware(['auth:sanctum'])->post(
     '/contracts/{id}/review',
     [ReviewController::class, 'store']
 );
+
+
+
+Route::middleware(['auth:sanctum', 'role:client'])
+    ->post('/buy-plan/{id}', [SubscriptionController::class, 'buy']);
