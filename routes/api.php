@@ -57,3 +57,8 @@ Route::middleware(['auth:sanctum', 'role:professional'])
 //admin controll
 Route::post('/admin/approve/{id}', [AdminController::class, 'approveProfessional']);
 Route::post('/admin/reject/{id}', [AdminController::class, 'rejectProfessional']); 
+//admin
+Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
+    Route::post('/admin/approve/{id}', [AdminController::class, 'approveProfessional']);
+    Route::post('/admin/reject/{id}', [AdminController::class, 'rejectProfessional']);
+});
