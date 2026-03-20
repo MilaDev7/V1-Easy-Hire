@@ -123,6 +123,14 @@ class ApplicationController extends Controller
             ->where('id', '!=', $application->id)
             ->update(['status' => 'rejected']);
 
+            // 4.5 ✅ Create contract
+\App\Models\Contract::create([
+    'job_id' => $job->id,
+    'client_id' => $job->client_id,
+    'professional_id' => $application->professional_id,
+    'agreed_price' => $job->budget,
+]);
+
         // 5. Update Job status to 'assigned'
         $job->status = 'assigned';
         $job->save();
