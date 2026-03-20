@@ -157,34 +157,5 @@ class ApplicationController extends Controller
     /**
      * Client confirms job is done and leaves a rating
      */
-    public function confirmCompletion(Request $request, $id)
-    {
-        $request->validate([
-            'rating' => 'required|integer|min:1|max:5'
-        ]);
-
-        $application = Application::findOrFail($id);
-        $job = JobPost::findOrFail($application->job_id);
-
-        // 1. Security: Only job owner
-        if ($job->client_id !== auth()->id()) {
-            return response()->json(['message' => 'Unauthorized'], 403);
-        }
-
-        // 2. Logic: Only accepted applications can be rated/completed
-        if ($application->status !== 'accepted') {
-            return response()->json(['message' => 'This application was not accepted'], 400);
-        }
-
-        // 3. Save rating and update job
-        $application->rating = $request->rating;
-        $application->save();
-
-        $job->status = 'completed';
-        $job->save();
-
-        return response()->json([
-            'message' => 'Job confirmed as completed and professional rated successfully'
-        ]);
-    }
+   
 }
