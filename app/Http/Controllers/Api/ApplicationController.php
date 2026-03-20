@@ -14,7 +14,13 @@ class ApplicationController extends Controller
     public function apply(Request $request, $jobId)
     {
 
-    
+    $professional = \App\Models\Professional::where('user_id', auth()->id())->first();
+
+if ($professional->status !== 'approved') {
+    return response()->json([
+        'message' => 'Your account is not approved yet'
+    ], 403);
+}
         $request->validate([
             'cover_letter' => 'required|string',
         ]);

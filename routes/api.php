@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\JobPostController;
 use App\Http\Controllers\Api\ApplicationController;
  use App\Http\Controllers\Api\ProfessionalController;
+  use App\Http\Controllers\Api\AdminController;
 
 //registertion user
 
@@ -51,3 +52,8 @@ Route::middleware(['auth:sanctum', 'role:professional'])
     Route::get('/professionals', [ProfessionalController::class, 'index']);
 //show pro
     Route::get('/professionals/{id}', [ProfessionalController::class, 'show']);
+
+  
+//admin controll
+Route::post('/admin/approve/{id}', [AdminController::class, 'approveProfessional']);
+Route::post('/admin/reject/{id}', [AdminController::class, 'rejectProfessional']); 
