@@ -7,6 +7,9 @@ use App\Http\Controllers\Api\JobPostController;
 use App\Http\Controllers\Api\ApplicationController;
  use App\Http\Controllers\Api\ProfessionalController;
   use App\Http\Controllers\Api\AdminController;
+ 
+  use App\Http\Controllers\Api\ContractController;
+  
 
 //registertion user
 
@@ -62,3 +65,11 @@ Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
     Route::post('/admin/approve/{id}', [AdminController::class, 'approveProfessional']);
     Route::post('/admin/reject/{id}', [AdminController::class, 'rejectProfessional']);
 });
+
+// Professional marks complete
+Route::middleware(['auth:sanctum', 'role:professional'])
+    ->post('/contracts/{id}/complete', [ContractController::class, 'markCompleted']);
+
+// Client confirms
+Route::middleware(['auth:sanctum', 'role:client'])
+    ->post('/contracts/{id}/confirm', [ContractController::class, 'confirm']);
