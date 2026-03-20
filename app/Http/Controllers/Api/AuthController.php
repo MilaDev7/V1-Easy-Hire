@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use App\Models\Professional; 
+
 use Illuminate\Support\Facades\DB; // Recommended for transactions
 
 
@@ -79,29 +80,34 @@ public function registerProfessional(Request $request)
     }
 
     // Login
-    public function login(Request $request)
-    {
-        $request->validate([
-            'email'    => 'required|string|email',
-            'password' => 'required|string',
-        ]);
 
-        $user = User::where('email', $request->email)->first();
 
-        if (! $user || ! Hash::check($request->password, $user->password)) {
-            throw ValidationException::withMessages([
-                'email' => ['The provided credentials are incorrect.'],
-            ]);
-        }
+public function login(Request $request)
+{
+    $request->validate([
+        'email'=>'required|email',
+        'password'=>'required',
+    ]);
 
-        $token = $user->createToken('API Token')->plainTextToken;
+    $user = User::where('email',$request->email)->first();
 
-        return response()->json([
-            'message'      => 'Logged in successfully',
-            'access_token' => $token,
-            'token_type'   => 'Bearer',
-        ]);
+    if (!$user || !Hash::check($request->password,$user->password)) {
+        return response()->json(['message'=>'Invalid credentials'], 401);
     }
+
+    $token = $user->createToken('auth_token')->plainTextToken;
+
+    // 🔥 check professional status
+    $professional = Professional::where('user_id', $user->id)->first();
+
+    return response()->json([
+        'message'=>'Login successful',
+        'access_token'=>$token,
+        'token_type'=>'Bearer',
+        'role' => $user->getRoleNames()->first(),
+        'approval_status' => $professional ? $professional->status : null
+    ]);
+}
 
     // Logout
     public function logout(Request $request)
