@@ -7,9 +7,9 @@ use App\Http\Controllers\Api\JobPostController;
 use App\Http\Controllers\Api\ApplicationController;
  use App\Http\Controllers\Api\ProfessionalController;
   use App\Http\Controllers\Api\AdminController;
- 
   use App\Http\Controllers\Api\ContractController;
   
+    use App\Http\Controllers\Api\ReviewController;
 
 //registertion user
 
@@ -73,3 +73,10 @@ Route::middleware(['auth:sanctum', 'role:professional'])
 // Client confirms
 Route::middleware(['auth:sanctum', 'role:client'])
     ->post('/contracts/{id}/confirm', [ContractController::class, 'confirm']);
+
+
+//review
+Route::middleware(['auth:sanctum'])->post(
+    '/contracts/{id}/review',
+    [ReviewController::class, 'store']
+);
