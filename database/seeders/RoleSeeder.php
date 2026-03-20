@@ -12,5 +12,6 @@ class RoleSeeder extends Seeder
         // Adding guard_name 'web' ensures Spatie finds it correctly
         Role::firstOrCreate(['name' => 'client', 'guard_name' => 'web']);
         Role::firstOrCreate(['name' => 'professional', 'guard_name' => 'web']);
+            Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']); // <--- ADD THIS
     }
 }
