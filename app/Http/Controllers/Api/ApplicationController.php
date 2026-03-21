@@ -16,6 +16,42 @@ class ApplicationController extends Controller
      */
     public function apply(Request $request, $jobId)
     {
+
+$user = auth()->user();
+
+// ✅ 1. check approval (you already have probably)
+
+// ✅ 2. LIMIT ACTIVE APPLICATIONS
+$activeApplications = \App\Models\Application::where('professional_id', $user->id)
+    ->whereIn('status', ['pending', 'accepted'])
+    ->count();
+
+if ($activeApplications >= 3) {
+    return response()->json([
+        'message' => 'You reached maximum active applications (3)'
+    ], 403);
+}
+
+$hasAcceptedJob = \App\Models\Application::where('professional_id', $user->id)
+    ->where('status', 'accepted')
+    ->exists();
+
+if ($hasAcceptedJob) {
+    return response()->json([
+        'message' => 'You already have an active job'
+    ], 403);
+}
+
+$alreadyApplied = \App\Models\Application::where('job_id', $jobId)
+    ->where('professional_id', $user->id)
+    ->exists();
+
+if ($alreadyApplied) {
+    return response()->json([
+        'message' => 'You already applied to this job'
+    ], 400);
+}
+
         // 1. Fetch the Job Post first (Fixes the "Undefined status" error)
         $job = JobPost::findOrFail($jobId);
 
@@ -65,7 +101,10 @@ class ApplicationController extends Controller
             'message' => 'Application submitted successfully',
             'application' => $application
         ], 201);
+
+        
     }
+
 
     /**
      * Professional views their own applications
