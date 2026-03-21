@@ -197,4 +197,27 @@ if ($alreadyApplied) {
      * Client confirms job is done and leaves a rating
      */
    
+
+    public function withdraw($id)
+{
+    $application = \App\Models\Application::findOrFail($id);
+
+    // ✅ must be owner
+    if ($application->professional_id !== auth()->id()) {
+        return response()->json(['message' => 'Unauthorized'], 403);
+    }
+
+    // ✅ only pending applications can be withdrawn
+    if ($application->status !== 'pending') {
+        return response()->json([
+            'message' => 'Only pending applications can be withdrawn'
+        ], 400);
+    }
+
+    $application->delete();
+
+    return response()->json([
+        'message' => 'Application withdrawn successfully'
+    ]);
+}
 }

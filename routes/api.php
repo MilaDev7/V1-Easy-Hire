@@ -85,3 +85,7 @@ Route::middleware(['auth:sanctum', 'role:client'])
     //matching-jobs
     Route::middleware(['auth:sanctum', 'role:professional'])
     ->get('/matching-jobs', [JobPostController::class, 'getMatchingJobs']);
+
+    //withdraal
+    Route::middleware(['auth:sanctum', 'role:professional'])
+    ->delete('/applications/{id}', [ApplicationController::class, 'withdraw']);
