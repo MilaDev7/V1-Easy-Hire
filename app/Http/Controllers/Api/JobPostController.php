@@ -19,34 +19,50 @@ class JobPostController extends Controller
 
 public function store(Request $request)
 {
+    $request->validate([
+        'title' => 'required|string',
+        'description' => 'required|string',
+        'location' => 'required|string',
+        'budget' => 'nullable|numeric'
+    ]);
+
     $user = auth()->user();
 
-    // 1. Check role (must be client)
-    if ($user->role !== 'client') {
-        return response()->json(['message' => 'Only clients can post jobs'], 403);
+    // ✅ check subscription
+    $subscription = \App\Models\Subscription::where('user_id', $user->id)
+        ->where('status', 'active')
+        ->first();
+
+    if (!$subscription) {
+        return response()->json(['message' => 'You need a subscription'], 403);
     }
-$subscription = Subscription::where('user_id', $user->id)->first();
 
-if (!$subscription) {
+    if ($subscription->remaining_posts <= 0) {
+        return response()->json(['message' => 'No remaining posts'], 403);
+    }
+
+    // ✅ create job
+    $job = \App\Models\JobPost::create([
+        'client_id' => $user->id,
+        'title' => $request->title,
+        'description' => $request->description,
+        'location' => $request->location,
+        'budget' => $request->budget,
+    ]);
+
+    // ✅ decrease remaining posts
+    $subscription->remaining_posts -= 1;
+    $subscription->save();
+
+    // ✅ THIS IS WHAT YOU WERE MISSING
     return response()->json([
-        'message' => 'You need a subscription'
-    ], 403);
+        'message' => 'Job created successfully',
+        'job' => $job
+    ], 201);
 }
 
-// check expiry
-if ($subscription->expires_at && $subscription->expires_at < now()) {
-    return response()->json([
-        'message' => 'Subscription expired'
-    ], 403);
-}
 
-// check remaining posts
-if ($subscription->remaining_posts <= 0) {
-    return response()->json([
-        'message' => 'No remaining job posts'
-    ], 403);
-}
-}
+
     public function complete($id)
 {
     $job = \App\Models\JobPost::findOrFail($id);
