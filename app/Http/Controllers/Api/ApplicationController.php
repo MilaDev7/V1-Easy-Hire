@@ -22,23 +22,23 @@ $user = auth()->user();
 // ✅ 1. check approval (you already have probably)
 
 // ✅ 2. LIMIT ACTIVE APPLICATIONS
-$activeApplications = \App\Models\Application::where('professional_id', $user->id)
-    ->whereIn('status', ['pending', 'accepted'])
+$pendingCount = \App\Models\Application::where('professional_id', $user->id)
+    ->where('status', 'pending')
     ->count();
 
-if ($activeApplications >= 3) {
+if ($pendingCount >= 5) {
     return response()->json([
-        'message' => 'You reached maximum active applications (3)'
+        'message' => 'Too many pending applications'
     ], 403);
 }
 
-$hasAcceptedJob = \App\Models\Application::where('professional_id', $user->id)
+$acceptedJobsCount = \App\Models\Application::where('professional_id', $user->id)
     ->where('status', 'accepted')
-    ->exists();
+    ->count();
 
-if ($hasAcceptedJob) {
+if ($acceptedJobsCount >= 3) {
     return response()->json([
-        'message' => 'You already have an active job'
+        'message' => 'You reached maximum active jobs (3)'
     ], 403);
 }
 
