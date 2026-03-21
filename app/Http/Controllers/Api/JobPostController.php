@@ -15,29 +15,38 @@ class JobPostController extends Controller
 
 
     // Client creates a new job post
-    public function store(Request $request)
-    {
-        $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'required|string',
-            'budget' => 'nullable|numeric',
-            'location' => 'required|string|max:255',
-        ]);
 
-        $job = JobPost::create([
-            'client_id' => Auth::id(), // from token
-            'title' => $request->title,
-            'description' => $request->description,
-            'budget' => $request->budget,
-            'location' => $request->location,
-        ]);
 
-        return response()->json([
-            'message' => 'Job post created successfully',
-            'job' => $job
-        ], 201);
+public function store(Request $request)
+{
+    $user = auth()->user();
+
+    // 1. Check role (must be client)
+    if ($user->role !== 'client') {
+        return response()->json(['message' => 'Only clients can post jobs'], 403);
     }
+$subscription = Subscription::where('user_id', $user->id)->first();
 
+if (!$subscription) {
+    return response()->json([
+        'message' => 'You need a subscription'
+    ], 403);
+}
+
+// check expiry
+if ($subscription->expires_at && $subscription->expires_at < now()) {
+    return response()->json([
+        'message' => 'Subscription expired'
+    ], 403);
+}
+
+// check remaining posts
+if ($subscription->remaining_posts <= 0) {
+    return response()->json([
+        'message' => 'No remaining job posts'
+    ], 403);
+}
+}
     public function complete($id)
 {
     $job = \App\Models\JobPost::findOrFail($id);
