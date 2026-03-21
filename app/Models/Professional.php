@@ -6,19 +6,18 @@ use Illuminate\Database\Eloquent\Model;
 
 class Professional extends Model
 {
-    protected $fillable = [
-        'user_id',
-        'skill',
-        'experience',
-        'bio',
-        'age',
-        'gender',
-        'city',
-        'cv',
-        'certificate',
-        'average_rating',
-        'total_reviews'
-    ];
+protected $fillable = [
+    'user_id',
+    'skill',
+    'experience',
+    'bio',
+    'age',
+    'gender',
+    'location', // <--- Change this from 'city' to 'location'
+    'cv',
+    'certificate',
+    'status'
+];
 
     public function user()
     {

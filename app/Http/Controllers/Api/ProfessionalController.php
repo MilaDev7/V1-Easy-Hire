@@ -14,7 +14,7 @@ class ProfessionalController extends Controller
             'skill' => 'required|string',
             'experience' => 'required|integer',
             'bio' => 'nullable|string',
-            'city' => 'nullable|string',
+            'location' => 'nullable|string',
             'cv' => 'nullable|string',
             'certificate' => 'nullable|string',
         ]);
@@ -29,7 +29,7 @@ class ProfessionalController extends Controller
             'skill',
             'experience',
             'bio',
-            'city',
+            'location',
             'cv',
             'certificate'
         ]));
@@ -48,8 +48,8 @@ public function index(Request $request)
         $query->where('skill', 'LIKE', '%' . $request->skill . '%');
     }
 
-    if ($request->city) {
-        $query->where('city', 'LIKE', '%' . $request->city . '%');
+    if ($request->location) {
+        $query->where('location', 'LIKE', '%' . $request->location . '%');
     }
 
     $professionals = $query->get();
