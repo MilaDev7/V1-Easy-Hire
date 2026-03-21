@@ -78,6 +78,10 @@ Route::middleware(['auth:sanctum'])->post(
 );
 
 
-
+//SubscriptionController
 Route::middleware(['auth:sanctum', 'role:client'])
     ->post('/buy-plan/{id}', [SubscriptionController::class, 'buy']);
+
+    //matching-jobs
+    Route::middleware(['auth:sanctum', 'role:professional'])
+    ->get('/matching-jobs', [JobPostController::class, 'getMatchingJobs']);

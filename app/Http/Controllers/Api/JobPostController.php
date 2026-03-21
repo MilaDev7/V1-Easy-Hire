@@ -20,11 +20,12 @@ class JobPostController extends Controller
 public function store(Request $request)
 {
     $request->validate([
-        'title' => 'required|string',
-        'description' => 'required|string',
-        'location' => 'required|string',
-        'budget' => 'nullable|numeric'
-    ]);
+    'title' => 'required|string',
+    'description' => 'required|string',
+    'location' => 'required|string',
+    'budget' => 'nullable|numeric',
+    'skill' => 'required|string', // ✅ ADD THIS ONLY
+]);
 
     $user = auth()->user();
 
@@ -42,13 +43,15 @@ public function store(Request $request)
     }
 
     // ✅ create job
-    $job = \App\Models\JobPost::create([
-        'client_id' => $user->id,
-        'title' => $request->title,
-        'description' => $request->description,
-        'location' => $request->location,
-        'budget' => $request->budget,
-    ]);
+    $job=JobPost::create([
+    'client_id' => auth()->id(),
+    'title' => $request->title,
+    'description' => $request->description,
+    'location' => $request->location,
+    'budget' => $request->budget,
+    'skill' => $request->skill, // ✅ ADD THIS
+    'status' => 'open',
+]);
 
     // ✅ decrease remaining posts
     $subscription->remaining_posts -= 1;
@@ -90,5 +93,23 @@ public function store(Request $request)
     return response()->json([
         'message' => 'Job marked as completed'
     ]);
+}
+
+public function getMatchingJobs()
+{
+    $user = auth()->user();
+
+    $professional = $user->professional;
+
+    if (!$professional) {
+        return response()->json(['message' => 'Professional profile not found'], 404);
+    }
+
+    $jobs = \App\Models\JobPost::where('skill', $professional->skill)
+        ->where('location', $professional->location)
+        ->where('status', 'open')
+        ->get();
+
+    return response()->json($jobs);
 }
 }

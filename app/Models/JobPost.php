@@ -9,14 +9,15 @@ class JobPost extends Model
 {
     use HasFactory;
 
-    protected $fillable = [
-        'client_id',
-        'title',
-        'description',
-        'budget',
-        'status',
-        'location'
-    ];
+protected $fillable = [
+    'client_id',
+    'title',
+    'description',
+    'budget',
+    'location',
+    'skill', // <--- ADD THIS LINE
+    'status',
+];
 
     public function client()
     {
