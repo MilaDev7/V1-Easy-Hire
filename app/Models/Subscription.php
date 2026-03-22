@@ -10,7 +10,8 @@ class Subscription extends Model
         'user_id',
         'plan_id',
         'remaining_posts',
-        'expires_at'
+        'expires_at',
+        'status'
     ];
 
     public function user()
