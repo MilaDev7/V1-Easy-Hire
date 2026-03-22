@@ -16,8 +16,9 @@ class ApplicationController extends Controller
      */
     public function apply(Request $request, $jobId)
     {
-
 $user = auth()->user();
+$professional = $user->professional;
+
 
 // ✅ 1. check approval (you already have probably)
 
@@ -54,6 +55,12 @@ if ($alreadyApplied) {
 
         // 1. Fetch the Job Post first (Fixes the "Undefined status" error)
         $job = JobPost::findOrFail($jobId);
+if ($job->skill !== $professional->skill) {
+    return response()->json([
+        'message' => 'You cannot apply to jobs outside your skill'
+    ], 403);
+}
+
 
         // 2. Fetch the Professional profile linked to the logged-in user
         $professionalProfile = Professional::where('user_id', auth()->id())->first();
@@ -219,5 +226,19 @@ if ($alreadyApplied) {
     return response()->json([
         'message' => 'Application withdrawn successfully'
     ]);
+    $professional = auth()->user()->professional;
+
+if (!$professional) {
+    return response()->json([
+        'message' => 'Professional profile not found'
+    ], 404);
 }
+
+// ✅ SKILL CHECK
+
+
+}
+
+
+
 }
