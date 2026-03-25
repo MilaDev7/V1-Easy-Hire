@@ -76,6 +76,11 @@ Route::middleware(['auth:sanctum', 'role:client'])
 Route::middleware(['auth:sanctum', 'role:client'])
     ->post('/contracts/{id}/cancel', [ContractController::class, 'cancel']);
 
+
+    //profession view contract
+    Route::middleware(['auth:sanctum', 'role:professional'])
+    ->get('/my-contracts', [ContractController::class, 'myContracts']);
+    
 //review
 Route::middleware(['auth:sanctum'])->post(
     '/contracts/{id}/review',

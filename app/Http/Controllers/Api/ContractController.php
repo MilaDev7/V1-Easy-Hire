@@ -100,4 +100,22 @@ class ContractController extends Controller
     ]);
 }
 
+public function myContracts(Request $request)
+{
+    $userId = auth()->id();
+
+    $query = \App\Models\Contract::where('professional_id', $userId);
+
+    // ✅ Optional filter by status
+    if ($request->has('status')) {
+        $query->where('status', $request->status);
+    }
+
+    $contracts = $query->with(['job', 'client'])->get();
+
+    return response()->json([
+        'contracts' => $contracts
+    ]);
+}
+
 };
