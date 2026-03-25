@@ -67,4 +67,37 @@ class ContractController extends Controller
         ]);
     }
 
+//client cancel contract
+    public function cancel($id)
+{
+    $contract = \App\Models\Contract::findOrFail($id);
+
+    // ✅ Only client can cancel
+    if ($contract->client_id !== auth()->id()) {
+        return response()->json(['message' => 'Unauthorized'], 403);
+    }
+
+    // ❌ Cannot cancel completed
+    if ($contract->status === 'completed') {
+        return response()->json([
+            'message' => 'Cannot cancel completed contract'
+        ], 400);
+    }
+
+    // ❌ Already cancelled
+    if ($contract->status === 'cancelled') {
+        return response()->json([
+            'message' => 'Contract already cancelled'
+        ], 400);
+    }
+
+    // ✅ Cancel (before OR during work)
+    $contract->status = 'cancelled';
+    $contract->save();
+
+    return response()->json([
+        'message' => 'Contract cancelled successfully'
+    ]);
+}
+
 };
