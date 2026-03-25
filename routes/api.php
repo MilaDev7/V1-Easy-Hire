@@ -8,9 +8,11 @@ use App\Http\Controllers\Api\ApplicationController;
  use App\Http\Controllers\Api\ProfessionalController;
   use App\Http\Controllers\Api\AdminController;
   use App\Http\Controllers\Api\ContractController;
-  
     use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\SubscriptionController;
+use App\Http\Controllers\Api\ReportController;
+
+
 //registertion user
 
 Route::post('/register/client', [AuthController::class, 'registerClient']);
@@ -70,6 +72,9 @@ Route::middleware(['auth:sanctum', 'role:professional'])
 Route::middleware(['auth:sanctum', 'role:client'])
     ->post('/contracts/{id}/confirm', [ContractController::class, 'confirm']);
 
+    //client cancel contract
+Route::middleware(['auth:sanctum', 'role:client'])
+    ->post('/contracts/{id}/cancel', [ContractController::class, 'cancel']);
 
 //review
 Route::middleware(['auth:sanctum'])->post(
@@ -87,5 +92,16 @@ Route::middleware(['auth:sanctum', 'role:client'])
     ->get('/matching-jobs', [JobPostController::class, 'getMatchingJobs']);
 
     //withdraal
+
+
     Route::middleware(['auth:sanctum', 'role:professional'])
     ->delete('/applications/{id}', [ApplicationController::class, 'withdraw']);
+
+    //Report
+
+    Route::middleware(['auth:sanctum'])
+    ->post('/contracts/{id}/report', [ReportController::class, 'store']);
+
+    //delete account 
+    Route::middleware('auth:sanctum')
+    ->delete('/account', [AuthController::class, 'deleteAccount']);
