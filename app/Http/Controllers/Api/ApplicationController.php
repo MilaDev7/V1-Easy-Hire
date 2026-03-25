@@ -33,15 +33,23 @@ if ($pendingCount >= 5) {
     ], 403);
 }
 
-$acceptedJobsCount = \App\Models\Application::where('professional_id', $user->id)
-    ->where('status', 'accepted')
-    ->count();
 
-if ($acceptedJobsCount >= 3) {
-    return response()->json([
-        'message' => 'You reached maximum active jobs (3)'
-    ], 403);
-}
+    // 1. Count only ACTIVE accepted jobs
+    // We check applications where status is 'accepted' 
+    // AND the linked job status is NOT 'completed' and NOT 'cancelled'
+    $activeJobsCount = \App\Models\Application::where('professional_id', $user->id)
+        ->where('status', 'accepted')
+        ->whereHas('job', function ($query) {
+            $query->whereNotIn('status', ['completed', 'cancelled']);
+        })
+        ->count();
+
+    // 2. Check the limit (3 active jobs)
+    if ($activeJobsCount >= 3) {
+        return response()->json([
+            'message' => 'You reached the maximum limit of active jobs (3). Please complete your current jobs before applying for more.'
+        ], 403);
+    }
 
 $alreadyApplied = \App\Models\Application::where('job_id', $jobId)
     ->where('professional_id', $user->id)
