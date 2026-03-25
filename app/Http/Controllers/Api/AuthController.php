@@ -118,4 +118,17 @@ public function login(Request $request)
             'message' => 'Logged out successfully'
         ]);
     }
+
+    //delet accout
+
+    public function deleteAccount()
+{
+    $user = auth()->user();
+
+    $user->delete();
+
+    return response()->json([
+        'message' => 'Account deleted successfully'
+    ]);
+}
 }
