@@ -9,11 +9,13 @@ class Kernel extends HttpKernel
     /**
      * Global HTTP middleware stack.
      */
+    
     protected $middleware = [
         \Illuminate\Http\Middleware\HandleCors::class,
         \Illuminate\Foundation\Http\Middleware\PreventRequestsDuringMaintenance::class,
         \Illuminate\Foundation\Http\Middleware\ValidatePostSize::class,
         \Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull::class,
+        
     ];
 
     /**
@@ -35,6 +37,7 @@ class Kernel extends HttpKernel
     protected $routeMiddleware = [
         'auth' => \Illuminate\Auth\Middleware\Authenticate::class,
         'guest' => \Illuminate\Auth\Middleware\RedirectIfAuthenticated::class,
+        'check.suspended' => \App\Http\Middleware\CheckSuspended::class,
 
         // 🔥 REQUIRED FOR YOUR PROJECT
         'role' => \Spatie\Permission\Middlewares\RoleMiddleware::class,

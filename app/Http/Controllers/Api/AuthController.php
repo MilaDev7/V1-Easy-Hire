@@ -7,7 +7,8 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
-use App\Models\Professional; 
+use App\Models\Professional;
+use Illuminate\Support\Facades\Auth; 
 
 use Illuminate\Support\Facades\DB; // Recommended for transactions
 
@@ -94,6 +95,14 @@ public function login(Request $request)
     if (!$user || !Hash::check($request->password,$user->password)) {
         return response()->json(['message'=>'Invalid credentials'], 401);
     }
+
+    Auth::user();
+
+if ($user->is_suspended) {
+    return response()->json([
+        'message' => 'Your account is suspended'
+    ], 403);
+}
 
     $token = $user->createToken('auth_token')->plainTextToken;
 
