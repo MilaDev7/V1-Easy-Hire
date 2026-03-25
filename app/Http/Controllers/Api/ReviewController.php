@@ -46,8 +46,7 @@ class ReviewController extends Controller
         if ($exists) {
             return response()->json(['message' => 'You already reviewed'], 400);
         }
-
-        Review::create([
+$review = \App\Models\Review::create([
             'contract_id' => $contractId,
             'reviewer_id' => $userId,
             'reviewed_id' => $reviewedId,
@@ -55,8 +54,21 @@ class ReviewController extends Controller
             'comment' => $request->comment,
         ]);
 
+        $professional = \App\Models\Professional::where('user_id', $review->reviewed_id)->first();
+
+if ($professional) {
+    $avg = \App\Models\Review::where('reviewed_id', $review->reviewed_id)->avg('rating');
+    $count = \App\Models\Review::where('reviewed_id', $review->reviewed_id)->count();
+
+    $professional->average_rating = $avg;
+    $professional->total_reviews = $count;
+    $professional->save();
+}
+
         return response()->json([
             'message' => 'Review submitted successfully'
         ]);
     }
+
+    
 }
