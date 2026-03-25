@@ -63,21 +63,45 @@ public function unsuspendUser($id)
 
     return response()->json(['message' => 'User unsuspended']);
 }
+
 //reports
 public function reports()
 {
-    $reports = \App\Models\Report::with(['reporter', 'reported', 'contract'])->get();
+    $reports = \App\Models\Report::with([
+        'contract',
+        'reporter:id,name,email',
+        'reported:id,name,email'
+    ])->latest()->get();
 
     return response()->json($reports);
 }
 
-public function resolveReport($id)
+
+//resolveReport
+
+public function resolveReport(Request $request, $id)
 {
     $report = \App\Models\Report::findOrFail($id);
+
+    // optional action from admin
+    if ($request->action === 'suspend') {
+        $user = \App\Models\User::find($report->reported_id);
+        $user->is_suspended = true;
+        $user->tokens()->delete();
+        $user->save();
+    }
+
+    if ($request->action === 'cancel_contract') {
+        $contract = \App\Models\Contract::find($report->contract_id);
+        $contract->status = 'cancelled';
+        $contract->save();
+    }
 
     $report->status = 'resolved';
     $report->save();
 
-    return response()->json(['message' => 'Report resolved']);
+    return response()->json([
+        'message' => 'Report resolved with action: ' . ($request->action ?? 'none')
+    ]);
 }
 }

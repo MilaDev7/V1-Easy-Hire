@@ -13,5 +13,22 @@ use Illuminate\Database\Eloquent\Model;
         'reported_id',
         'reason'
     ];
+
+    public function contract()
+{
+    return $this->belongsTo(\App\Models\Contract::class);
 }
+
+public function reporter()
+{
+    return $this->belongsTo(\App\Models\User::class, 'reporter_id');
+}
+
+public function reported()
+{
+    return $this->belongsTo(\App\Models\User::class, 'reported_id');
+}
+}
+
+
 
