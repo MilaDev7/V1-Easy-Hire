@@ -11,11 +11,19 @@ use Illuminate\Support\Facades\Auth;
 
 class ApplicationController extends Controller
 {
+
+
     /**
      * Professional applies for a job
      */
     public function apply(Request $request, $jobId)
     {
+
+        if (!auth()->user()->is_profile_completed) {
+            return response()->json([
+                'message' => 'Complete your profile first'
+            ], 403);
+        }
 $user = auth()->user();
 $professional = $user->professional;
 
@@ -45,7 +53,7 @@ if ($pendingCount >= 5) {
         ->count();
 
     // 2. Check the limit (3 active jobs)
-    if ($activeJobsCount >= 3) {
+        if ($activeJobsCount >= 3) {
         return response()->json([
             'message' => 'You reached the maximum limit of active jobs (3). Please complete your current jobs before applying for more.'
         ], 403);

@@ -38,6 +38,10 @@ class ProfessionalController extends Controller
             'message' => 'Profile updated successfully',
             'data' => $professional
         ]);
+$professional = Professional::where('user_id', auth()->id())->first();
+
+$professional->status = 'pending'; // waiting admin approval
+$professional->save();
     }
 
 public function index(Request $request)
