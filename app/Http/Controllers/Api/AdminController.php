@@ -189,10 +189,25 @@ public function resolveReport(Request $request, $id)
 
     //forceCancelContract
 
-    public function forceCancelContract($id)
+public function forceCancelContract($id)
 {
     $contract = \App\Models\Contract::findOrFail($id);
 
+    // ❌ DO NOT cancel completed
+    if ($contract->status === 'completed') {
+        return response()->json([
+            'message' => 'Cannot cancel completed contract'
+        ], 400);
+    }
+
+    // ❌ already cancelled
+    if ($contract->status === 'cancelled') {
+        return response()->json([
+            'message' => 'Contract already cancelled'
+        ], 400);
+    }
+
+    // ✅ allow cancel
     $contract->status = 'cancelled';
     $contract->save();
 
