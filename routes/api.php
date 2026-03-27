@@ -92,9 +92,14 @@ Route::middleware(['auth:sanctum', 'check_status'])->group(function () {
 
         // User Management
         Route::get('/users', [AdminController::class, 'users']);
+
         //jobs Management
         Route::get('/jobs', [AdminController::class, 'jobs']);
+
         //contracts Management
         Route::get('/contracts', [AdminController::class, 'contracts']);
+
+        //forceCancelContract Management
+        Route::post('/contracts/{id}/cancel', [AdminController::class, 'forceCancelContract']);
     });
 });

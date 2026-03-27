@@ -185,6 +185,20 @@ public function resolveReport(Request $request, $id)
         return response()->json([
             'contracts' => $contracts
         ]);
-    }
+    } 
+
+    //forceCancelContract
+
+    public function forceCancelContract($id)
+{
+    $contract = \App\Models\Contract::findOrFail($id);
+
+    $contract->status = 'cancelled';
+    $contract->save();
+
+    return response()->json([
+        'message' => 'Contract cancelled by admin'
+    ]);
+}
 
 }
