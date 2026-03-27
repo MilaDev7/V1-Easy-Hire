@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\ProfessionalStatusMail;
 
+
 class AdminController extends Controller
 {
    public function approveProfessional($id)
@@ -216,4 +217,86 @@ public function forceCancelContract($id)
     ]);
 }
 
+    //Plan Management (Admin CRUD)
+
+    //CreatePlan
+    public function createPlan(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string',
+            'price' => 'required|numeric',
+            'job_posts_limit' => 'required|integer'
+        ]);
+
+        $plan = \App\Models\Plan::create($request->all());
+
+        return response()->json([
+            'message' => 'Plan created',
+            'plan' => $plan
+        ]);
+    }
+
+    //View plan
+    public function plans()
+    {
+        $plans = \App\Models\Plan::all();
+
+        return response()->json($plans);
+    }
+
+    //Updata plan
+    public function updatePlan(Request $request, $id)
+    {
+        $plan = \App\Models\Plan::findOrFail($id);
+
+        $plan->update($request->all());
+
+        return response()->json([
+            'message' => 'Plan updated',
+            'plan' => $plan
+        ]);
+    }
+
+    //Delet plan 
+
+    public function deletePlan($id)
+    {
+        $plan = \App\Models\Plan::findOrFail($id);
+
+        $plan->delete();
+
+        return response()->json([
+            'message' => 'Plan deleted'
+        ]);
+    }
+
+
+    //VIEW DELETED USERS
+
+    public function deletedUsers()
+    {
+        $users = User::onlyTrashed()->get();
+
+        return response()->json($users);
+    }
+
+    
+    //RESTORE USER
+
+    public function restoreUser($id)
+{
+    $user = User::withTrashed()->findOrFail($id);
+
+    if (!$user->trashed()) {
+        return response()->json([
+            'message' => 'User is not deleted'
+        ], 400);
+    }
+
+    $user->restore();
+
+    return response()->json([
+        'message' => 'User restored successfully'
+    ]);
+}
 }

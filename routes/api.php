@@ -49,6 +49,9 @@ Route::middleware(['auth:sanctum', 'check_status'])->group(function () {
 
         // Subscriptions
         Route::post('/buy-plan/{id}', [SubscriptionController::class, 'buy']);
+
+        Route::middleware(['auth:sanctum', 'role:client'])
+            ->get('/my-subscription', [SubscriptionController::class, 'mySubscription']);
     });
 
 
@@ -101,5 +104,15 @@ Route::middleware(['auth:sanctum', 'check_status'])->group(function () {
 
         //forceCancelContract Management
         Route::post('/contracts/{id}/cancel', [AdminController::class, 'forceCancelContract']);
+
+        //Plan Management (Admin CRUD)
+        Route::post('/plans', [AdminController::class, 'createPlan']);
+        Route::get('/plans', [AdminController::class, 'plans']);
+        Route::put('/plans/{id}', [AdminController::class, 'updatePlan']);
+        Route::delete('/plans/{id}', [AdminController::class, 'deletePlan']);
+
+        //user delet managemnt
+        Route::get('/deleted-users', [AdminController::class, 'deletedUsers']);
+        Route::post('/restore-user/{id}', [AdminController::class, 'restoreUser']);
     });
 });
