@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Contract;
 use Illuminate\Http\Request;
+use App\Models\Subscription;
+use App\Models\JobPost;
 
 class ContractController extends Controller
 {
@@ -77,7 +79,18 @@ class ContractController extends Controller
         return response()->json(['message' => 'Unauthorized'], 403);
     }
 
-    // ❌ Cannot cancel completed
+
+        // ✅ Cancel (before OR during work)
+        $contract->status = 'cancelled';
+        $contract->save();
+
+        $job = JobPost::findOrFail($contract->job_id);
+
+        $job->status = 'cancelled';
+        $job->save();
+
+
+        // ❌ Cannot cancel completed
     if ($contract->status === 'completed') {
         return response()->json([
             'message' => 'Cannot cancel completed contract'
@@ -91,14 +104,15 @@ class ContractController extends Controller
         ], 400);
     }
 
-    // ✅ Cancel (before OR during work)
-    $contract->status = 'cancelled';
-    $contract->save();
-
     return response()->json([
         'message' => 'Contract cancelled successfully'
     ]);
+
+ 
+
 }
+
+
 
 public function myContracts(Request $request)
 {

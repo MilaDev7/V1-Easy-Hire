@@ -29,18 +29,31 @@ public function store(Request $request)
 
     $user = auth()->user();
 
-    // ✅ check subscription
-    $subscription = \App\Models\Subscription::where('user_id', $user->id)
-        ->where('status', 'active')
-        ->first();
+    // 1. Get active subscription
+$subscription = Subscription::where('user_id', auth()->id())
+    ->where('status', 'active')
+    ->first();
 
-    if (!$subscription) {
-        return response()->json(['message' => 'You need a subscription'], 403);
-    }
+if (!$subscription) {
+    return response()->json([
+        'message' => 'You need an active subscription'
+    ], 403);
+}
 
-    if ($subscription->remaining_posts <= 0) {
-        return response()->json(['message' => 'No remaining posts'], 403);
-    }
+// 2. Get plan limit
+$plan = $subscription->plan;
+
+// 3. Count how many jobs user already posted
+$jobCount = JobPost::where('client_id', auth()->id())
+    ->where('status', '!=', 'cancelled')
+    ->count();
+
+// 4. Check limit
+if ($jobCount >= $plan->job_posts_limit) {
+    return response()->json([
+        'message' => 'Job post limit reached for your plan'
+    ], 403);
+}
 
     // ✅ create job
     $job=JobPost::create([
@@ -52,10 +65,7 @@ public function store(Request $request)
     'skill' => $request->skill, // ✅ ADD THIS
     'status' => 'open',
 ]);
-
-    // ✅ decrease remaining posts
-    $subscription->remaining_posts -= 1;
-    $subscription->save();
+  
 
     // ✅ THIS IS WHAT YOU WERE MISSING
     return response()->json([
