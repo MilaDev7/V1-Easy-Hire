@@ -85,6 +85,8 @@ public function suspendUser($id)
     ]);
 }
 
+    //unsuspendUser
+
 public function unsuspendUser($id)
 {
     // 1. Find the user
@@ -106,7 +108,9 @@ public function unsuspendUser($id)
     return response()->json([
         'message' => 'User unsuspended successfully'
     ]);
-}//reports
+    }
+
+    //reports
 public function reports()
 {
     $reports = \App\Models\Report::with([
@@ -146,4 +150,41 @@ public function resolveReport(Request $request, $id)
         'message' => 'Report resolved with action: ' . ($request->action ?? 'none')
     ]);
 }
+
+    //user view
+    public function users()
+    {
+        $users = \App\Models\User::select('id', 'name', 'email', 'role', 'is_suspended', 'created_at')
+            ->latest()
+            ->get();
+
+        return response()->json($users);
+    }
+
+    //Veiw all jobs
+
+    public function jobs()
+    {
+        $jobs = \App\Models\JobPost::with('client')->latest()->get();
+
+        return response()->json([
+            'jobs' => $jobs
+        ]);
+    }
+
+
+    //View contract
+    public function contracts()
+    {
+        $contracts = \App\Models\Contract::with([
+            'client',
+            'professional',
+            'job'
+        ])->latest()->get();
+
+        return response()->json([
+            'contracts' => $contracts
+        ]);
+    }
+
 }

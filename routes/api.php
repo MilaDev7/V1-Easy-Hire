@@ -69,7 +69,7 @@ Route::middleware(['auth:sanctum', 'check_status'])->group(function () {
         Route::post('/contracts/{id}/complete', [ContractController::class, 'markCompleted']);
         
         // Contracts
-        Route::get('/my-contracts', [ContractController::class, 'myContracts']);
+        // Route::get('/my-contracts', [ContractController::class, 'myContracts']);
     });
 
     /*
@@ -89,5 +89,12 @@ Route::middleware(['auth:sanctum', 'check_status'])->group(function () {
         // Report Management
         Route::get('/reports', [AdminController::class, 'reports']);
         Route::post('/reports/{id}/resolve', [AdminController::class, 'resolveReport']);
+
+        // User Management
+        Route::get('/users', [AdminController::class, 'users']);
+        //jobs Management
+        Route::get('/jobs', [AdminController::class, 'jobs']);
+        //contracts Management
+        Route::get('/contracts', [AdminController::class, 'contracts']);
     });
 });
