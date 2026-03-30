@@ -20,14 +20,12 @@
                     <div class="col-md-4">
                         <div class="input-group">
                             <span class="input-group-text bg-white border-0 text-secondary"><i class="fa-solid fa-location-dot"></i></span>
-                            <input class="form-control form-control-lg border-0 ps-1" placeholder="City or Area (e.g., Addis)">
-                        </div>
+<input id="location" class="form-control form-control-lg border-0 ps-1" placeholder="City or Area (e.g., Addis)">                        </div>
                     </div>
                     <div class="col-md-5">
                         <div class="input-group">
                             <span class="input-group-text bg-white border-0 text-secondary"><i class="fa-solid fa-briefcase"></i></span>
-                            <input class="form-control form-control-lg border-0 ps-1" placeholder="What do you need? (e.g., Electrician)">
-                        </div>
+<input id="service" class="form-control form-control-lg border-0 ps-1" placeholder="What do you need? (e.g., Electrician)">                        </div>
                     </div>
                     <div class="col-md-3">
                         <button onclick="searchExperts()" class="btn btn-success btn-sm w-100 rounded-pill fw-bold h-100 d-flex align-items-center justify-content-center gap-2">
@@ -209,34 +207,18 @@
 @section('scripts')
 
 <script>
-const cards = document.querySelectorAll('.work-card');
-
-window.addEventListener('scroll', () => {
-    cards.forEach(card => {
-        const top = card.getBoundingClientRect().top;
-
-        if (top < window.innerHeight - 50) {
-            card.style.opacity = 1;
-            card.style.transform = "translateY(0)";
-        }
-    });
-});
-
-// initial state
-cards.forEach(card => {
-    card.style.opacity = 0;
-    card.style.transform = "translateY(50px)";
-    card.style.transition = "0.5s";
-});
-
 function searchExperts() {
-    const location = document.getElementById("location").value;
-    const service = document.getElementById("service").value;
+    const location = document.getElementById("location")?.value || "";
+    const service = document.getElementById("service")?.value || "";
 
-    console.log("Search:", location, service);
+    if (!location && !service) {
+        alert("Enter location or service");
+        return;
+    }
 
     window.location.href = `/search?location=${location}&service=${service}`;
 }
 </script>
 
 @endsection
+
