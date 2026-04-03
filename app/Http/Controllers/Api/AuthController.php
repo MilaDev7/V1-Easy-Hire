@@ -108,14 +108,15 @@ if ($user->is_suspended) {
 
     // 🔥 check professional status
     $professional = Professional::where('user_id', $user->id)->first();
+return response()->json([
+    'message' => 'Login successful',
+    'token' => $token,
+    'role' => $user->getRoleNames()->first(), // Using Spatie
+    'approval_status' => $professional ? $professional->status : null,
+    'user_name' => $user->name // Good for the dashboard welcome message
+]);
 
-    return response()->json([
-        'message'=>'Login successful',
-        'access_token'=>$token,
-        'token_type'=>'Bearer',
-        'role' => $user->getRoleNames()->first(),
-        'approval_status' => $professional ? $professional->status : null
-    ]);
+    
 }
 
     // Logout
