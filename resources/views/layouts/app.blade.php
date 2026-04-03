@@ -12,8 +12,9 @@
     <!-- social meadia icon -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
 
-
-    <style>
+<link rel="stylesheet" href="{{ asset('css/dashboard.css') }}">
+<link rel="stylesheet" href="{{ asset('css/headerFooter.css') }}">
+<!-- <style>
     body {
         font-family: 'Inter', sans-serif;
     }
@@ -129,102 +130,42 @@
 }
 
 footer a:hover { color: #198754 !important; transition: 0.3s; }
-</style>
+.result-card {
+border-radius: 15px;
+transition: 0.3s;
+overflow: hidden;
+}
+
+.result-card:hover {
+transform: translateY(-8px);
+box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+}
+
+.blur-img {
+filter: blur(4px);
+height: 200px;
+object-fit: cover;
+width: 100%;
+}
+
+.skill-badge {
+background: #e9f7ef;
+color: #198754;
+padding: 5px 10px;
+border-radius: 20px;
+font-size: 12px;
+}
+</style> -->
 </head>
 <body>
- 
- 
- <!-- navbar -->
 
-
-<nav class="navbar navbar-expand-lg bg-white shadow-sm sticky-top">
-    <div class="container">
-
-        <!-- Logo -->
-        <a class="navbar-brand fw-bold text-success" href="/">
-            EasyHire
-        </a>
-
-        <!-- Toggle (mobile) -->
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-
-        <!-- Links -->
-        <div class="collapse navbar-collapse" id="nav">
-        <ul class="navbar-nav mx-auto">
-    <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
-    <li class="nav-item"><a class="nav-link" href="#services">Services</a></li>
-    <li class="nav-item"><a class="nav-link" href="#about">About</a></li>
-    <li class="nav-item"><a class="nav-link" href="#contact">Contact</a></li>
-</ul>
-
-            <!-- Auth Buttons -->
-            <div class="d-flex gap-2">
-                <a href="/register" class="btn btn-success">Register</a>
-                <a href="/" class="btn btn-outline-success">Login</a>
-            </div>
-        </div>
-
-    </div>
-</nav>
+ @include('layouts.header')
 
     <main>
         @yield('content')
     </main>
 
-<!-- Footer -->
-<footer class="bg-dark text-white pt-5 pb-4 mt-5">
-    <div class="container">
-        <div class="row text-center text-md-start">
-            <div class="col-md-3 col-lg-3 col-xl-3 mx-auto mt-3">
-                <h5 class="text-uppercase mb-4 fw-bold text-success">EasyHire</h5>
-                <p class="small text-secondary">
-                    Connecting clients with trusted professionals quickly and safely.
-                </p>
-                <p class="small text-secondary mt-3">
-                    <i class="fas fa-envelope me-2"></i> info@easyhire.com<br>
-                    <i class="fas fa-phone me-2"></i> +251 900000000
-                </p>
-            </div>
-
-            <div class="col-md-2 col-lg-2 col-xl-2 mx-auto mt-3">
-                <h6 class="text-uppercase mb-4 fw-bold">Social Icons</h6>
-                <div class="d-flex justify-content-center justify-content-md-start gap-3">
-                    <a href="#" class="text-white fs-4"><i class="fab fa-facebook"></i></a>
-                    <a href="#" class="text-white fs-4"><i class="fab fa-instagram"></i></a>
-                    <a href="#" class="text-white fs-4"><i class="fab fa-linkedin"></i></a>
-                </div>
-            </div>
-
-            <div class="col-md-3 col-lg-2 col-xl-2 mx-auto mt-3">
-                <h6 class="text-uppercase mb-4 fw-bold">About</h6>
-                <ul class="list-unstyled small">
-                    <li class="mb-2"><a href="#" class="text-secondary text-decoration-none hover-white">About us</a></li>
-                    <li class="mb-2"><a href="#" class="text-secondary text-decoration-none hover-white">Professionals</a></li>
-                    <li class="mb-2"><a href="#" class="text-secondary text-decoration-none hover-white">About</a></li>
-                </ul>
-            </div>
-
-            <div class="col-md-3 col-lg-2 col-xl-2 mx-auto mt-3">
-                <h6 class="text-uppercase mb-4 fw-bold">Team</h6>
-                <ul class="list-unstyled small text-secondary">
-                    <li class="mb-2">MILA</li>
-                    <li class="mb-2">Sentayhu</li>
-                    <li class="mb-2">Filimon</li>
-                    <li class="mb-2">Samual</li>
-                </ul>
-            </div>
-        </div>
-
-        <hr class="mb-4 border-secondary opacity-25">
-<div class="row">
-                <div class="col-12 text-center">
-                    <p class="small text-secondary mb-0">Baba 2026</p>
-                </div>
-            </div>
-    </div>
-</footer>
+@include('layouts.footer')
 
 
 <!-- Bootstrap JS  -->
@@ -232,8 +173,29 @@ footer a:hover { color: #198754 !important; transition: 0.3s; }
 
 <!-- Your global API -->
 <script src="{{ asset('js/api.js') }}"></script>
+<script src="{{ asset('js/auth.js') }}"></script>
 
 <!-- Page-specific scripts -->
 @yield('scripts')
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const token = localStorage.getItem("token");
+    const guestSection = document.getElementById("guestSection");
+    const userSection = document.getElementById("userSection");
+
+    if (token) {
+        // ✅ USER IS LOGGED IN
+        if(guestSection) guestSection.classList.add("d-none");
+        if(userSection) userSection.classList.remove("d-none");
+    } else {
+        // ❌ USER IS GUEST
+        if(guestSection) guestSection.classList.remove("d-none");
+        if(userSection) userSection.classList.add("d-none");
+    }
+});
+
+
+</script>
 </body>
 </html>
