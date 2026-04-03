@@ -10,8 +10,8 @@ use App\Http\Controllers\Api\AdminController;
 use App\Http\Controllers\Api\ContractController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\SubscriptionController;
+use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\ReportController;
-
 
 // Public Routes (No Token Required)
 
@@ -23,18 +23,23 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::get('/professionals', [ProfessionalController::class, 'index']);
 Route::get('/professionals/{id}', [ProfessionalController::class, 'show']);
 
+// Professional Setup
+Route::post('/pro/profile-update', [ProfileController::class, 'updateProProfile']);
+
+// Client Setup
+Route::post('/client/update-photo',    [ProfileController::class, 'updateClientPhoto']);
 
 //Authenticated Routes (Token Required + Check Status)
 
 Route::middleware(['auth:sanctum', 'check_status'])->group(function () {
-    
+
     // General User Actions
-    Route::post('/logout', [AuthController::class, 'logout']);
+    Route::post('/logout',     [AuthController::class, 'logout']);
     Route::delete('/account', [AuthController::class, 'deleteAccount']);
     Route::post('/contracts/{id}/report', [ReportController::class, 'store']);
-    Route::post('/contracts/{id}/review', [ReviewController::class, 'store']);
+    Route::post('/contracts/{id}/review',        [ReviewController::class, 'store']);
 
-  
+
     //Client Routes
 
     Route::middleware('role:client')->group(function () {
@@ -56,7 +61,7 @@ Route::middleware(['auth:sanctum', 'check_status'])->group(function () {
 
 
     // Professional Routes
-   
+
     Route::middleware('role:professional')->group(function () {
         // Profile Management
         Route::post('/professional/profile', [ProfessionalController::class, 'updateProfile']);
@@ -70,7 +75,7 @@ Route::middleware(['auth:sanctum', 'check_status'])->group(function () {
         // Work Completion (Both controllers used depending on your logic)
         Route::post('/jobs/{id}/complete', [JobPostController::class, 'complete']);
         Route::post('/contracts/{id}/complete', [ContractController::class, 'markCompleted']);
-        
+
         // Contracts
         // Route::get('/my-contracts', [ContractController::class, 'myContracts']);
     });
