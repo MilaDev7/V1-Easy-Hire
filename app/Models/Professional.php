@@ -16,8 +16,14 @@ protected $fillable = [
     'location', // <--- Change this from 'city' to 'location'
     'cv',
     'certificate',
-    'status'
+    'status',
+    'average_rating', // Add this
+    'total_reviews',
+    'profile_photo', 
+    'id_card'
 ];
+
+
 
     public function user()
     {
