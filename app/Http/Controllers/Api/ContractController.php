@@ -39,7 +39,7 @@ class ContractController extends Controller
     }
 
     //CLIENT CONFIRMS
-        public function confirm($id)
+    public function confirm($id)
     {
         $contract = Contract::find($id);
 
@@ -52,17 +52,17 @@ class ContractController extends Controller
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
-        if ($contract->status !== 'completed') {
-            return response()->json(['message' => 'Work not completed yet'], 400);
+        if ($contract->status === 'cancelled') {
+            return response()->json(['message' => 'Cancelled contract cannot be confirmed'], 400);
         }
 
-        // ✅ Final confirmation
         $contract->status = 'completed';
         $contract->save();
 
-        // 🔥 ALSO update job
-        $contract->job->status = 'completed';
-        $contract->job->save();
+        if ($contract->job) {
+            $contract->job->status = 'completed';
+            $contract->job->save();
+        }
 
         return response()->json([
             'message' => 'Job completed successfully'
@@ -80,17 +80,6 @@ class ContractController extends Controller
     }
 
 
-        // ✅ Cancel (before OR during work)
-        $contract->status = 'cancelled';
-        $contract->save();
-
-        $job = JobPost::findOrFail($contract->job_id);
-
-        $job->status = 'cancelled';
-        $job->save();
-
-
-        // ❌ Cannot cancel completed
     if ($contract->status === 'completed') {
         return response()->json([
             'message' => 'Cannot cancel completed contract'
@@ -103,6 +92,13 @@ class ContractController extends Controller
             'message' => 'Contract already cancelled'
         ], 400);
     }
+
+    $contract->status = 'cancelled';
+    $contract->save();
+
+    $job = JobPost::findOrFail($contract->job_id);
+    $job->status = 'cancelled';
+    $job->save();
 
     return response()->json([
         'message' => 'Contract cancelled successfully'

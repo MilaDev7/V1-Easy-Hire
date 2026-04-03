@@ -12,6 +12,8 @@ use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\SubscriptionController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\ReportController;
+use App\Http\Controllers\Api\ClientController;
+
 
 // Public Routes (No Token Required)
 
@@ -24,7 +26,10 @@ Route::get('/professionals', [ProfessionalController::class, 'index']);
 Route::get('/professionals/{id}', [ProfessionalController::class, 'show']);
 
 // Professional Setup
-Route::post('/pro/profile-update', [ProfileController::class, 'updateProProfile']);
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/pro/profile-update', [ProfileController::class, 'updateProProfile']);
+    Route::post('/pro/complete-profile', [ProfileController::class, 'updateProProfile']);
+});
 
 // Client Setup
 Route::post('/client/update-photo',    [ProfileController::class, 'updateClientPhoto']);
@@ -43,10 +48,13 @@ Route::middleware(['auth:sanctum', 'check_status'])->group(function () {
     //Client Routes
 
     Route::middleware('role:client')->group(function () {
+        Route::get('/client/me', [ClientController::class, 'me']);
+
         // Job Management
         Route::post('/job-posts', [JobPostController::class, 'store']);
         Route::get('/jobs/{id}/applications', [ApplicationController::class, 'jobApplications']);
         Route::post('/applications/{id}/accept', [ApplicationController::class, 'accept']);
+        Route::post('/applications/{id}/reject', [ApplicationController::class, 'reject']);
 
         // Contract Management
         Route::post('/contracts/{id}/confirm', [ContractController::class, 'confirm']);
@@ -56,7 +64,25 @@ Route::middleware(['auth:sanctum', 'check_status'])->group(function () {
         Route::post('/buy-plan/{id}', [SubscriptionController::class, 'buy']);
 
         Route::middleware(['auth:sanctum', 'role:client'])
-            ->get('/my-subscription', [SubscriptionController::class, 'mySubscription']);
+            ->get('client/my-subscription', [SubscriptionController::class, 'mySubscription']);
+
+        //Job Posts list
+        Route::get('/client/job-posts', [ClientController::class, 'jobPosts']);
+
+        // Contracts
+        Route::get('/client/contracts/active', [ClientController::class, 'activeContracts']);
+        Route::get('/client/contracts', [ClientController::class, 'allContracts']);
+
+        // Applications
+        Route::get('/client/applications', [ClientController::class, 'applications']);
+
+        // Job Posts
+        Route::get('/client/job-posts/count', [ClientController::class, 'jobPostCount']);
+        Route::get('/client/job-posts/remaining', [ClientController::class, 'remainingJobPosts']);
+
+
+        // Professionals
+        Route::get('/professionals', [ProfessionalController::class, 'index']);
     });
 
 
