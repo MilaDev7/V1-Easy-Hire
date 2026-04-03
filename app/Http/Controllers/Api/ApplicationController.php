@@ -19,11 +19,7 @@ class ApplicationController extends Controller
     public function apply(Request $request, $jobId)
     {
 
-        if (!auth()->user()->is_profile_completed) {
-            return response()->json([
-                'message' => 'Complete your profile first'
-            ], 403);
-        }
+      
 $user = auth()->user();
 $professional = $user->professional;
 
@@ -199,6 +195,28 @@ if ($job->skill !== $professional->skill) {
 
         return response()->json([
             'message' => 'Professional assigned successfully',
+            'application' => $application
+        ]);
+    }
+
+    public function reject($id)
+    {
+        $application = Application::findOrFail($id);
+        $job = JobPost::findOrFail($application->job_id);
+
+        if ($job->client_id !== auth()->id()) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        if ($application->status !== 'pending') {
+            return response()->json(['message' => 'Only pending applications can be rejected'], 400);
+        }
+
+        $application->status = 'rejected';
+        $application->save();
+
+        return response()->json([
+            'message' => 'Application rejected successfully',
             'application' => $application
         ]);
     }
