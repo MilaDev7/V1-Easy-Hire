@@ -17,21 +17,28 @@ class ProfileController extends Controller
     {
         $user = Auth::user();
 
-        // 1. Validate - Don't let them upload trash
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ], 401);
+        }
+
         $request->validate([
             'skill' => 'required|string',
             'experience' => 'required|integer',
             'bio' => 'required|string|min:20',
             'location' => 'required|string',
+            'age' => 'nullable|integer',
+            'gender' => 'nullable|string',
             'profile_photo' => 'required|image|mimes:jpeg,png,jpg|max:2048',
             'cv' => 'required|mimes:pdf|max:5120', // Max 5MB PDF
             'id_card' => 'required|image|mimes:jpeg,png,jpg|max:2048',
+            'certificate' => 'nullable|file|mimes:pdf,jpeg,png,jpg|max:5120',
         ]);
 
-        // 2. Find or Create the Pro record
         $pro = Professional::firstOrNew(['user_id' => $user->id]);
 
-        // 3. Handle File Uploads
         if ($request->hasFile('profile_photo')) {
             $pro->profile_photo = $request->file('profile_photo')->store('profiles', 'public');
         }
@@ -44,7 +51,10 @@ class ProfileController extends Controller
             $pro->id_card = $request->file('id_card')->store('documents/ids', 'public');
         }
 
-        // 4. Update text fields
+        if ($request->hasFile('certificate')) {
+            $pro->certificate = $request->file('certificate')->store('documents/certificates', 'public');
+        }
+
         $pro->skill = $request->skill;
         $pro->experience = $request->experience;
         $pro->bio = $request->bio;
@@ -89,7 +99,7 @@ class ProfileController extends Controller
     public function completeProfessionalProfile(Request $request)
 {
     $user = auth()->user();
-    $pro = Professional::where('user_id', $user->id)->first();
+    $pro = Professional::firstOrNew(['user_id' => $user->id]);
 
     // 1. Validate (Crucial!)
     $request->validate([
@@ -103,6 +113,10 @@ class ProfileController extends Controller
     $pro->profile_photo = $request->file('profile_photo')->store('profiles', 'public');
     $pro->id_card = $request->file('id_card')->store('ids', 'public');
     $pro->cv = $request->file('cv')->store('cvs', 'public');
+
+    if ($request->hasFile('certificate')) {
+        $pro->certificate = $request->file('certificate')->store('certificates', 'public');
+    }
 
     // 3. Save Text
     $pro->skill = $request->skill;
