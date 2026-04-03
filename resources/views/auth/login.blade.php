@@ -24,56 +24,57 @@
 
 @section('scripts')
 <script>
-function handleLogin() {
-    const email = document.getElementById("loginEmail").value;
-    const password = document.getElementById("loginPass").value;
+    function handleLogin() {
+        const email = document.getElementById("loginEmail").value;
+        const password = document.getElementById("loginPass").value;
 
-    fetch("/api/login", {
-        method: "POST",
-        headers: { 
-            "Content-Type": "application/json", 
-            "Accept": "application/json" 
-        },
-        body: JSON.stringify({ email, password })
-    })
-    .then(res => res.json())
-    .then(data => {
-        console.log("Backend Response:", data);
+        fetch("/api/login", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Accept": "application/json"
+                },
+                body: JSON.stringify({
+                    email,
+                    password
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                console.log("Backend Response:", data);
 
-        // ✅ 1. Match your backend key: 'token'
-        if (data.token) {
-            localStorage.setItem("token", data.token);
-            
-            // ✅ 2. Match your backend key: 'role' (Not data.user.role)
-            const role = data.role; 
-            const status = data.approval_status;
+                // ✅ 1. Match your backend key: 'token'
+                if (data.token) {
+                    localStorage.setItem("token", data.token);
 
-            // ✅ 3. Redirect Logic
-            if (role === 'professional') {
-                // If they are not approved yet, send them to a "Pending" page
-                if (status === 'pending') {
-                    alert("Your account is still under review by Admin.");
-                    window.location.href = "/pro/pending"; 
+                    // ✅ 2. Match your backend key: 'role' (Not data.user.role)
+                    const role = data.role;
+                    const status = data.approval_status;
+                    localStorage.setItem("role", role || "");
+                    // ✅ 3. Redirect Logic
+                    if (role === 'professional') {
+                        // If they are not approved yet, send them to a "Pending" page
+                        if (status === 'pending') {
+                            alert("Your account is still under review by Admin.");
+                            window.location.href = "/pro/pending";
+                        } else {
+                            window.location.href = "/pro/dashboard";
+                        }
+                    } else if (role === 'client') {
+                        window.location.href = "/client/dashboard";
+                    } else {
+                        window.location.href = "/"; // Default
+                    }
                 } else {
-                    window.location.href = "/pro/dashboard";
+                    // This handles the "Invalid credentials" or "Suspended" message
+                    alert(data.message || "Login Failed");
                 }
-            } else if (role === 'client') {
-                window.location.href = "/client/dashboard";
-            } else {
-                window.location.href = "/"; // Default
-            }
-        } else {
-            // This handles the "Invalid credentials" or "Suspended" message
-            alert(data.message || "Login Failed");
-        }
-    })
-    .catch(err => {
-        console.error("Critical Error:", err);
-        alert("Server connection failed.");
-    });
-    
-}
+            })
+            .catch(err => {
+                console.error("Critical Error:", err);
+                alert("Server connection failed.");
+            });
 
-
+    }
 </script>
 @endsection
