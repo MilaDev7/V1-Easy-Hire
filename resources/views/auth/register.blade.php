@@ -59,80 +59,67 @@
 
 @section('scripts')
 <script>
-function executeRegister() {
-    // 1. Grab Elements
-    const name = document.getElementById("regName").value;
-    const email = document.getElementById("regEmail").value;
-    const password = document.getElementById("regPassword").value;
-    const confirm = document.getElementById("regConfirm").value;
-    const role = document.getElementById("regRole").value;
-    const btn = document.getElementById("submitBtn");
-    const errorBox = document.getElementById("errorBox");
+    function executeRegister() {
 
-    if (localStorage.getItem("token")) {
-    window.location.href = "/";
-}
-    // 2. Clear old errors & Disable button
-    errorBox.innerHTML = "";
-    btn.disabled = true;
-    btn.innerHTML = "Processing...";
+        const name = document.getElementById("regName").value;
+        const email = document.getElementById("regEmail").value;
+        const password = document.getElementById("regPassword").value;
+        const confirm = document.getElementById("regConfirm").value;
+        const role = document.getElementById("regRole").value;
+        const btn = document.getElementById("submitBtn");
+        const errorBox = document.getElementById("errorBox");
 
-    // 3. Validation Logic
-    if (password !== confirm) {
-        errorBox.innerHTML = "Passwords do not match!";
-        btn.disabled = false;
-        btn.innerHTML = "Create Account";
-        return;
+        errorBox.innerHTML = "";
+        btn.disabled = true;
+        btn.innerHTML = "Processing...";
+
+        if (password !== confirm) {
+            errorBox.innerHTML = "Passwords do not match!";
+            btn.disabled = false;
+            btn.innerHTML = "Create Account";
+            return;
+        }
+
+        fetch(`/api/register/${role}`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Accept": "application/json"
+                },
+                body: JSON.stringify({
+                    name: name,
+                    email: email,
+                    password: password,
+                    password_confirmation: confirm
+                })
+            })
+            .then(async res => {
+                const data = await res.json();
+
+                if (!res.ok) throw data;
+
+                // ✅ Save token
+                localStorage.setItem("token", data.access_token);
+
+                alert("Account Created Successfully!");
+
+                // ✅ CORRECT REDIRECT
+                if (role === "professional") {
+                    window.location.href = "/professional-setup";
+                } else {
+                    window.location.href = "/client-setup";
+                }
+            })
+            .catch(err => {
+                btn.disabled = false;
+                btn.innerHTML = "Create Account";
+
+                if (err.errors) {
+                    errorBox.innerHTML = Object.values(err.errors).flat().join("<br>");
+                } else {
+                    errorBox.innerHTML = err.message || "Something went wrong";
+                }
+            });
     }
-
-    // 4. API Call - Matching your AuthController routes
-    // URL will be: /api/register/client OR /api/register/professional
-    fetch(`/api/register/${role}`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "Accept": "application/json"
-        },
-        body: JSON.stringify({
-            name: name,
-            email: email,
-            password: password,
-            password_confirmation: confirm
-        })
-    })
-    .then(async res => {
-        const data = await res.json();
-        
-        if (!res.ok) {
-            // This catches 422 Validation errors from Laravel
-            throw data; 
-        }
-
-        // ✅ SUCCESS
-        // Your backend returns 'access_token'
-        localStorage.setItem("token", data.access_token);
-        
-        alert("Account Created Successfully!");
-
-        // Redirect based on role
-        if (role === "professional") {
-            window.location.href = "/professional-setup";
-        } else {
-            window.location.href = "/client-setup";
-        }
-    })
-    .catch(err => {
-        console.error("Error Detail:", err);
-        btn.disabled = false;
-        btn.innerHTML = "Create Account";
-
-        // Display Laravel validation errors
-        if (err.errors) {
-            errorBox.innerHTML = Object.values(err.errors).flat().join("<br>");
-        } else {
-            errorBox.innerHTML = err.message || "Something went wrong. Check console.";
-        }
-    });
-}
 </script>
 @endsection
