@@ -2,6 +2,10 @@ function getToken() {
     return localStorage.getItem("token");
 }
 
+function getStoredRole() {
+    return localStorage.getItem("role");
+}
+
 function requireAuth() {
     const token = getToken();
 
@@ -13,32 +17,24 @@ function requireAuth() {
 
 function requireRole(expectedRole) {
     const token = getToken();
+    const storedRole = getStoredRole();
 
     if (!token) {
         window.location.href = "/login";
         return;
     }
 
-    fetch("/api/user", {
-        headers: {
-            Authorization: "Bearer " + token,
-            Accept: "application/json",
-        },
-    })
-        .then((res) => res.json())
-        .then((user) => {
-            if (user.role !== expectedRole) {
-                alert("Unauthorized access");
-                window.location.href = "/";
-            }
-        })
-        .catch(() => {
-            localStorage.removeItem("token");
-            window.location.href = "/login";
-        });
+    if (storedRole && storedRole.toLowerCase() === expectedRole.toLowerCase()) {
+        return;
+    }
+
+    localStorage.removeItem("token");
+    localStorage.removeItem("role");
+    window.location.href = "/login";
 }
 
 function logout() {
     localStorage.removeItem("token");
+    localStorage.removeItem("role");
     window.location.href = "/login";
 }
