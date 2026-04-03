@@ -181,20 +181,56 @@ font-size: 12px;
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const token = localStorage.getItem("token");
+    const role = localStorage.getItem("role");
     const guestSection = document.getElementById("guestSection");
     const userSection = document.getElementById("userSection");
+    const headerClientName = document.getElementById("header-client-name");
+    const headerClientPhoto = document.getElementById("header-client-photo");
+    const headerAccountLink = document.getElementById("header-account-link");
 
-    if (token) {
-        // ✅ USER IS LOGGED IN
-        if(guestSection) guestSection.classList.add("d-none");
-        if(userSection) userSection.classList.remove("d-none");
-    } else {
-        // ❌ USER IS GUEST
+    function showGuestState() {
         if(guestSection) guestSection.classList.remove("d-none");
         if(userSection) userSection.classList.add("d-none");
     }
-});
 
+    if (!token || (role && role !== "client")) {
+        showGuestState();
+        return;
+    }
+
+    fetch("/api/client/me", {
+        headers: {
+            "Accept": "application/json",
+            "Authorization": "Bearer " + token
+        }
+    })
+    .then(async function (response) {
+        if (!response.ok) {
+            throw new Error("Unable to load client");
+        }
+
+        return response.json();
+    })
+    .then(function (client) {
+        if(guestSection) guestSection.classList.add("d-none");
+        if(userSection) userSection.classList.remove("d-none");
+
+        if (headerClientName) {
+            headerClientName.textContent = client.name || "Client";
+        }
+
+        if (headerClientPhoto && client.profile_photo) {
+            headerClientPhoto.src = client.profile_photo;
+        }
+
+        if (headerAccountLink) {
+            headerAccountLink.href = "/client/dashboard";
+        }
+    })
+    .catch(function () {
+        showGuestState();
+    });
+});
 
 </script>
 </body>
