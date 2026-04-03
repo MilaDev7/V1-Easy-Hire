@@ -63,6 +63,18 @@
             color: #f9fafb;
             border-color: #374151;
         }
+
+        body.client-dashboard-dark .modal-content,
+        body.client-dashboard-dark .modal-header,
+        body.client-dashboard-dark .modal-footer {
+            background: #1f2937;
+            color: #f9fafb;
+            border-color: #374151;
+        }
+
+        body.client-dashboard-dark .btn-close {
+            filter: invert(1) grayscale(100%);
+        }
     </style>
 </head>
 <body class="bg-light">
