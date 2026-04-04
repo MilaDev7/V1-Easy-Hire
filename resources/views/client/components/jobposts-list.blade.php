@@ -1,9 +1,11 @@
 <section class="job-post-list-section">
-    <div class="card border-0 shadow-sm">
+    <div class="card border-0 shadow-sm" style="border-top: 4px solid #fd7e14 !important;">
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <div>
-                    <h3 class="h5 mb-1" id="content-title">Job Posts</h3>
+                    <h3 class="h5 mb-1" id="content-title">
+                        <i class="fa-solid fa-list-ul text-success me-2"></i>Job Posts
+                    </h3>
                     <p class="text-muted mb-0" id="content-subtitle">Latest client job posts</p>
                 </div>
                 <button

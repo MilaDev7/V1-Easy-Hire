@@ -1,6 +1,6 @@
 <aside
     class="client-sidebar d-flex flex-column align-items-center text-center bg-white shadow-sm p-4"
-    style="position: fixed; top: 0; left: 0; width: 280px; min-height: 100vh;"
+    style="position: fixed; top: 0; left: 0; width: 280px; min-height: 100vh; border-top: 4px solid #0d6efd !important;"
 >
     <div class="w-100 text-start mb-4">
         <a href="/" class="navbar-brand fw-bold text-success text-decoration-none fs-3">
@@ -26,35 +26,35 @@
             class="btn btn-outline-dark text-start sidebar-nav-button"
             data-view="post-job"
         >
-            + Post Job
+            <i class="fa-solid fa-plus-circle text-success me-2"></i> Post Job
         </button>
         <button
             type="button"
             class="btn btn-outline-dark text-start sidebar-nav-button"
             data-view="job-posts"
         >
-            Job Posts
+            <i class="fa-solid fa-list-ul text-primary me-2"></i> Job Posts
         </button>
         <button
             type="button"
             class="btn btn-outline-dark text-start sidebar-nav-button"
             data-view="professionals"
         >
-            View Professionals
+            <i class="fa-solid fa-users text-info me-2"></i> View Professionals
         </button>
         <button
             type="button"
             class="btn btn-outline-dark text-start sidebar-nav-button"
             data-view="applications"
         >
-            Applications
+            <i class="fa-solid fa-file-lines text-warning me-2"></i> Applications
         </button>
         <button
             type="button"
             class="btn btn-outline-dark text-start sidebar-nav-button"
             data-view="contracts"
         >
-            All Contracts
+            <i class="fa-solid fa-file-contract text-secondary me-2"></i> All Contracts
         </button>
     </div>
 
