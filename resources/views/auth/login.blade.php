@@ -52,7 +52,9 @@
                     const status = data.approval_status;
                     localStorage.setItem("role", role || "");
                     // ✅ 3. Redirect Logic
-                    if (role === 'professional') {
+                    if (role === 'admin') {
+                        window.location.href = "/admin/dashboard";
+                    } else if (role === 'professional') {
                         // If they are not approved yet, send them to a "Pending" page
                         if (status === 'pending') {
                             alert("Your account is still under review by Admin.");
