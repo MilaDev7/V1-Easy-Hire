@@ -81,29 +81,24 @@
     @include('client.components.leftnav')
 
     <div class="client-dashboard-main" style="margin-left: 280px; min-height: 100vh; padding: 24px 24px 140px;">
-        <div class="card border-0 shadow-sm mb-4">
-            <div class="card-body d-flex justify-content-between align-items-center">
-                <div class="d-flex align-items-center gap-3">
-                    <img
-                        src="{{ asset('images/user1.jpg') }}"
-                        alt="Profile Photo"
-                        class="rounded-circle border"
-                        style="width: 48px; height: 48px; object-fit: cover;"
-                    >
-                    <div>
-                        <p class="text-muted small mb-0">Client Dashboard</p>
-                        <h1 class="h5 mb-0">Overview</h1>
-                    </div>
+        <div class="card border-0 shadow-sm mb-4 position-relative" style="background: #e7f1ff; border-top: 4px solid #0d6efd !important;">
+            <div class="card-body text-center py-4">
+                <div>
+                    <p class="text-muted small mb-0">Client Dashboard</p>
+                    <h1 class="h4 mb-0">Overview</h1>
                 </div>
 
-                <button type="button" class="btn btn-outline-danger btn-sm" onclick="logout()">
+                <button type="button" class="btn btn-outline-danger btn-sm position-absolute end-0 me-4 top-50 translate-middle-y" onclick="logout()">
                     <i class="fa-solid fa-right-from-bracket me-1"></i> Logout
                 </button>
             </div>
         </div>
 
         @include('client.components.stats')
-        @include('client.components.jobposts-list')
+
+        <div id="content-area">
+            @include('client.components.jobposts-list')
+        </div>
     </div>
 
     @include('client.components.subscription')
@@ -117,6 +112,12 @@
             if (typeof window.requireRole === "function") {
                 window.requireRole("client");
             }
+            
+            setTimeout(function() {
+                if (typeof window.bindProfessionalSearch === "function") {
+                    window.bindProfessionalSearch();
+                }
+            }, 100);
         });
     </script>
 </body>
