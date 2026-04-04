@@ -44,7 +44,7 @@
                     <input type="number" id="f_exp" class="form-control mb-3" required>
 
                     <label>Location (City)</label>
-                    <select id="job-location" name="location" class="form-select" required="">
+                    <select id="f_loc" name="location" class="form-select" required="">
                         <option value="">Select city</option>
                         <option value="Addis Ababa">Addis Ababa</option>
                         <option value="Adama">Adama</option>
@@ -93,26 +93,38 @@
     function completePro() {
         const fd = new FormData();
 
-        // ✅ FIXED IDs
-        fd.append("skill", document.getElementById("f_skill").value);
-        fd.append("experience", document.getElementById("f_exp").value); // FIXED
-        fd.append("bio", document.getElementById("f_bio").value);
+        // Validate required fields
+        const skill = document.getElementById("f_skill").value;
+        const exp = document.getElementById("f_exp").value;
+        const bio = document.getElementById("f_bio").value;
+        const location = document.getElementById("f_loc").value;
+        const photo = document.getElementById("f_photo").files[0];
+        const idCard = document.getElementById("f_id").files[0];
+        const cv = document.getElementById("f_cv").files[0];
+
+        if (!skill || !exp || !bio || !location || !photo || !idCard || !cv) {
+            alert("Please fill all required fields and upload all required documents.");
+            return;
+        }
+
+        if (bio.length < 20) {
+            alert("Bio must be at least 20 characters.");
+            return;
+        }
+
+        fd.append("skill", skill);
+        fd.append("experience", exp);
+        fd.append("bio", bio);
         fd.append("age", document.getElementById("f_age").value);
         fd.append("gender", document.getElementById("f_gender").value);
-        fd.append("location", document.getElementById("f_loc").value);
+        fd.append("location", location);
 
-        // FILES
-        fd.append("profile_photo", document.getElementById("f_photo").files[0]);
-        fd.append("id_card", document.getElementById("f_id").files[0]);
-        fd.append("cv", document.getElementById("f_cv").files[0]);
+        fd.append("profile_photo", photo);
+        fd.append("id_card", idCard);
+        fd.append("cv", cv);
 
         if (document.getElementById("f_cert").files[0]) {
             fd.append("certificate", document.getElementById("f_cert").files[0]);
-        }
-
-        // 🔥 DEBUG (YOU SHOULD HAVE DONE THIS EARLIER)
-        for (let pair of fd.entries()) {
-            console.log(pair[0], pair[1]);
         }
 
         fetch("/api/pro/complete-profile", {
@@ -125,19 +137,25 @@
             })
             .then(async res => {
                 const data = await res.json();
+                console.log("Response:", data);
 
                 if (!res.ok) {
-                    console.log("VALIDATION ERROR:", data);
-                    alert(JSON.stringify(data.errors || data.message));
+                    if (data.errors) {
+                        const errorMessages = Object.values(data.errors).flat().join("\n");
+                        alert(errorMessages);
+                    } else {
+                        alert(data.message || "Something failed.");
+                    }
                     return;
                 }
 
-                alert("Profile saved successfully!");
-                window.location.href = "/pro/dashboard";
+                localStorage.setItem("approval_status", "pending");
+                alert("Profile submitted for review! You will be notified once approved.");
+                window.location.href = "/";
             })
             .catch(err => {
                 console.error("ERROR:", err);
-                alert("Something failed. Check console.");
+                alert("Server connection failed. Please try again.");
             });
     }
 </script>
