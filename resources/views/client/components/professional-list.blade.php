@@ -1,5 +1,5 @@
 <section class="professional-list-section">
-    <div class="card border-0 shadow-sm mb-4">
+    <div class="card border-0 shadow-sm mb-4" style="border-top: 4px solid #6f42c1 !important;">
         <div class="card-body p-4">
             <div class="row g-2 align-items-center">
                 <div class="col-md-4">
@@ -31,6 +31,7 @@
                         type="button"
                         id="professional-search-button"
                         class="btn btn-success btn-sm w-100 rounded-pill fw-bold h-100 d-flex align-items-center justify-content-center gap-2"
+                        onclick="if(typeof window.loadProfessionalsResults==='function'){window.loadProfessionalsResults(document.getElementById('professional-skill').value, document.getElementById('professional-location').value);}"
                     >
                         <i class="fa-solid fa-search"></i> Search
                     </button>
