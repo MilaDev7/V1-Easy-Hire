@@ -11,7 +11,34 @@ use App\Mail\ProfessionalStatusMail;
 
 class AdminController extends Controller
 {
-   public function approveProfessional($id)
+
+//Pending Professionals (DEFAULT VIEW)
+    public function pendingProfessionals()
+    {
+        $pros = \App\Models\Professional::with('user')
+            ->where('status', 'pending')
+            ->latest()
+            ->get()
+            ->map(function ($pro) {
+                return [
+                    'id' => $pro->id,
+                    'name' => $pro->user->name ?? '',
+                    'email' => $pro->user->email ?? '',
+                    'skill' => $pro->skill,
+                    'location' => $pro->location,
+                    'cv' => $pro->cv,
+                    'certificate' => $pro->certificate,
+                    'status' => $pro->status,
+                ];
+            });
+
+        return response()->json($pros);
+    }
+
+
+    //approveProfessional
+
+    public function approvedProfessionals($id)
  {
     // 1. Fetch professional with the linked user data
     $professional = \App\Models\Professional::with('user')->findOrFail($id);
@@ -27,10 +54,8 @@ class AdminController extends Controller
         );
     }
 
-    // 3. RETURN MUST BE LAST
-    return response()->json([
-        'message' => 'Professional approved and email sent.'
-    ]);
+        // 3. RETURN MUST BE LAST
+        return response()->json($professional);
  }
 
     //rejectProfessional
@@ -61,7 +86,7 @@ class AdminController extends Controller
 
     //suspendUser
 
-public function suspendUser($id)
+public function suspendedUsers($id)
 {
     // 1. Find the user directly
     $user = User::findOrFail($id);
@@ -81,9 +106,7 @@ public function suspendUser($id)
         \Log::error("Failed to send suspension email: " . $e->getMessage());
     }
 
-    return response()->json([
-        'message' => 'User suspended and logged out successfully'
-    ]);
+        return response()->json($user);
 }
 
     //unsuspendUser
@@ -299,4 +322,14 @@ public function forceCancelContract($id)
         'message' => 'User restored successfully'
     ]);
 }
+
+    public function stats()
+    {
+        return response()->json([
+            'pending_professionals' => \App\Models\Professional::where('status', 'pending')->count(),
+            'active_contracts' => \App\Models\Contract::where('status', 'active')->count(),
+            'total_users' => User::count(),
+            'open_reports' => \App\Models\Report::where('status', 'pending')->count(),
+        ]);
+    }
 }
