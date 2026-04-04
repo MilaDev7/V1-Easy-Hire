@@ -86,11 +86,12 @@ Route::middleware(['auth:sanctum', 'check_status'])->group(function () {
     });
 
 
-    // Professional Routes
+    // Professional id Routes
 
     Route::middleware('role:professional')->group(function () {
         // Profile Management
         Route::post('/professional/profile', [ProfessionalController::class, 'updateProfile']);
+        Route::get('/pro/me', [ProfessionalController::class, 'me']);
 
         // Job/Application Management
         Route::post('/jobs/{id}/apply', [ApplicationController::class, 'apply']);
@@ -105,6 +106,32 @@ Route::middleware(['auth:sanctum', 'check_status'])->group(function () {
         // Contracts
         // Route::get('/my-contracts', [ContractController::class, 'myContracts']);
     });
+
+
+
+    //Route for frontend
+
+    Route::middleware('auth:sanctum')->group(function () {
+
+        Route::get('/jobs', [ProfessionalController::class, 'jobs']);
+
+        Route::post('/pro/apply', [ProfessionalController::class, 'apply']);
+
+        Route::get('/pro/applications', [ProfessionalController::class, 'myApplications']);
+        Route::post('/pro/withdraw', [ProfessionalController::class, 'withdraw']);
+        Route::post('/pro/withdraw-application', [ProfessionalController::class, 'withdraw']);
+
+        Route::get('/pro/contracts', [ProfessionalController::class, 'myContracts']);
+        Route::post('/pro/complete', [ProfessionalController::class, 'completeContract']);
+        Route::post('/pro/complete-contract', [ProfessionalController::class, 'completeContract']);
+
+        Route::get('/pro/stats', [ProfessionalController::class, 'stats']);
+    });
+
+
+
+
+
 
     /*
     |--------------------------------------------------------------------------
