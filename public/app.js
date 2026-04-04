@@ -2440,9 +2440,914 @@
         loadProfessionalJobsView();
     }
 
+    function loadAdminStats() {
+        console.log("Loading admin stats...");
+        fetchJson("/api/admin/stats")
+            .then((payload) => {
+                console.log("Stats payload:", payload);
+                setText("admin-pending-approvals-count", payload.pending_professionals ?? 0);
+                setText("admin-active-contracts-count", payload.active_contracts ?? 0);
+                setText("admin-total-users-count", payload.total_users ?? 0);
+                setText("admin-open-reports-count", payload.open_reports ?? 0);
+            })
+            .catch((err) => {
+                console.error("Error loading stats:", err);
+                setText("admin-pending-approvals-count", "--");
+                setText("admin-active-contracts-count", "--");
+                setText("admin-total-users-count", "--");
+                setText("admin-open-reports-count", "--");
+            });
+    }
+
+    function loadPendingProfessionals() {
+        fetchJson("/api/admin/professionals/pending")
+            .then((payload) => {
+                renderPendingProfessionals(toArray(payload));
+            })
+            .catch(() => {
+                renderPendingProfessionalsError();
+            });
+    }
+
+    function renderPendingProfessionals(professionals) {
+        const area = document.getElementById("admin-pending-professionals-area");
+
+        if (!area) {
+            return;
+        }
+
+        if (!professionals.length) {
+            area.innerHTML = '<div class="alert alert-light border mb-0">No pending professionals.</div>';
+            return;
+        }
+
+        const rows = professionals
+            .map((pro) => {
+                const photo = pro.profile_photo 
+                    ? `/storage/${pro.profile_photo}` 
+                    : "/images/user1.jpg";
+                
+                return `
+                    <tr data-professional-id="${pro.id}">
+                        <td>
+                            <img src="${photo}" alt="Photo" class="rounded-circle" style="width: 48px; height: 48px; object-fit: cover;">
+                        </td>
+                        <td class="fw-semibold">${pro.user?.name ?? 'N/A'}</td>
+                        <td>${pro.skill ?? 'N/A'}</td>
+                        <td>${pro.location ?? 'N/A'}</td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="viewDocument('cv', ${pro.id})">
+                                <i class="fa-solid fa-file me-1"></i> CV
+                            </button>
+                        </td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-outline-success" onclick="viewDocument('certificate', ${pro.id})">
+                                <i class="fa-solid fa-certificate me-1"></i> Certificate
+                            </button>
+                        </td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-outline-warning" onclick="viewDocument('id', ${pro.id})">
+                                <i class="fa-solid fa-id-card me-1"></i> ID
+                            </button>
+                        </td>
+                        <td>
+                            <span class="badge bg-warning">Pending</span>
+                        </td>
+                        <td>
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-sm btn-success" onclick="approveProfessional(${pro.id})">
+                                    <i class="fa-solid fa-check"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-danger" onclick="rejectProfessional(${pro.id})">
+                                    <i class="fa-solid fa-times"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            })
+            .join("");
+
+        area.innerHTML = `
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th scope="col">Photo</th>
+                            <th scope="col">Name</th>
+                            <th scope="col">Skill</th>
+                            <th scope="col">Location</th>
+                            <th scope="col">CV</th>
+                            <th scope="col">Certificate</th>
+                            <th scope="col">ID</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>
+        `;
+    }
+
+    function renderPendingProfessionalsError() {
+        const area = document.getElementById("admin-pending-professionals-area");
+
+        if (area) {
+            area.innerHTML = '<div class="alert alert-danger mb-0">Unable to load pending professionals.</div>';
+        }
+    }
+
+    function approveProfessional(id) {
+        showAdminActionModal(
+            'Approve Professional',
+            'Are you sure you want to approve this professional?',
+            'success',
+            () => {
+                postJson(`/api/admin/professionals/${id}/approve`)
+                    .then(() => {
+                        removePendingRow(id);
+                        loadAdminStats();
+                    })
+                    .catch((err) => {
+                        alert(err.message || "Failed to approve professional.");
+                    });
+            }
+        );
+    }
+
+    function rejectProfessional(id) {
+        showAdminActionModal(
+            'Reject Professional',
+            'Are you sure you want to reject this professional?',
+            'danger',
+            () => {
+                postJson(`/api/admin/professionals/${id}/reject`)
+                    .then(() => {
+                        removePendingRow(id);
+                        loadAdminStats();
+                    })
+                    .catch((err) => {
+                        alert(err.message || "Failed to reject professional.");
+                    });
+            }
+        );
+    }
+
+    function removePendingRow(id) {
+        const row = document.querySelector(`tr[data-professional-id="${id}"]`);
+        if (row) {
+            row.remove();
+        }
+        const tbody = document.querySelector('#admin-pending-professionals-area tbody');
+        if (tbody && !tbody.children.length) {
+            const area = document.getElementById('admin-pending-professionals-area');
+            area.innerHTML = '<div class="alert alert-light border mb-0">No pending professionals.</div>';
+        }
+    }
+
+    function showAdminActionModal(title, message, btnClass, onConfirm) {
+        const modalEl = document.getElementById('admin-action-modal');
+        const titleEl = document.getElementById('admin-action-modal-title');
+        const bodyEl = document.getElementById('admin-action-modal-body');
+        const confirmBtn = document.getElementById('admin-action-confirm-btn');
+
+        titleEl.textContent = title;
+        bodyEl.textContent = message;
+        confirmBtn.className = `btn btn-${btnClass}`;
+        confirmBtn.textContent = 'Confirm';
+
+        const modal = new bootstrap.Modal(modalEl);
+        modal.show();
+
+        confirmBtn.onclick = () => {
+            modal.hide();
+            onConfirm();
+        };
+    }
+
+    function viewDocument(type, id) {
+        window.open(`/api/admin/professionals/${id}/document/${type}`, '_blank');
+    }
+
+    function initializeAdminSidebar() {
+        const sidebarItems = document.querySelectorAll('.admin-sidebar-item');
+        const sidebarChildren = document.querySelectorAll('.admin-sidebar-child');
+
+        let currentOpen = null;
+
+        sidebarItems.forEach(item => {
+            item.addEventListener('click', function() {
+                const toggleId = this.dataset.toggle;
+                const view = this.dataset.view;
+
+                if (toggleId) {
+                    const children = document.getElementById(toggleId);
+                    const icon = this.querySelector('.admin-collapse-icon');
+
+                    if (currentOpen && currentOpen !== children) {
+                        currentOpen.classList.remove('show');
+                        const prevItem = document.querySelector(`[data-toggle="${currentOpen.id}"]`);
+                        if (prevItem) {
+                            prevItem.querySelector('.admin-collapse-icon').classList.remove('rotated');
+                        }
+                    }
+
+                    if (children) {
+                        children.classList.toggle('show');
+                        icon.classList.toggle('rotated');
+                        currentOpen = children.classList.contains('show') ? children : null;
+                    }
+                }
+
+                if (view) {
+                    loadAdminSection(view);
+                }
+            });
+        });
+
+        sidebarChildren.forEach(child => {
+            child.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const view = this.dataset.view;
+
+                document.querySelectorAll('.admin-sidebar-child').forEach(c => c.classList.remove('active'));
+                this.classList.add('active');
+
+                if (view) {
+                    loadAdminSection(view);
+                }
+            });
+        });
+    }
+
+    function loadAdminSection(view) {
+        document.querySelectorAll('.admin-sidebar-item').forEach(item => item.classList.remove('active'));
+        document.querySelectorAll('.admin-sidebar-child').forEach(child => child.classList.remove('active'));
+
+        const item = document.querySelector(`.admin-sidebar-item[data-view="${view}"]`);
+        const child = document.querySelector(`.admin-sidebar-child[data-view="${view}"]`);
+
+        if (item) item.classList.add('active');
+        if (child) child.classList.add('active');
+
+        const pendingSection = document.querySelector('.admin-content-section:not(#users-section):not(#jobs-section):not(#contracts-section):not(#reports-section):not(#plans-section)');
+        const usersSection = document.getElementById('users-section');
+        const jobsSection = document.getElementById('jobs-section');
+        const contractsSection = document.getElementById('contracts-section');
+        const reportsSection = document.getElementById('reports-section');
+        const plansSection = document.getElementById('plans-section');
+        
+        const contentArea = document.getElementById('admin-content-area');
+        
+        const sections = {
+            'all-users': { title: 'All Users', fetch: loadUsers },
+            'suspended-users': { title: 'Suspended Users', fetch: loadSuspendedUsers },
+            'deleted-users': { title: 'Deleted Users', fetch: loadDeletedUsers },
+            'all-professionals': { title: 'All Professionals', fetch: loadAllProfessionals },
+            'pending-professionals': { title: 'Pending Approvals', fetch: loadPendingProfessionals },
+            'jobs-view': { title: 'Jobs', fetch: loadJobs },
+            'contracts-view': { title: 'Contracts', fetch: loadContracts },
+            'reports': { title: 'All Reports', fetch: loadReports },
+            'resolved-reports': { title: 'Resolved Reports', fetch: loadResolvedReports },
+            'all-payments': { title: 'All Payments', fetch: loadAllPayments },
+            'pending-payments': { title: 'Pending Payments', fetch: loadPendingPayments },
+            'plans': { title: 'Subscription Plans', fetch: loadPlans },
+            'general-settings': { title: 'General Settings', fetch: loadGeneralSettings },
+            'system-settings': { title: 'System Settings', fetch: loadSystemSettings }
+        };
+
+        if (sections[view]) {
+            hideAllAdminSections();
+            if (['all-users', 'suspended-users', 'deleted-users'].includes(view) && usersSection) {
+                usersSection.style.display = 'block';
+                document.getElementById('users-section-title').textContent = sections[view].title;
+            } else if (view === 'pending-professionals' && pendingSection) {
+                pendingSection.style.display = 'block';
+                if (contentArea) { contentArea.innerHTML = ''; contentArea.appendChild(pendingSection); }
+            } else if (['jobs-view'].includes(view) && jobsSection) {
+                jobsSection.style.display = 'block';
+            } else if (['contracts-view'].includes(view) && contractsSection) {
+                contractsSection.style.display = 'block';
+            } else if (['reports', 'resolved-reports'].includes(view) && reportsSection) {
+                reportsSection.style.display = 'block';
+            } else if (['plans'].includes(view) && plansSection) {
+                plansSection.style.display = 'block';
+            }
+            sections[view].fetch();
+        } else {
+            hideAllAdminSections();
+        }
+    }
+
+    function loadAllProfessionals() { fetchJson("/api/admin/professionals").then(p => renderProfessionalsTable(toArray(p))).catch(renderProfessionalsTableError); }
+    function renderProfessionalsTable(pros) {
+        const area = document.getElementById('users-table-area');
+        if (!area) return;
+        if (!pros.length) { area.innerHTML = '<div class="alert alert-light border mb-0">No professionals found.</div>'; return; }
+        area.innerHTML = '<div class="table-responsive"><table class="table align-middle mb-0"><thead><tr><th>Name</th><th>Skill</th><th>Location</th><th>Status</th></tr></thead><tbody>' + 
+            pros.map(p => `<tr><td class="fw-semibold">${p.user?.name ?? 'N/A'}</td><td>${p.skill ?? 'N/A'}</td><td>${p.location ?? 'N/A'}</td><td><span class="badge bg-${p.approval_status === 'approved' ? 'success' : 'warning'}">${p.approval_status ?? 'Pending'}</span></td></tr>`).join('') + 
+            '</tbody></table></div>';
+    }
+    function renderProfessionalsTableError() {
+        const area = document.getElementById('users-table-area');
+        if (area) area.innerHTML = '<div class="alert alert-danger mb-0">Unable to load professionals.</div>';
+    }
+
+    function loadResolvedReports() { fetchJson("/api/admin/reports?status=resolved").then(p => renderReportsTable(toArray(p))).catch(renderReportsTableError); }
+    function loadAllPayments() { 
+        const area = document.getElementById('users-table-area');
+        if (area) area.innerHTML = '<div class="alert alert-info mb-0">Payments section coming soon.</div>';
+    }
+    function loadPendingPayments() { 
+        const area = document.getElementById('users-table-area');
+        if (area) area.innerHTML = '<div class="alert alert-info mb-0">Pending payments section coming soon.</div>';
+    }
+    function loadGeneralSettings() { 
+        const area = document.getElementById('users-table-area');
+        if (area) area.innerHTML = '<div class="alert alert-info mb-0">General settings section coming soon.</div>';
+    }
+    function loadSystemSettings() { 
+        const area = document.getElementById('users-table-area');
+        if (area) area.innerHTML = '<div class="alert alert-info mb-0">System settings section coming soon.</div>';
+    }
+
+    function toggleAdminDarkMode() {
+        console.log("Dark mode toggle clicked!");
+        document.body.classList.toggle('admin-dashboard-dark');
+        
+        // Save preference
+        const isDark = document.body.classList.contains('admin-dashboard-dark');
+        localStorage.setItem('admin_dark_mode', isDark ? '1' : '0');
+        
+        console.log("Dark mode active:", isDark);
+    }
+
+    // Load saved dark mode preference on page load
+    function loadAdminDarkModePreference() {
+        const savedPref = localStorage.getItem('admin_dark_mode');
+        if (savedPref === '1') {
+            document.body.classList.add('admin-dashboard-dark');
+        }
+    }
+
+    function hideAllAdminSections() {
+        document.querySelectorAll('.admin-content-section').forEach(el => el.style.display = 'none');
+    }
+
+    function loadUsers() {
+        fetchJson("/api/admin/users")
+            .then((payload) => {
+                renderUsersTable(toArray(payload), 'all');
+            })
+            .catch(() => {
+                renderUsersTableError();
+            });
+    }
+
+    function loadSuspendedUsers() {
+        fetchJson("/api/admin/users?suspended=1")
+            .then((payload) => {
+                renderUsersTable(toArray(payload), 'suspended');
+            })
+            .catch(() => {
+                renderUsersTableError();
+            });
+    }
+
+    function loadDeletedUsers() {
+        fetchJson("/api/admin/users?deleted=1")
+            .then((payload) => {
+                renderUsersTable(toArray(payload), 'deleted');
+            })
+            .catch(() => {
+                renderUsersTableError();
+            });
+    }
+
+    function renderUsersTable(users, type) {
+        const area = document.getElementById('users-table-area');
+        if (!area) return;
+
+        if (!users.length) {
+            area.innerHTML = '<div class="alert alert-light border mb-0">No users found.</div>';
+            return;
+        }
+
+        const rows = users.map(user => {
+            const statusBadge = user.deleted_at 
+                ? '<span class="badge bg-danger">Deleted</span>'
+                : user.is_suspended 
+                    ? '<span class="badge bg-warning">Suspended</span>'
+                    : '<span class="badge bg-success">Active</span>';
+            
+            const roleBadge = user.role === 'admin' 
+                ? '<span class="badge bg-primary">Admin</span>'
+                : user.role === 'professional'
+                    ? '<span class="badge bg-info">Professional</span>'
+                    : '<span class="badge bg-secondary">Client</span>';
+
+            return `
+                <tr data-user-id="${user.id}">
+                    <td class="fw-semibold">${user.name ?? 'N/A'}</td>
+                    <td>${user.email ?? 'N/A'}</td>
+                    <td>${roleBadge}</td>
+                    <td>${statusBadge}</td>
+                    <td>
+                        <div class="d-flex gap-2">
+                            ${!user.deleted_at && !user.is_suspended ? `<button type="button" class="btn btn-sm btn-warning" onclick="suspendUser(${user.id})"><i class="fa-solid fa-ban"></i></button>` : ''}
+                            ${user.is_suspended && !user.deleted_at ? `<button type="button" class="btn btn-sm btn-success" onclick="unsuspendUser(${user.id})"><i class="fa-solid fa-check"></i></button>` : ''}
+                            ${user.deleted_at ? `<button type="button" class="btn btn-sm btn-info" onclick="restoreUser(${user.id})"><i class="fa-solid fa-trash-restore"></i></button>` : ''}
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+        area.innerHTML = `
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th scope="col">Name</th>
+                            <th scope="col">Email</th>
+                            <th scope="col">Role</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>
+        `;
+    }
+
+    function renderUsersTableError() {
+        const area = document.getElementById('users-table-area');
+        if (area) {
+            area.innerHTML = '<div class="alert alert-danger mb-0">Unable to load users.</div>';
+        }
+    }
+
+    function removeUserRow(id) {
+        const row = document.querySelector(`tr[data-user-id="${id}"]`);
+        if (row) row.remove();
+    }
+
+    function showUsersActionModal(title, message, btnClass, onConfirm) {
+        const modalEl = document.getElementById('users-action-modal');
+        const titleEl = document.getElementById('users-action-modal-title');
+        const bodyEl = document.getElementById('users-action-modal-body');
+        const confirmBtn = document.getElementById('users-action-confirm-btn');
+
+        titleEl.textContent = title;
+        bodyEl.textContent = message;
+        confirmBtn.className = `btn btn-${btnClass}`;
+        confirmBtn.textContent = 'Confirm';
+
+        const modal = new bootstrap.Modal(modalEl);
+        modal.show();
+
+        confirmBtn.onclick = () => {
+            modal.hide();
+            onConfirm();
+        };
+    }
+
+    function suspendUser(id) {
+        showUsersActionModal(
+            'Suspend User',
+            'Are you sure you want to suspend this user?',
+            'warning',
+            () => {
+                postJson(`/api/admin/users/${id}/suspend`)
+                    .then(() => {
+                        removeUserRow(id);
+                        loadAdminStats();
+                    })
+                    .catch(err => alert(err.message || 'Failed to suspend user.'));
+            }
+        );
+    }
+
+    function unsuspendUser(id) {
+        showUsersActionModal(
+            'Unsuspend User',
+            'Are you sure you want to unsuspend this user?',
+            'success',
+            () => {
+                postJson(`/api/admin/users/${id}/unsuspend`)
+                    .then(() => {
+                        removeUserRow(id);
+                        loadAdminStats();
+                    })
+                    .catch(err => alert(err.message || 'Failed to unsuspend user.'));
+            }
+        );
+    }
+
+    function restoreUser(id) {
+        showUsersActionModal(
+            'Restore User',
+            'Are you sure you want to restore this user?',
+            'info',
+            () => {
+                postJson(`/api/admin/users/${id}/restore`)
+                    .then(() => {
+                        removeUserRow(id);
+                        loadAdminStats();
+                    })
+                    .catch(err => alert(err.message || 'Failed to restore user.'));
+            }
+        );
+    }
+
+    function loadJobs() {
+        fetchJson("/api/admin/jobs")
+            .then((payload) => {
+                renderJobsTable(toArray(payload));
+            })
+            .catch(() => {
+                renderJobsTableError();
+            });
+    }
+
+    function renderJobsTable(jobs) {
+        const area = document.getElementById('jobs-table-area');
+        if (!area) return;
+
+        if (!jobs.length) {
+            area.innerHTML = '<div class="alert alert-light border mb-0">No jobs found.</div>';
+            return;
+        }
+
+        const rows = jobs.map(job => {
+            const statusBadge = job.status === 'open' 
+                ? '<span class="badge bg-success">Open</span>'
+                : job.status === 'completed'
+                    ? '<span class="badge bg-info">Completed</span>'
+                    : job.status === 'cancelled'
+                        ? '<span class="badge bg-danger">Cancelled</span>'
+                        : '<span class="badge bg-warning">Pending</span>';
+
+            return `
+                <tr data-job-id="${job.id}">
+                    <td class="fw-semibold">${job.title ?? 'N/A'}</td>
+                    <td>${job.skill ?? 'N/A'}</td>
+                    <td>${job.location ?? 'N/A'}</td>
+                    <td>${job.budget ? '$' + job.budget : 'N/A'}</td>
+                    <td>${statusBadge}</td>
+                    <td>${job.client?.name ?? 'N/A'}</td>
+                    <td>${job.created_at ? new Date(job.created_at).toLocaleDateString() : 'N/A'}</td>
+                </tr>
+            `;
+        }).join('');
+
+        area.innerHTML = `
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th scope="col">Title</th>
+                            <th scope="col">Skill</th>
+                            <th scope="col">Location</th>
+                            <th scope="col">Budget</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Client</th>
+                            <th scope="col">Created</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>
+        `;
+    }
+
+    function renderJobsTableError() {
+        const area = document.getElementById('jobs-table-area');
+        if (area) area.innerHTML = '<div class="alert alert-danger mb-0">Unable to load jobs.</div>';
+    }
+
+    function loadContracts() {
+        fetchJson("/api/admin/contracts")
+            .then((payload) => {
+                renderContractsTable(toArray(payload));
+            })
+            .catch(() => {
+                renderContractsTableError();
+            });
+    }
+
+    function renderContractsTable(contracts) {
+        const area = document.getElementById('contracts-table-area');
+        if (!area) return;
+
+        if (!contracts.length) {
+            area.innerHTML = '<div class="alert alert-light border mb-0">No contracts found.</div>';
+            return;
+        }
+
+        const rows = contracts.map(contract => {
+            const statusBadge = contract.status === 'active' 
+                ? '<span class="badge bg-success">Active</span>'
+                : contract.status === 'completed'
+                    ? '<span class="badge bg-info">Completed</span>'
+                    : contract.status === 'cancelled'
+                        ? '<span class="badge bg-danger">Cancelled</span>'
+                        : '<span class="badge bg-warning">Pending</span>';
+
+            const canCancel = contract.status === 'active';
+
+            return `
+                <tr data-contract-id="${contract.id}">
+                    <td class="fw-semibold">${contract.title ?? 'N/A'}</td>
+                    <td>${contract.job?.title ?? 'N/A'}</td>
+                    <td>${contract.client?.name ?? 'N/A'}</td>
+                    <td>${contract.professional?.name ?? 'N/A'}</td>
+                    <td>${statusBadge}</td>
+                    <td>${contract.created_at ? new Date(contract.created_at).toLocaleDateString() : 'N/A'}</td>
+                    <td>
+                        ${canCancel ? `<button type="button" class="btn btn-sm btn-danger" onclick="forceCancelContract(${contract.id})"><i class="fa-solid fa-times"></i> Force Cancel</button>` : ''}
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+        area.innerHTML = `
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th scope="col">Title</th>
+                            <th scope="col">Job</th>
+                            <th scope="col">Client</th>
+                            <th scope="col">Professional</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Created</th>
+                            <th scope="col">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>
+        `;
+    }
+
+    function renderContractsTableError() {
+        const area = document.getElementById('contracts-table-area');
+        if (area) area.innerHTML = '<div class="alert alert-danger mb-0">Unable to load contracts.</div>';
+    }
+
+    function removeContractRow(id) {
+        const row = document.querySelector(`tr[data-contract-id="${id}"]`);
+        if (row) row.remove();
+    }
+
+    function forceCancelContract(id) {
+        const modalEl = document.getElementById('admin-contract-modal');
+        const titleEl = document.getElementById('admin-contract-modal-title');
+        const bodyEl = document.getElementById('admin-contract-modal-body');
+        const confirmBtn = document.getElementById('admin-contract-confirm-btn');
+
+        titleEl.textContent = 'Force Cancel Contract';
+        bodyEl.textContent = 'Are you sure you want to force cancel this contract? This action cannot be undone.';
+        confirmBtn.className = 'btn btn-danger';
+        confirmBtn.textContent = 'Force Cancel';
+
+        const modal = new bootstrap.Modal(modalEl);
+        modal.show();
+
+        confirmBtn.onclick = () => {
+            modal.hide();
+            postJson(`/api/admin/contracts/${id}/force-cancel`)
+                .then(() => {
+                    removeContractRow(id);
+                    loadAdminStats();
+                })
+                .catch(err => alert(err.message || 'Failed to cancel contract.'));
+        };
+    }
+
+    let currentResolveReportId = null;
+
+    function loadReports() {
+        fetchJson("/api/admin/reports")
+            .then((payload) => {
+                renderReportsTable(toArray(payload));
+            })
+            .catch(() => {
+                renderReportsTableError();
+            });
+    }
+
+    function renderReportsTable(reports) {
+        const area = document.getElementById('reports-table-area');
+        if (!area) return;
+
+        if (!reports.length) {
+            area.innerHTML = '<div class="alert alert-light border mb-0">No reports found.</div>';
+            return;
+        }
+
+        const rows = reports.map(report => {
+            const statusBadge = report.status === 'resolved' 
+                ? '<span class="badge bg-success">Resolved</span>'
+                : '<span class="badge bg-warning">Pending</span>';
+
+            return `
+                <tr data-report-id="${report.id}">
+                    <td class="fw-semibold">${report.title ?? 'N/A'}</td>
+                    <td>${report.reporter?.name ?? 'N/A'}</td>
+                    <td>${report.reported?.name ?? 'N/A'}</td>
+                    <td>${report.reason ?? 'N/A'}</td>
+                    <td>${statusBadge}</td>
+                    <td>${report.created_at ? new Date(report.created_at).toLocaleDateString() : 'N/A'}</td>
+                    <td>
+                        ${report.status !== 'resolved' ? `<button type="button" class="btn btn-sm btn-success" onclick="showResolveReportModal(${report.id})"><i class="fa-solid fa-check"></i> Resolve</button>` : ''}
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+        area.innerHTML = `
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th scope="col">Title</th>
+                            <th scope="col">Reporter</th>
+                            <th scope="col">Reported</th>
+                            <th scope="col">Reason</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Date</th>
+                            <th scope="col">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>
+        `;
+    }
+
+    function renderReportsTableError() {
+        const area = document.getElementById('reports-table-area');
+        if (area) area.innerHTML = '<div class="alert alert-danger mb-0">Unable to load reports.</div>';
+    }
+
+    function showResolveReportModal(id) {
+        currentResolveReportId = id;
+        document.getElementById('report-resolution-notes').value = '';
+        const modal = new bootstrap.Modal(document.getElementById('admin-report-modal'));
+        modal.show();
+
+        document.getElementById('report-resolve-confirm-btn').onclick = () => {
+            const notes = document.getElementById('report-resolution-notes').value;
+            postJson(`/api/admin/reports/${id}/resolve`, { notes })
+                .then(() => {
+                    modal.hide();
+                    loadReports();
+                    loadAdminStats();
+                })
+                .catch(err => alert(err.message || 'Failed to resolve report.'));
+        };
+    }
+
+    function loadPlans() {
+        fetchJson("/api/admin/plans")
+            .then((payload) => {
+                renderPlansTable(toArray(payload));
+            })
+            .catch(() => {
+                renderPlansTableError();
+            });
+    }
+
+    function renderPlansTable(plans) {
+        const area = document.getElementById('plans-table-area');
+        if (!area) return;
+
+        if (!plans.length) {
+            area.innerHTML = '<div class="alert alert-light border mb-0">No plans found.</div>';
+            return;
+        }
+
+        const rows = plans.map(plan => `
+            <tr data-plan-id="${plan.id}">
+                <td class="fw-semibold">${plan.name ?? 'N/A'}</td>
+                <td>$${plan.price ?? 0}</td>
+                <td>${plan.duration_days ?? 0} days</td>
+                <td>${plan.job_posts_allowed ?? 0}</td>
+                <td>${plan.description ?? '-'}</td>
+                <td>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-sm btn-primary" onclick="showEditPlanModal(${plan.id}, '${plan.name}', ${plan.price}, ${plan.duration_days}, ${plan.job_posts_allowed}, '${plan.description || ''}')">
+                            <i class="fa-solid fa-edit"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-danger" onclick="showDeletePlanModal(${plan.id})">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+
+        area.innerHTML = `
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th scope="col">Name</th>
+                            <th scope="col">Price</th>
+                            <th scope="col">Duration</th>
+                            <th scope="col">Job Posts</th>
+                            <th scope="col">Description</th>
+                            <th scope="col">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>
+        `;
+    }
+
+    function renderPlansTableError() {
+        const area = document.getElementById('plans-table-area');
+        if (area) area.innerHTML = '<div class="alert alert-danger mb-0">Unable to load plans.</div>';
+    }
+
+    let currentDeletePlanId = null;
+
+    function showCreatePlanModal() {
+        document.getElementById('plan-id').value = '';
+        document.getElementById('plan-name').value = '';
+        document.getElementById('plan-price').value = '';
+        document.getElementById('plan-duration').value = '';
+        document.getElementById('plan-job-posts').value = '';
+        document.getElementById('plan-description').value = '';
+        document.getElementById('admin-plan-modal-title').textContent = 'Create Plan';
+        new bootstrap.Modal(document.getElementById('admin-plan-modal')).show();
+    }
+
+    function showEditPlanModal(id, name, price, duration, jobPosts, description) {
+        document.getElementById('plan-id').value = id;
+        document.getElementById('plan-name').value = name;
+        document.getElementById('plan-price').value = price;
+        document.getElementById('plan-duration').value = duration;
+        document.getElementById('plan-job-posts').value = jobPosts;
+        document.getElementById('plan-description').value = description;
+        document.getElementById('admin-plan-modal-title').textContent = 'Edit Plan';
+        new bootstrap.Modal(document.getElementById('admin-plan-modal')).show();
+    }
+
+    function savePlan() {
+        const id = document.getElementById('plan-id').value;
+        const data = {
+            name: document.getElementById('plan-name').value,
+            price: parseFloat(document.getElementById('plan-price').value),
+            duration_days: parseInt(document.getElementById('plan-duration').value),
+            job_posts_allowed: parseInt(document.getElementById('plan-job-posts').value),
+            description: document.getElementById('plan-description').value
+        };
+
+        const url = id ? `/api/admin/plans/${id}` : '/api/admin/plans';
+        const method = id ? 'PUT' : 'POST';
+
+        fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('token') },
+            body: JSON.stringify(data)
+        })
+        .then(res => res.json())
+        .then(() => {
+            bootstrap.Modal.getInstance(document.getElementById('admin-plan-modal')).hide();
+            loadPlans();
+        })
+        .catch(err => alert(err.message || 'Failed to save plan.'));
+    }
+
+    function showDeletePlanModal(id) {
+        currentDeletePlanId = id;
+        const modal = new bootstrap.Modal(document.getElementById('admin-plan-delete-modal'));
+        modal.show();
+
+        document.getElementById('plan-delete-confirm-btn').onclick = () => {
+            modal.hide();
+            fetch(`/api/admin/plans/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
+            })
+            .then(() => {
+                document.querySelector(`tr[data-plan-id="${id}"]`)?.remove();
+                loadPlans();
+            })
+            .catch(err => alert(err.message || 'Failed to delete plan.'));
+        };
+    }
+
     document.addEventListener("DOMContentLoaded", function () {
         const clientDashboard = document.querySelector(".client-dashboard-main");
         const professionalDashboard = document.getElementById("professional-dashboard");
+        const adminDashboard = document.getElementById("admin-dashboard");
 
         if (clientDashboard) {
             bindSidebarNavigation();
@@ -2458,6 +3363,12 @@
         if (professionalDashboard) {
             initializeProfessionalDashboard();
         }
+
+        if (adminDashboard) {
+            initializeAdminSidebar();
+            loadAdminStats();
+            loadPendingProfessionals();
+        }
     });
 
     window.loadJobPosts = loadJobPosts;
@@ -2468,4 +3379,7 @@
     window.loadProfessionalJobs = loadProfessionalJobs;
     window.bindProfessionalSearch = bindProfessionalSearch;
     window.loadProfessionalsResults = loadProfessionalsResults;
+    window.loadAdminStats = loadAdminStats;
+    window.loadPendingProfessionals = loadPendingProfessionals;
+    window.toggleAdminDarkMode = toggleAdminDarkMode;
 })();
