@@ -74,4 +74,6 @@ Route::get('/pro/dashboard', function () {
     return view('professional.dashboard');
 });
 
-
+Route::get('/admin/dashboard', function () {
+    return view('admin.dashboard');
+});

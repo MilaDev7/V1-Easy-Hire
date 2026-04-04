@@ -126,6 +126,41 @@ Route::middleware(['auth:sanctum', 'check_status'])->group(function () {
         Route::post('/pro/complete-contract', [ProfessionalController::class, 'completeContract']);
 
         Route::get('/pro/stats', [ProfessionalController::class, 'stats']);
+
+        //admin routes for frontend
+
+        // 🔥 PROFESSIONALS
+        Route::get('/admin/professionals/pending', [AdminController::class, 'pendingProfessionals']);
+        Route::get('/admin/professionals/approved', [AdminController::class, 'approvedProfessionals']);
+        Route::post('/admin/professionals/{id}/approve', [AdminController::class, 'approveProfessional']);
+        Route::post('/admin/professionals/{id}/reject', [AdminController::class, 'rejectProfessional']);
+
+        // 🔥 USERS
+        Route::get('/admin/users', [AdminController::class, 'users']);
+        Route::get('/admin/users/suspended', [AdminController::class, 'suspendedUsers']);
+        Route::get('/admin/users/deleted', [AdminController::class, 'deletedUsers']);
+
+        Route::post('/admin/users/{id}/suspend', [AdminController::class, 'suspendUser']);
+        Route::post('/admin/users/{id}/unsuspend', [AdminController::class, 'unsuspendUser']);
+        Route::post('/admin/users/{id}/restore', [AdminController::class, 'restoreUser']);
+
+        // 🔥 JOBS & CONTRACTS
+        Route::get('/admin/jobs', [AdminController::class, 'jobs']);
+        Route::get('/admin/contracts', [AdminController::class, 'contracts']);
+        Route::post('/admin/contracts/{id}/cancel', [AdminController::class, 'forceCancelContract']);
+
+        // 🔥 REPORTS
+        Route::get('/admin/reports', [AdminController::class, 'reports']);
+        Route::post('/admin/reports/{id}/resolve', [AdminController::class, 'resolveReport']);
+
+        // 🔥 PLANS
+        Route::get('/admin/plans', [AdminController::class, 'plans']);
+        Route::post('/admin/plans', [AdminController::class, 'createPlan']);
+        Route::put('/admin/plans/{id}', [AdminController::class, 'updatePlan']);
+        Route::delete('/admin/plans/{id}', [AdminController::class, 'deletePlan']);
+
+        // 🔥 STATS
+        Route::get('/admin/stats', [AdminController::class, 'stats']);
     });
 
 
