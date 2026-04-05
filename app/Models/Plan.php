@@ -9,6 +9,12 @@ class Plan extends Model
     protected $fillable = [
         'name',
         'price',
-        'job_posts_limit'
+        'job_posts_limit',
+        'duration_days',
     ];
+
+    public function subscriptions()
+    {
+        return $this->hasMany(Subscription::class);
+    }
 }
