@@ -1,9 +1,11 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Client\JobController;
+use App\Http\Controllers\ChapaController;
 use App\Models\Application;
 use App\Models\Professional;
+use App\Models\Report;
+use App\Models\Review;
+use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return view('home');
@@ -16,11 +18,11 @@ Route::get('/search', function () {
     $query = Professional::with('user');
 
     if ($service !== '') {
-        $query->where('skill', 'LIKE', '%' . $service . '%');
+        $query->where('skill', 'LIKE', '%'.$service.'%');
     }
 
     if ($location !== '') {
-        $query->where('location', 'LIKE', '%' . $location . '%');
+        $query->where('location', 'LIKE', '%'.$location.'%');
     }
 
     return view('search', [
@@ -38,6 +40,10 @@ Route::get('/register', function () {
     return view('auth.register');
 });
 
+Route::get('/payment-success', [ChapaController::class, 'handlePaymentSuccess']);
+
+Route::get('/payment-failed', [ChapaController::class, 'paymentFailed']);
+
 Route::get('/professionals/{id}', function ($id) {
     $professional = Professional::with('user')->findOrFail($id);
 
@@ -49,12 +55,20 @@ Route::get('/professionals/{id}', function ($id) {
         ->with('job')
         ->get();
 
+    $reviews = Review::where('reviewed_id', $professional->user_id)
+        ->with('reviewer:id,name')
+        ->orderBy('created_at', 'desc')
+        ->get();
+
+    $reportsCount = Report::where('reported_id', $professional->user_id)->count();
+
     return view('professional.show', [
         'professional' => $professional,
         'completedJobs' => $completedJobs,
+        'reviews' => $reviews,
+        'reportsCount' => $reportsCount,
     ]);
 });
-
 
 // Step 2: Role-Specific Setup Forms
 Route::get('/professional-setup', function () {
@@ -63,8 +77,6 @@ Route::get('/professional-setup', function () {
 Route::get('/client-setup', function () {
     return view('auth.client-setup');
 });
-
-
 
 Route::get('/client/dashboard', function () {
     return view('client.dashboard');

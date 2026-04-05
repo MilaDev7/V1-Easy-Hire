@@ -1,25 +1,30 @@
 <?php
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\JobPostController;
-use App\Http\Controllers\Api\ApplicationController;
-use App\Http\Controllers\Api\ProfessionalController;
 use App\Http\Controllers\Api\AdminController;
+use App\Http\Controllers\Api\ApplicationController;
+use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\ClientController;
 use App\Http\Controllers\Api\ContractController;
-use App\Http\Controllers\Api\ReviewController;
-use App\Http\Controllers\Api\SubscriptionController;
+use App\Http\Controllers\Api\JobPostController;
+use App\Http\Controllers\Api\ProfessionalController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\ReportController;
-use App\Http\Controllers\Api\ClientController;
-
+use App\Http\Controllers\Api\ReviewController;
+use App\Http\Controllers\Api\SubscriptionController;
+use App\Http\Controllers\ChapaController;
+use Illuminate\Support\Facades\Route;
 
 // Public Routes (No Token Required)
 
 Route::post('/register/client', [AuthController::class, 'registerClient']);
 Route::post('/register/professional', [AuthController::class, 'registerProfessional']);
 Route::post('/login', [AuthController::class, 'login']);
+
+// Public plans endpoint (no auth required)
+Route::get('/plans', [AdminController::class, 'plans']);
+
+// Chapa Payment Callback (public)
+Route::get('/chapa/payment-success', [ChapaController::class, 'verifyPayment']);
 
 // Professionals are usually public so clients can browse them
 Route::get('/professionals', [ProfessionalController::class, 'index']);
@@ -32,20 +37,21 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 // Client Setup
-Route::post('/client/update-photo',    [ProfileController::class, 'updateClientPhoto']);
+Route::post('/client/update-photo', [ProfileController::class, 'updateClientPhoto']);
+Route::get('/client/profile', [ProfileController::class, 'getClientProfile']);
+Route::post('/client/profile', [ProfileController::class, 'updateClientProfile']);
 
-//Authenticated Routes (Token Required + Check Status)
+// Authenticated Routes (Token Required + Check Status)
 
 Route::middleware(['auth:sanctum', 'check_status'])->group(function () {
 
     // General User Actions
-    Route::post('/logout',     [AuthController::class, 'logout']);
+    Route::post('/logout', [AuthController::class, 'logout']);
     Route::delete('/account', [AuthController::class, 'deleteAccount']);
     Route::post('/contracts/{id}/report', [ReportController::class, 'store']);
-    Route::post('/contracts/{id}/review',        [ReviewController::class, 'store']);
+    Route::post('/contracts/{id}/review', [ReviewController::class, 'store']);
 
-
-    //Client Routes
+    // Client Routes
 
     Route::middleware('role:client')->group(function () {
         Route::get('/client/me', [ClientController::class, 'me']);
@@ -63,10 +69,13 @@ Route::middleware(['auth:sanctum', 'check_status'])->group(function () {
         // Subscriptions
         Route::post('/buy-plan/{id}', [SubscriptionController::class, 'buy']);
 
+        // Chapa Payment
+        Route::post('/chapa/initialize-payment', [ChapaController::class, 'initializePayment']);
+
         Route::middleware(['auth:sanctum', 'role:client'])
             ->get('client/my-subscription', [SubscriptionController::class, 'mySubscription']);
 
-        //Job Posts list
+        // Job Posts list
         Route::get('/client/job-posts', [ClientController::class, 'jobPosts']);
 
         // Contracts
@@ -79,12 +88,7 @@ Route::middleware(['auth:sanctum', 'check_status'])->group(function () {
         // Job Posts
         Route::get('/client/job-posts/count', [ClientController::class, 'jobPostCount']);
         Route::get('/client/job-posts/remaining', [ClientController::class, 'remainingJobPosts']);
-
-
-        // Professionals
-        Route::get('/professionals', [ProfessionalController::class, 'index']);
     });
-
 
     // Professional id Routes
 
@@ -107,9 +111,7 @@ Route::middleware(['auth:sanctum', 'check_status'])->group(function () {
         // Route::get('/my-contracts', [ContractController::class, 'myContracts']);
     });
 
-
-
-    //Route for frontend
+    // Route for frontend
 
     Route::middleware('auth:sanctum')->group(function () {
 
@@ -127,17 +129,17 @@ Route::middleware(['auth:sanctum', 'check_status'])->group(function () {
 
         Route::get('/pro/stats', [ProfessionalController::class, 'stats']);
 
-        //admin routes for frontend
+        // admin routes for frontend
 
         // 🔥 PROFESSIONALS
+        Route::get('/admin/professionals', [AdminController::class, 'allProfessionals']);
         Route::get('/admin/professionals/pending', [AdminController::class, 'pendingProfessionals']);
-        Route::get('/admin/professionals/approved', [AdminController::class, 'approvedProfessionals']);
         Route::post('/admin/professionals/{id}/approve', [AdminController::class, 'approveProfessional']);
         Route::post('/admin/professionals/{id}/reject', [AdminController::class, 'rejectProfessional']);
 
         // 🔥 USERS
         Route::get('/admin/users', [AdminController::class, 'users']);
-        Route::get('/admin/users/suspended', [AdminController::class, 'suspendedUsers']);
+        Route::get('/admin/users/suspended', [AdminController::class, 'getSuspendedUsers']);
         Route::get('/admin/users/deleted', [AdminController::class, 'deletedUsers']);
 
         Route::post('/admin/users/{id}/suspend', [AdminController::class, 'suspendUser']);
@@ -146,6 +148,7 @@ Route::middleware(['auth:sanctum', 'check_status'])->group(function () {
 
         // 🔥 JOBS & CONTRACTS
         Route::get('/admin/jobs', [AdminController::class, 'jobs']);
+        Route::post('/admin/jobs/{id}/cancel', [AdminController::class, 'cancelJob']);
         Route::get('/admin/contracts', [AdminController::class, 'contracts']);
         Route::post('/admin/contracts/{id}/cancel', [AdminController::class, 'forceCancelContract']);
 
@@ -162,11 +165,6 @@ Route::middleware(['auth:sanctum', 'check_status'])->group(function () {
         // 🔥 STATS
         Route::get('/admin/stats', [AdminController::class, 'stats']);
     });
-
-
-
-
-
 
     /*
     |--------------------------------------------------------------------------
@@ -189,22 +187,22 @@ Route::middleware(['auth:sanctum', 'check_status'])->group(function () {
         // User Management
         Route::get('/users', [AdminController::class, 'users']);
 
-        //jobs Management
+        // jobs Management
         Route::get('/jobs', [AdminController::class, 'jobs']);
 
-        //contracts Management
+        // contracts Management
         Route::get('/contracts', [AdminController::class, 'contracts']);
 
-        //forceCancelContract Management
+        // forceCancelContract Management
         Route::post('/contracts/{id}/cancel', [AdminController::class, 'forceCancelContract']);
 
-        //Plan Management (Admin CRUD)
+        // Plan Management (Admin CRUD)
         Route::post('/plans', [AdminController::class, 'createPlan']);
         Route::get('/plans', [AdminController::class, 'plans']);
         Route::put('/plans/{id}', [AdminController::class, 'updatePlan']);
         Route::delete('/plans/{id}', [AdminController::class, 'deletePlan']);
 
-        //user delet managemnt
+        // user delet managemnt
         Route::get('/deleted-users', [AdminController::class, 'deletedUsers']);
         Route::post('/restore-user/{id}', [AdminController::class, 'restoreUser']);
     });
