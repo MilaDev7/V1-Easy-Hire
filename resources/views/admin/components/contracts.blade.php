@@ -18,19 +18,35 @@
     </div>
 </section>
 
-<div class="modal fade" id="admin-contract-modal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="contract-view-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-success text-white border-0">
+                <div>
+                    <h5 class="modal-title fw-bold"><i class="fa-solid fa-file-contract me-2"></i>Contract Details</h5>
+                    <p class="mb-0 opacity-75 small" id="contract-modal-subtitle">Loading...</p>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4" id="contract-view-modal-body"></div>
+            <div class="modal-footer border-top">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="contract-action-modal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="admin-contract-modal-title">Confirm Action</h5>
+                <h5 class="modal-title" id="contract-action-modal-title">Confirm Action</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body" id="admin-contract-modal-body">
-                Are you sure?
-            </div>
+            <div class="modal-body" id="contract-action-modal-body">Are you sure?</div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-danger" id="admin-contract-confirm-btn">Confirm</button>
+                <button type="button" class="btn btn-danger" id="contract-action-confirm-btn">Confirm</button>
             </div>
         </div>
     </div>

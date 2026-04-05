@@ -1,13 +1,13 @@
 <section class="admin-content-section" id="plans-section" style="display: none;">
-    <div class="card border-0 shadow-sm admin-content-card" style="border-top: 4px solid #198754 !important;">
+    <div class="card border-0 shadow-sm admin-content-card" style="border-top: 4px solid #6f42c1 !important;">
         <div class="card-body p-4 p-lg-5">
             <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4">
                 <div>
                     <p class="text-muted text-uppercase small mb-1">Workspace</p>
                     <h2 class="h4 mb-1">Subscription Plans</h2>
-                    <p class="text-muted mb-0">Manage subscription plans.</p>
+                    <p class="text-muted mb-0">Manage subscription plans for clients.</p>
                 </div>
-                <button type="button" class="btn btn-dark btn-sm rounded-pill" onclick="showCreatePlanModal()">
+                <button type="button" class="btn btn-primary btn-sm rounded-pill" onclick="showCreatePlanModal()">
                     <i class="fa-solid fa-plus me-1"></i> Create Plan
                 </button>
             </div>
@@ -18,57 +18,60 @@
     </div>
 </section>
 
-<div class="modal fade" id="admin-plan-modal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="plan-modal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="admin-plan-modal-title">Create Plan</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-primary text-white border-0">
+                <h5 class="modal-title fw-bold" id="plan-modal-title"><i class="fa-solid fa-layer-group me-2"></i>Create Plan</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body p-4">
                 <input type="hidden" id="plan-id">
                 <div class="mb-3">
-                    <label class="form-label">Plan Name</label>
-                    <input type="text" class="form-control" id="plan-name" placeholder="e.g., Basic">
+                    <label class="form-label fw-bold"><i class="fa-solid fa-tag me-2 text-primary"></i>Plan Name</label>
+                    <input type="text" class="form-control" id="plan-name" placeholder="e.g., Basic, Premium">
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold"><i class="fa-solid fa-dollar-sign me-2 text-success"></i>Price ($)</label>
+                        <input type="number" class="form-control" id="plan-price" placeholder="0.00" step="0.01" min="0">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold"><i class="fa-solid fa-briefcase me-2 text-warning"></i>Job Posts Limit</label>
+                        <input type="number" class="form-control" id="plan-job-limit" placeholder="e.g., 5" min="1">
+                    </div>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">Price ($)</label>
-                    <input type="number" class="form-control" id="plan-price" placeholder="0.00" step="0.01">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Duration (days)</label>
-                    <input type="number" class="form-control" id="plan-duration" placeholder="30">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Job Posts Allowed</label>
-                    <input type="number" class="form-control" id="plan-job-posts" placeholder="5">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Description</label>
-                    <textarea class="form-control" id="plan-description" rows="2" placeholder="Plan description"></textarea>
+                    <label class="form-label fw-bold"><i class="fa-solid fa-clock me-2 text-info"></i>Duration (Days)</label>
+                    <input type="number" class="form-control" id="plan-duration" placeholder="e.g., 30" min="1">
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-success" id="plan-save-btn" onclick="savePlan()">Save</button>
+            <div class="modal-footer border-top">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="savePlan()"><i class="fa-solid fa-check me-1"></i>Save Plan</button>
             </div>
         </div>
     </div>
 </div>
 
-<div class="modal fade" id="admin-plan-delete-modal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="plan-delete-modal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Delete Plan</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-danger text-white border-0">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-trash me-2"></i>Delete Plan</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
-                <p>Are you sure you want to delete this plan? This action cannot be undone.</p>
+            <div class="modal-body p-4 text-center">
+                <div class="mb-3">
+                    <i class="fa-solid fa-exclamation-triangle text-danger fa-4x"></i>
+                </div>
+                <h5>Are you sure?</h5>
+                <p class="text-muted">This action cannot be undone. The plan will be permanently deleted.</p>
+                <input type="hidden" id="delete-plan-id">
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-danger" id="plan-delete-confirm-btn">Delete</button>
+            <div class="modal-footer border-top">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" onclick="confirmDeletePlan()"><i class="fa-solid fa-trash me-1"></i>Delete</button>
             </div>
         </div>
     </div>

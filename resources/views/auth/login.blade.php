@@ -51,6 +51,14 @@
                     const role = data.role;
                     const status = data.approval_status;
                     localStorage.setItem("role", role || "");
+                    
+                    // Check for redirect URL from search page
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const redirectUrl = urlParams.get('redirect');
+                    
+                    // Check if there's a pending professional ID to view
+                    const pendingProId = localStorage.getItem('pending_pro_id');
+                    
                     // ✅ 3. Redirect Logic
                     if (role === 'admin') {
                         window.location.href = "/admin/dashboard";
@@ -63,7 +71,13 @@
                             window.location.href = "/pro/dashboard";
                         }
                     } else if (role === 'client') {
-                        window.location.href = "/client/dashboard";
+                        // If there's a redirect URL (e.g., from search page), go there
+                        // Otherwise go to dashboard
+                        if (redirectUrl) {
+                            window.location.href = redirectUrl;
+                        } else {
+                            window.location.href = "/client/dashboard";
+                        }
                     } else {
                         window.location.href = "/"; // Default
                     }

@@ -68,7 +68,12 @@
         }
 
         .admin-sidebar-item:hover {
-            background: rgba(0, 0, 0, 0.05);
+            background: rgba(111, 66, 193, 0.1);
+            color: #6f42c1;
+        }
+
+        .admin-sidebar-item:hover .admin-collapse-icon {
+            color: #6f42c1;
         }
 
         .admin-sidebar-item.active {
@@ -95,7 +100,10 @@
         }
 
         .admin-sidebar-child:hover {
-            background: rgba(0, 0, 0, 0.05);
+            background: rgba(111, 66, 193, 0.15);
+            color: #6f42c1;
+            font-weight: 600;
+            transform: translateX(4px);
         }
 
         .admin-sidebar-child.active {
@@ -151,7 +159,13 @@
 
         body.admin-dashboard-dark .admin-sidebar-item:hover,
         body.admin-dashboard-dark .admin-sidebar-child:hover {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.15);
+            color: #c4b5fd;
+        }
+
+        body.admin-dashboard-dark .admin-sidebar-item:hover .admin-collapse-icon,
+        body.admin-dashboard-dark .admin-sidebar-child:hover {
+            color: #c4b5fd;
         }
 
         body.admin-dashboard-dark .form-control,
@@ -167,6 +181,18 @@
 
         body.admin-dashboard-dark .btn-close {
             filter: invert(1);
+        }
+
+        .table tbody tr:hover {
+            background-color: rgba(111, 66, 193, 0.05);
+        }
+
+        body.admin-dashboard-dark .table tbody tr:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .table tbody tr {
+            transition: background-color 0.15s ease;
         }
     </style>
 </head>
@@ -211,8 +237,8 @@
                 <i class="fa-solid fa-chevron-down float-end admin-collapse-icon"></i>
             </div>
             <div class="admin-sidebar-children" id="reports-menu">
-                <div class="admin-sidebar-child" data-view="reports">All Reports</div>
-                <div class="admin-sidebar-child" data-view="resolved-reports">Resolved</div>
+                <div class="admin-sidebar-child" data-view="reports">Pending Reports</div>
+                <div class="admin-sidebar-child" data-view="resolved-reports">Resolved Reports</div>
             </div>
 
             <div class="admin-sidebar-item" data-toggle="payments-menu">
@@ -263,6 +289,7 @@
         <div class="admin-dashboard-container">
             @include('admin.components.stats')
             @include('admin.components.pending-professionals')
+            @include('admin.components.all-professionals')
             @include('admin.components.users')
             @include('admin.components.jobs')
             @include('admin.components.contracts')

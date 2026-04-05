@@ -27,6 +27,27 @@
                         <span class="text-muted small">(No ratings)</span>
                     @endif
                 </div>
+                
+                @if($reportsCount > 0)
+                    <div class="alert alert-danger py-1 px-2 mb-2 small">
+                        <i class="fa-solid fa-flag me-1"></i><strong>{{ $reportsCount }}</strong> report(s)
+                    </div>
+                @else
+                    <div class="alert alert-success py-1 px-2 mb-2 small">
+                        <i class="fa-solid fa-check-circle me-1"></i>No reports
+                    </div>
+                @endif
+                
+                <div class="d-flex justify-content-center gap-3 mt-2">
+                    <div class="text-center">
+                        <strong class="text-success fs-5">{{ $completedJobs->count() }}</strong>
+                        <small class="d-block text-muted">Jobs</small>
+                    </div>
+                    <div class="text-center">
+                        <strong class="text-warning fs-5">{{ $reviews->count() }}</strong>
+                        <small class="d-block text-muted">Reviews</small>
+                    </div>
+                </div>
             </div>
             <div class="col-md-8 p-4">
                 <h4 class="fw-bold text-primary mb-3">
@@ -38,7 +59,7 @@
                     <i class="fa-solid fa-briefcase me-2"></i>Experience
                 </h4>
                 <div class="alert alert-success mb-4">
-                    <strong>{{ $professional->years_of_experience ?? 0 }} years</strong> of professional experience
+                    <strong>{{ $professional->experience ?? 0 }} years</strong> of professional experience
                 </div>
                 
                 <h4 class="fw-bold text-warning mb-3">
@@ -57,6 +78,33 @@
                                     </div>
                                     <small class="text-muted">{{ $application->job->created_at ?? '' }}</small>
                                 </div>
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
+                
+                <h4 class="fw-bold text-info mb-3 mt-4">
+                    <i class="fa-solid fa-star me-2"></i>Reviews ({{ $reviews->count() }})
+                </h4>
+                @if($reviews->isEmpty())
+                    <div class="alert alert-secondary">No reviews yet.</div>
+                @else
+                    <div class="list-group">
+                        @foreach($reviews as $review)
+                            <div class="list-group-item mb-2 rounded">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div>
+                                        <i class="fa-solid fa-user me-1 text-primary"></i>
+                                        <strong>{{ $review->reviewer->name ?? 'Anonymous' }}</strong>
+                                    </div>
+                                    <div>
+                                        @for($i = 1; $i <= 5; $i++)
+                                            <i class="fa-star {{ $i <= $review->rating ? 'fas text-warning' : 'far text-secondary' }}" style="font-size: 12px;"></i>
+                                        @endfor
+                                    </div>
+                                </div>
+                                <p class="mb-1 text-muted small">{{ $review->comment ?: 'No comment' }}</p>
+                                <small class="text-muted">{{ $review->created_at->format('M d, Y') }}</small>
                             </div>
                         @endforeach
                     </div>
