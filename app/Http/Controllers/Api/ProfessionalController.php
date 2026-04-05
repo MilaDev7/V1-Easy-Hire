@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\Application;
 use App\Models\Contract;
 use App\Models\JobPost;
-use Illuminate\Http\Request;
 use App\Models\Professional;
+use App\Models\Report;
+use App\Models\Review;
+use Illuminate\Http\Request;
 
 class ProfessionalController extends Controller
 {
@@ -16,7 +18,7 @@ class ProfessionalController extends Controller
         $user = auth()->user();
         $professional = Professional::where('user_id', $user->id)->first();
 
-        if (!$professional) {
+        if (! $professional) {
             return response()->json(['message' => 'Professional profile not found'], 404);
         }
 
@@ -45,7 +47,7 @@ class ProfessionalController extends Controller
 
         $professional = Professional::where('user_id', auth()->id())->first();
 
-        if (!$professional) {
+        if (! $professional) {
             return response()->json(['message' => 'Profile not found'], 404);
         }
 
@@ -55,7 +57,7 @@ class ProfessionalController extends Controller
             'bio',
             'location',
             'cv',
-            'certificate'
+            'certificate',
         ]));
 
         $professional->status = 'pending';
@@ -63,26 +65,53 @@ class ProfessionalController extends Controller
 
         return response()->json([
             'message' => 'Profile updated successfully',
-            'data' => $professional
+            'data' => $professional,
         ]);
     }
 
     public function index(Request $request)
     {
-        $query = Professional::with('user');
+        $query = Professional::with('user')->where('status', 'approved');
 
         if ($request->skill) {
-            $query->where('skill', 'LIKE', '%' . $request->skill . '%');
+            $query->where('skill', 'LIKE', '%'.$request->skill.'%');
         }
 
         if ($request->location) {
-            $query->where('location', 'LIKE', '%' . $request->location . '%');
+            $query->where('location', 'LIKE', '%'.$request->location.'%');
         }
 
-        $professionals = $query->get();
+        $professionals = $query->get()->map(function ($pro) {
+            $reviews = Review::where('reviewed_id', $pro->user_id)->with('reviewer:id,name')->get();
+            $reportsCount = Report::where('reported_id', $pro->user_id)->count();
+
+            return [
+                'id' => $pro->id,
+                'user_id' => $pro->user_id,
+                'name' => $pro->user ? $pro->user->name : 'N/A',
+                'email' => $pro->user ? $pro->user->email : 'N/A',
+                'profile_photo' => $pro->profile_photo,
+                'skill' => $pro->skill,
+                'location' => $pro->location,
+                'experience' => $pro->experience,
+                'bio' => $pro->bio,
+                'average_rating' => $reviews->avg('rating') ?? 0,
+                'reviews_count' => $reviews->count(),
+                'reviews' => $reviews->take(3)->map(function ($r) {
+                    return [
+                        'id' => $r->id,
+                        'rating' => $r->rating,
+                        'comment' => $r->comment,
+                        'reviewer_name' => $r->reviewer ? $r->reviewer->name : 'Anonymous',
+                        'created_at' => $r->created_at,
+                    ];
+                }),
+                'reports_count' => $reportsCount,
+            ];
+        });
 
         return response()->json([
-            'data' => $professionals
+            'data' => $professionals,
         ]);
     }
 
@@ -90,7 +119,7 @@ class ProfessionalController extends Controller
     {
         $professional = Professional::with('user')->find($id);
 
-        if (!$professional) {
+        if (! $professional) {
             return response()->json(['message' => 'Professional not found'], 404);
         }
 
@@ -102,9 +131,30 @@ class ProfessionalController extends Controller
             ->with('job')
             ->get();
 
+        $reviews = Review::where('reviewed_id', $professional->user_id)
+            ->with('reviewer:id,name')
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($r) {
+                return [
+                    'id' => $r->id,
+                    'rating' => $r->rating,
+                    'comment' => $r->comment,
+                    'reviewer_name' => $r->reviewer ? $r->reviewer->name : 'Anonymous',
+                    'created_at' => $r->created_at,
+                ];
+            });
+
+        $reportsCount = Report::where('reported_id', $professional->user_id)->count();
+        $averageRating = $reviews->count() > 0 ? $reviews->avg('rating') : 0;
+
         return response()->json([
             'professional' => $professional,
-            'completed_jobs' => $completedJobs
+            'completed_jobs' => $completedJobs,
+            'reviews' => $reviews,
+            'reviews_count' => $reviews->count(),
+            'reports_count' => $reportsCount,
+            'average_rating' => round($averageRating, 1),
         ]);
     }
 
@@ -115,11 +165,11 @@ class ProfessionalController extends Controller
         $query = JobPost::query()->where('status', 'open');
 
         if ($request->skill) {
-            $query->where('skill', 'LIKE', '%' . $request->skill . '%');
+            $query->where('skill', 'LIKE', '%'.$request->skill.'%');
         }
 
         if ($request->location) {
-            $query->where('location', 'LIKE', '%' . $request->location . '%');
+            $query->where('location', 'LIKE', '%'.$request->location.'%');
         }
 
         $appliedJobIds = Application::where('professional_id', $userId)
@@ -148,7 +198,7 @@ class ProfessionalController extends Controller
             });
 
         return response()->json([
-            'data' => $jobs
+            'data' => $jobs,
         ]);
     }
 
@@ -179,7 +229,7 @@ class ProfessionalController extends Controller
 
         $professional = Professional::where('user_id', $userId)->first();
 
-        if (!$professional) {
+        if (! $professional) {
             return response()->json(['message' => 'Profile missing'], 404);
         }
 
@@ -191,7 +241,7 @@ class ProfessionalController extends Controller
             return response()->json(['message' => 'Job is not open'], 400);
         }
 
-        if (!str_contains(strtolower($professional->skill), strtolower($job->skill))) {
+        if (! str_contains(strtolower($professional->skill), strtolower($job->skill))) {
             return response()->json(['message' => 'Skill mismatch'], 403);
         }
 
@@ -215,7 +265,7 @@ class ProfessionalController extends Controller
                     'id' => $app->id,
                     'job_id' => $app->job_id,
                     'job_title' => $app->job->title ?? '',
-                    'status' => $app->status
+                    'status' => $app->status,
                 ];
             });
 
@@ -229,7 +279,7 @@ class ProfessionalController extends Controller
             ->where('status', 'pending')
             ->first();
 
-        if (!$app) {
+        if (! $app) {
             return response()->json(['message' => 'Cannot withdraw'], 400);
         }
 
@@ -268,7 +318,7 @@ class ProfessionalController extends Controller
             ->where('professional_id', auth()->id())
             ->first();
 
-        if (!$contract) {
+        if (! $contract) {
             return response()->json(['message' => 'Not found'], 404);
         }
 
@@ -301,7 +351,7 @@ class ProfessionalController extends Controller
         return response()->json([
             'active_contracts' => $active,
             'completed_jobs' => $completed,
-            'remaining_apply' => max(5 - $applications, 0)
+            'remaining_apply' => max(5 - $applications, 0),
         ]);
     }
 }
