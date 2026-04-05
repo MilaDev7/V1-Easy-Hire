@@ -453,6 +453,99 @@
                 </div>
             </section>
         `;
+
+        // Load professionals from API
+        function loadClientPros() {
+            var skill = document.getElementById("professional-skill") ? document.getElementById("professional-skill").value : '';
+            var location = document.getElementById("professional-location") ? document.getElementById("professional-location").value : '';
+            
+            var params = new URLSearchParams({skill: skill, location: location});
+            var token = localStorage.getItem("token");
+            var headers = {"Accept": "application/json"};
+            if (token) headers["Authorization"] = "Bearer " + token;
+            
+            var resultsArea = document.getElementById("professionals-results");
+            if (resultsArea) {
+                resultsArea.innerHTML = '<div class="text-center py-5"><span class="spinner-border spinner-border-sm me-2"></span>Loading...</div>';
+            }
+            
+            console.log("Loading professionals from /api/professionals?" + params.toString());
+            
+            fetch("/api/professionals?" + params.toString(), {method: "GET", headers: headers})
+            .then(function(r) { 
+                console.log("Professionals response status:", r.status);
+                if (!r.ok) throw new Error("Request failed with status " + r.status); 
+                return r.json(); 
+            })
+            .then(function(payload) {
+                console.log("Professionals payload:", payload);
+                var pros = payload.data || [];
+                var results = document.getElementById("professionals-results");
+                if (!results) return;
+                
+                if (!pros.length) {
+                    console.log("No professionals found");
+                    results.innerHTML = '<div class="alert alert-light border mb-0">No professionals found.</div>';
+                    return;
+                }
+                
+                console.log("Rendering " + pros.length + " professional cards");
+                
+                var cards = pros.map(function(p) {
+                    var proId = p.id;
+                    var name = p.name || "N/A";
+                    var photo = p.profile_photo ? "/storage/" + p.profile_photo : "/images/user1.jpg";
+                    var skillText = p.skill || "N/A";
+                    var locationText = p.location || "N/A";
+                    var rating = p.average_rating || 0;
+                    var reviewsCount = p.reviews_count || 0;
+                    var reportsCount = p.reports_count || 0;
+                    var reviewText = reviewsCount > 0 ? reviewsCount + ' review' + (reviewsCount > 1 ? 's' : '') : 'No reviews';
+                    
+                    // Generate stars inline
+                    var starsHtml = '';
+                    var fullStars = Math.floor(rating);
+                    for (var i = 1; i <= 5; i++) {
+                        starsHtml += '<i class="fa-solid fa-star" style="color: ' + (i <= fullStars ? '#ffc107;' : '#e4e5e9;') + '"></i>';
+                    }
+                    
+                    return '<div class="col-md-6 col-xl-4" onclick="window.showProProfile(' + proId + ')" style="cursor:pointer;">' +
+                        '<div class="card border-0 shadow-sm h-100" style="border-left: 4px solid #0d6efd !important; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform=\'translateY(-5px)\';this.style.boxShadow=\'0 8px 25px rgba(0,0,0,0.15)\';" onmouseout="this.style.transform=\'\';this.style.boxShadow=\'\';">' +
+                        '<div class="card-body p-4">' +
+                        '<div class="d-flex align-items-center mb-3">' +
+                        '<img src="' + photo + '" alt="' + name + '" class="rounded-circle object-fit-cover me-3 border" style="width: 72px; height: 72px;">' +
+                        '<div><h3 class="h6 mb-1 fw-bold">' + name + '</h3>' +
+                        '<div class="small">' + starsHtml + ' <span class="text-muted">(' + rating.toFixed(1) + ')</span></div></div>' +
+                        '</div>' +
+                        '<p class="mb-2"><span class="fw-semibold">Skills:</span> ' + skillText + '</p>' +
+                        '<p class="mb-0"><span class="fw-semibold">Location:</span> ' + locationText + '</p>' +
+                        '<hr>' +
+                        '<div class="d-flex justify-content-between small">' +
+                        '<span class="text-muted"><i class="fa-solid fa-star me-1"></i>' + reviewText + '</span>' +
+                        (reportsCount > 0 ? '<span class="text-danger"><i class="fa-solid fa-flag me-1"></i>' + reportsCount + ' report(s)</span>' : '<span class="text-success"><i class="fa-solid fa-check-circle me-1"></i>No reports</span>') +
+                        '</div>' +
+                        '</div></div></div>';
+                }).join("");
+                
+                results.innerHTML = '<div class="row g-4">' + cards + '</div>';
+            })
+            .catch(function(err) {
+                console.error("Error loading professionals:", err);
+                var results = document.getElementById("professionals-results");
+                if (results) results.innerHTML = '<div class="alert alert-danger mb-0">Unable to load professionals. Check console for details.</div>';
+            });
+        }
+
+        // Expose globally for profile modal
+        window.loadClientPros = loadClientPros;
+
+        // Bind search button
+        var searchBtn = document.getElementById("professional-search-button");
+        if (searchBtn) {
+            searchBtn.addEventListener("click", loadClientPros);
+            // Trigger initial load after a small delay
+            setTimeout(loadClientPros, 100);
+        }
     }
 
     function renderProfessionals(professionals) {
@@ -794,14 +887,23 @@
                     contract.created_at || contract.createdAt
                 );
 
-                return `
-                    <tr>
-                        <td class="fw-semibold">${getContractTitle(contract)}</td>
-                        <td>${getContractClientName(contract)}</td>
-                        <td>${getContractProfessionalName(contract)}</td>
-                        <td><span class="badge text-bg-light border">${status}</span></td>
-                        <td>${createdDate}</td>
-                        <td class="text-end">
+                // Check if already reviewed/reported
+                const hasReview = contract.has_review || false;
+                const hasReport = contract.has_report || false;
+                
+                // Only show confirm button for completed contracts that haven't been reviewed
+                let actionButtons = '';
+                
+                if (status === 'completed') {
+                    if (hasReview) {
+                        // Already reviewed - show badges
+                        actionButtons = `
+                            <span class="badge bg-success me-1"><i class="fa-solid fa-star me-1"></i>Reviewed</span>
+                            ${hasReport ? '<span class="badge bg-danger"><i class="fa-solid fa-flag me-1"></i>Reported</span>' : ''}
+                        `;
+                    } else {
+                        // Can still confirm/review
+                        actionButtons = `
                             <div class="d-flex justify-content-end gap-2">
                                 <button
                                     type="button"
@@ -820,7 +922,35 @@
                                     Confirm
                                 </button>
                             </div>
-                        </td>
+                        `;
+                    }
+                } else if (status === 'cancelled') {
+                    actionButtons = '<span class="badge bg-danger">Cancelled</span>';
+                } else if (status === 'active') {
+                    actionButtons = `
+                        <div class="d-flex justify-content-end gap-2">
+                            <button
+                                type="button"
+                                class="btn btn-sm btn-outline-danger contract-action-button"
+                                data-action="cancel"
+                                data-contract-id="${contract.id}"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    `;
+                } else {
+                    actionButtons = '<span class="badge bg-secondary">Pending</span>';
+                }
+
+                return `
+                    <tr>
+                        <td class="fw-semibold">${getContractTitle(contract)}</td>
+                        <td>${getContractClientName(contract)}</td>
+                        <td>${getContractProfessionalName(contract)}</td>
+                        <td><span class="badge text-bg-light border">${status}</span></td>
+                        <td>${createdDate}</td>
+                        <td class="text-end">${actionButtons}</td>
                     </tr>
                 `;
             })
@@ -995,6 +1125,7 @@
     function getSubscriptionPlanName(subscription) {
         return (
             subscription.plan_name ||
+            subscription.plan ||
             subscription.name ||
             subscription.plan?.name ||
             "No Active Plan"
@@ -1014,7 +1145,26 @@
         return (
             subscription.job_post_limit ||
             subscription.post_limit ||
-            subscription.plan?.job_post_limit ||
+            subscription.job_limit ||
+            subscription.plan?.job_posts_limit ||
+            "N/A"
+        );
+    }
+
+    function getSubscriptionDuration(subscription) {
+        return (
+            subscription.duration_days ||
+            subscription.plan?.duration_days ||
+            subscription.duration ||
+            "N/A"
+        );
+    }
+
+    function getSubscriptionExpiry(subscription) {
+        return (
+            subscription.expires_at ||
+            subscription.expiresAt ||
+            subscription.end_date ||
             "N/A"
         );
     }
@@ -1030,6 +1180,25 @@
             getSubscriptionJobPostLimit(subscription)
         );
 
+        const currentPlanName = document.getElementById("current-plan-name");
+        const currentPlanDuration = document.getElementById("current-plan-duration");
+        const currentPlanExpiry = document.getElementById("current-plan-expiry");
+        const currentPlanJobs = document.getElementById("current-plan-jobs");
+
+        if (currentPlanName) currentPlanName.textContent = getSubscriptionPlanName(subscription);
+        if (currentPlanDuration) currentPlanDuration.textContent = getSubscriptionDuration(subscription) + " days";
+        
+        if (currentPlanExpiry) {
+            const expiry = getSubscriptionExpiry(subscription);
+            if (expiry && expiry !== "N/A") {
+                currentPlanExpiry.textContent = new Date(expiry).toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'});
+            } else {
+                currentPlanExpiry.textContent = "--";
+            }
+        }
+
+        if (currentPlanJobs) currentPlanJobs.textContent = getSubscriptionJobPostLimit(subscription);
+
         const actionButton = document.getElementById("subscription-action-button");
 
         if (actionButton) {
@@ -1041,6 +1210,16 @@
         setText("subscription-plan-name", "Plan unavailable");
         setText("subscription-plan-price", "N/A");
         setText("subscription-job-post-limit", "N/A");
+
+        const currentPlanName = document.getElementById("current-plan-name");
+        const currentPlanDuration = document.getElementById("current-plan-duration");
+        const currentPlanExpiry = document.getElementById("current-plan-expiry");
+        const currentPlanJobs = document.getElementById("current-plan-jobs");
+
+        if (currentPlanName) currentPlanName.textContent = "No Active Plan";
+        if (currentPlanDuration) currentPlanDuration.textContent = "--";
+        if (currentPlanExpiry) currentPlanExpiry.textContent = "--";
+        if (currentPlanJobs) currentPlanJobs.textContent = "--";
     }
 
     function handleSubscriptionAction() {
@@ -1061,9 +1240,46 @@
         });
     }
 
+    function buyPlan(planId) {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            alert('Please login to buy a plan');
+            window.location.href = '/login';
+            return;
+        }
+
+        fetch(`/api/buy-plan/${planId}`, {
+            method: 'POST',
+            headers: {
+                'Authorization': 'Bearer ' + token,
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.redirect_url) {
+                window.location.href = data.redirect_url;
+            } else if (data.message || data.success) {
+                alert('Plan purchased successfully!');
+                if (typeof loadSubscription === 'function') loadSubscription();
+                if (typeof loadClientPlans === 'function') loadClientPlans();
+            } else if (data.error || data.message) {
+                alert(data.error || data.message);
+            }
+        })
+        .catch(err => {
+            alert('Failed to purchase plan. Please try again.');
+        });
+    }
+
     function loadSubscription() {
         fetchJson("/api/client/my-subscription")
             .then((payload) => {
+                if (payload.has_subscription === false) {
+                    renderSubscriptionError();
+                    return;
+                }
+                
                 const subscription = Array.isArray(payload?.data)
                     ? payload.data[0] || {}
                     : payload?.data || payload;
@@ -1351,6 +1567,151 @@
         });
     }
 
+    function showProProfile(proId) {
+        try {
+            var token = localStorage.getItem("token");
+            var headers = {"Accept": "application/json"};
+            if (token) headers["Authorization"] = "Bearer " + token;
+
+            var modalBody = document.getElementById("pro-profile-modal-body");
+            if (modalBody) {
+                modalBody.innerHTML = '<div class="text-center py-5"><span class="spinner-border spinner-border-sm me-2"></span>Loading...</div>';
+            }
+            
+            var modalEl = document.getElementById("pro-profile-modal");
+            if (modalEl) {
+                var modal = new bootstrap.Modal(modalEl);
+                modal.show();
+            }
+
+            fetch("/api/professionals/" + proId, {method: "GET", headers: headers})
+            .then(function(r) { 
+                if (!r.ok) throw new Error("Request failed with status " + r.status); 
+                return r.json(); 
+            })
+            .then(function(data) {
+                var pro = data.professional || {};
+                var name = pro.user ? pro.user.name : (pro.name || "N/A");
+                var email = pro.user ? pro.user.email : "N/A";
+                var photo = pro.profile_photo ? "/storage/" + pro.profile_photo : "/images/user1.jpg";
+                var skill = pro.skill || "N/A";
+                var location = pro.location || "N/A";
+                var experience = pro.experience || "0";
+                var rating = data.average_rating || 0;
+                var bio = pro.bio || "No biography available.";
+                var completedJobs = data.completed_jobs ? data.completed_jobs.length : 0;
+                var reviews = data.reviews || [];
+                var reportsCount = data.reports_count || 0;
+
+                function proGenerateStars(r) {
+                    var html = '';
+                    var fullStars = Math.floor(r);
+                    for (var i = 1; i <= 5; i++) {
+                        html += '<i class="fa-solid fa-star" style="color: ' + (i <= fullStars ? '#ffc107;' : '#e4e5e9;') + '"></i>';
+                    }
+                    return html;
+                }
+
+                function proFormatDate(dateStr) {
+                    if (!dateStr) return 'N/A';
+                    var date = new Date(dateStr);
+                    return date.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'});
+                }
+
+                var reviewsHtml = '';
+                if (reviews.length > 0) {
+                    reviews.forEach(function(review) {
+                        reviewsHtml += '<div class="border-bottom pb-3 mb-3">' +
+                            '<div class="d-flex justify-content-between mb-2">' +
+                            '<strong><i class="fa-solid fa-user me-1"></i>' + (review.reviewer_name || 'Anonymous') + '</strong>' +
+                            '<span>' + proGenerateStars(review.rating) + '</span>' +
+                            '</div>' +
+                            '<p class="mb-1 text-muted small">' + (review.comment || 'No comment') + '</p>' +
+                            '<small class="text-muted">' + proFormatDate(review.created_at) + '</small>' +
+                            '</div>';
+                    });
+                } else {
+                    reviewsHtml = '<div class="alert alert-light border mb-0"><i class="fa-solid fa-star me-2"></i>No reviews yet</div>';
+                }
+
+                var reportsHtml = '';
+                if (reportsCount > 0) {
+                    reportsHtml = '<div class="alert alert-danger py-2 mb-0"><i class="fa-solid fa-flag me-2"></i><strong>' + reportsCount + '</strong> report(s) filed against this professional</div>';
+                } else {
+                    reportsHtml = '<div class="alert alert-success py-2 mb-0"><i class="fa-solid fa-check-circle me-2"></i>No reports filed</div>';
+                }
+
+                if (modalBody) {
+                    modalBody.innerHTML = `
+                        <div class="text-center mb-4">
+                            <img src="${photo}" alt="${name}" class="rounded-circle object-fit-cover border border-3 border-primary" style="width: 120px; height: 120px;">
+                            <h3 class="mt-3 mb-1 fw-bold">${name}</h3>
+                            <div class="mb-2">${proGenerateStars(rating)} <span class="text-muted">(${rating.toFixed(1)})</span></div>
+                            <span class="badge bg-success px-3 py-2"><i class="fa-solid fa-check-circle me-1"></i>Verified Professional</span>
+                        </div>
+                        
+                        ${reportsHtml}
+                        
+                        <div class="row g-3 mb-4 mt-3">
+                            <div class="col-md-6">
+                                <div class="card bg-light border-0 h-100">
+                                    <div class="card-body">
+                                        <h6 class="fw-bold mb-3"><i class="fa-solid fa-info-circle me-2 text-primary"></i>Basic Info</h6>
+                                        <p class="mb-2"><i class="fa-solid fa-code me-2 text-secondary"></i><strong>Skill:</strong> ${skill}</p>
+                                        <p class="mb-2"><i class="fa-solid fa-location-dot me-2 text-secondary"></i><strong>Location:</strong> ${location}</p>
+                                        <p class="mb-2"><i class="fa-solid fa-briefcase me-2 text-secondary"></i><strong>Experience:</strong> ${experience} years</p>
+                                        <p class="mb-0"><i class="fa-solid fa-envelope me-2 text-secondary"></i><strong>Email:</strong> ${email}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card bg-light border-0 h-100">
+                                    <div class="card-body">
+                                        <h6 class="fw-bold mb-3"><i class="fa-solid fa-chart-line me-2 text-success"></i>Statistics</h6>
+                                        <div class="text-center">
+                                            <div class="row g-3">
+                                                <div class="col-6">
+                                                    <h2 class="fw-bold text-success mb-0">${completedJobs}</h2>
+                                                    <small class="text-muted">Completed Jobs</small>
+                                                </div>
+                                                <div class="col-6">
+                                                    <h2 class="fw-bold text-warning mb-0">${data.reviews_count || 0}</h2>
+                                                    <small class="text-muted">Reviews</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card bg-light border-0 mb-3">
+                            <div class="card-body">
+                                <h6 class="fw-bold mb-3"><i class="fa-solid fa-user me-2 text-info"></i>About</h6>
+                                <p class="mb-0" style="white-space: pre-wrap;">${bio}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="card border-0">
+                            <div class="card-body">
+                                <h6 class="fw-bold mb-3"><i class="fa-solid fa-star me-2 text-warning"></i>Reviews (${reviews.length})</h6>
+                                ${reviewsHtml}
+                            </div>
+                        </div>
+                    `;
+                }
+            })
+            .catch(function(err) {
+                console.error("Error loading professional profile:", err);
+                if (modalBody) {
+                    modalBody.innerHTML = '<div class="alert alert-danger mb-0">Failed to load profile. Error: ' + err.message + '</div>';
+                }
+            });
+        } catch(e) {
+            console.error("Unexpected error in showProProfile:", e);
+        }
+    }
+
     function setActiveSidebarButton(view) {
         document.querySelectorAll(".sidebar-nav-button").forEach((button) => {
             const isActive = button.dataset.view === view;
@@ -1402,6 +1763,113 @@
 
         reloadButton.addEventListener("click", function () {
             loadJobPosts();
+        });
+    }
+
+    function loadClientProfileForSettings() {
+        console.log("Loading client profile...");
+        fetchJson("/api/client/profile")
+            .then((data) => {
+                console.log("Profile data:", data);
+                if (data.success && data.data) {
+                    const d = data.data;
+                    document.getElementById("profile-name").value = d.name || "";
+                    document.getElementById("profile-email").value = d.email || "";
+                    document.getElementById("profile-location").value = d.location || "";
+                    
+                    // Update photo
+                    const photoPreview = document.getElementById("settings-profile-preview");
+                    if (photoPreview && d.profile_photo) {
+                        photoPreview.src = d.profile_photo;
+                    } else if (photoPreview) {
+                        photoPreview.src = "/images/user1.jpg";
+                    }
+                }
+            })
+            .catch((err) => {
+                console.error("Error loading profile:", err);
+            });
+    }
+
+    function bindClientProfileForm() {
+        // Edit field buttons
+        const editButtons = document.querySelectorAll(".edit-field-btn");
+        editButtons.forEach(btn => {
+            btn.addEventListener("click", function() {
+                const fieldId = this.getAttribute("data-field");
+                const input = document.getElementById(fieldId);
+                if (input) {
+                    input.removeAttribute("readonly");
+                    input.classList.remove("bg-light");
+                    input.focus();
+                    input.addEventListener("blur", function() {
+                        input.setAttribute("readonly", true);
+                        input.classList.add("bg-light");
+                    }, { once: true });
+                }
+            });
+        });
+        
+        // Photo preview
+        const photoInput = document.getElementById("profile-photo");
+        const photoPreview = document.getElementById("settings-profile-preview");
+        
+        if (photoInput && photoPreview) {
+            photoInput.addEventListener("change", function (e) {
+                if (e.target.files && e.target.files[0]) {
+                    const reader = new FileReader();
+                    reader.onload = function (e) {
+                        photoPreview.src = e.target.result;
+                    };
+                    reader.readAsDataURL(e.target.files[0]);
+                }
+            });
+        }
+
+        const saveBtn = document.getElementById("save-profile-btn");
+        if (!saveBtn) return;
+
+        saveBtn.addEventListener("click", function (e) {
+            e.preventDefault();
+
+            const formData = new FormData();
+            formData.append("name", document.getElementById("profile-name").value);
+            formData.append("email", document.getElementById("profile-email").value);
+            formData.append("location", document.getElementById("profile-location").value);
+            
+            const photo = document.getElementById("profile-photo").files[0];
+            if (photo) {
+                formData.append("profile_photo", photo);
+            }
+
+            const originalText = saveBtn.innerHTML;
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Saving...';
+
+            fetch("/api/client/profile", {
+                method: "POST",
+                headers: {
+                    "Authorization": "Bearer " + token,
+                },
+                body: formData,
+            })
+            .then((res) => res.json())
+            .then((data) => {
+                if (data.success) {
+                    alert("Profile updated successfully!");
+                    loadClientIdentity();
+                    loadClientProfileForSettings();
+                } else {
+                    alert(data.message || "Failed to update profile");
+                }
+            })
+            .catch(() => {
+                alert("Failed to update profile. Please try again.");
+            })
+            .finally(() => {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = originalText;
+            });
         });
     }
 
@@ -1457,6 +1925,13 @@
                 if (settingsModal) {
                     settingsModal.show();
                 }
+            });
+        }
+        
+        // Load profile when modal is shown
+        if (settingsModalElement) {
+            settingsModalElement.addEventListener("shown.bs.modal", function() {
+                loadClientProfileForSettings();
             });
         }
 
@@ -1567,8 +2042,6 @@
     function loadProfessionals() {
         setActiveSidebarButton("professionals");
         renderProfessionalsSection();
-        bindProfessionalSearch();
-        loadProfessionalsResults();
     }
 
     function loadApplications() {
@@ -2492,34 +2965,38 @@
                         <td>
                             <img src="${photo}" alt="Photo" class="rounded-circle" style="width: 48px; height: 48px; object-fit: cover;">
                         </td>
-                        <td class="fw-semibold">${pro.user?.name ?? 'N/A'}</td>
-                        <td>${pro.skill ?? 'N/A'}</td>
-                        <td>${pro.location ?? 'N/A'}</td>
+                        <td class="fw-semibold">${pro.name || 'N/A'}</td>
+                        <td>${pro.email || 'N/A'}</td>
+                        <td>${pro.skill || 'N/A'}</td>
+                        <td>${pro.location || 'N/A'}</td>
                         <td>
-                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="viewDocument('cv', ${pro.id})">
-                                <i class="fa-solid fa-file me-1"></i> CV
-                            </button>
+                            ${pro.cv 
+                                ? `<a href="/storage/${pro.cv}" target="_blank" class="btn btn-sm btn-outline-primary"><i class="fa-solid fa-file me-1"></i> View</a>`
+                                : '<span class="text-muted small">N/A</span>'
+                            }
                         </td>
                         <td>
-                            <button type="button" class="btn btn-sm btn-outline-success" onclick="viewDocument('certificate', ${pro.id})">
-                                <i class="fa-solid fa-certificate me-1"></i> Certificate
-                            </button>
+                            ${pro.certificate 
+                                ? `<a href="/storage/${pro.certificate}" target="_blank" class="btn btn-sm btn-outline-success"><i class="fa-solid fa-certificate me-1"></i> View</a>`
+                                : '<span class="text-muted small">N/A</span>'
+                            }
                         </td>
                         <td>
-                            <button type="button" class="btn btn-sm btn-outline-warning" onclick="viewDocument('id', ${pro.id})">
-                                <i class="fa-solid fa-id-card me-1"></i> ID
-                            </button>
+                            ${pro.id_card 
+                                ? `<a href="/storage/${pro.id_card}" target="_blank" class="btn btn-sm btn-outline-warning"><i class="fa-solid fa-id-card me-1"></i> View</a>`
+                                : '<span class="text-muted small">N/A</span>'
+                            }
                         </td>
                         <td>
                             <span class="badge bg-warning">Pending</span>
                         </td>
                         <td>
                             <div class="d-flex gap-2">
-                                <button type="button" class="btn btn-sm btn-success" onclick="approveProfessional(${pro.id})">
-                                    <i class="fa-solid fa-check"></i>
+                                <button type="button" class="btn btn-sm btn-success" onclick="window.approveProfessional(${pro.id})">
+                                    <i class="fa-solid fa-check me-1"></i>Approve
                                 </button>
-                                <button type="button" class="btn btn-sm btn-danger" onclick="rejectProfessional(${pro.id})">
-                                    <i class="fa-solid fa-times"></i>
+                                <button type="button" class="btn btn-sm btn-danger" onclick="window.rejectProfessional(${pro.id})">
+                                    <i class="fa-solid fa-times me-1"></i>Reject
                                 </button>
                             </div>
                         </td>
@@ -2535,6 +3012,7 @@
                         <tr>
                             <th scope="col">Photo</th>
                             <th scope="col">Name</th>
+                            <th scope="col">Email</th>
                             <th scope="col">Skill</th>
                             <th scope="col">Location</th>
                             <th scope="col">CV</th>
@@ -2589,6 +3067,42 @@
                     })
                     .catch((err) => {
                         alert(err.message || "Failed to reject professional.");
+                    });
+            }
+        );
+    }
+
+    function suspendProfessional(id) {
+        showAdminActionModal(
+            'Suspend Professional',
+            'Are you sure you want to suspend this professional?',
+            'dark',
+            () => {
+                postJson(`/api/admin/users/${id}/suspend`)
+                    .then(() => {
+                        loadAllProfessionals();
+                        loadAdminStats();
+                    })
+                    .catch((err) => {
+                        alert(err.message || "Failed to suspend professional.");
+                    });
+            }
+        );
+    }
+
+    function unsuspendProfessional(id) {
+        showAdminActionModal(
+            'Unsuspend Professional',
+            'Are you sure you want to unsuspend this professional?',
+            'success',
+            () => {
+                postJson(`/api/admin/users/${id}/unsuspend`)
+                    .then(() => {
+                        loadAllProfessionals();
+                        loadAdminStats();
+                    })
+                    .catch((err) => {
+                        alert(err.message || "Failed to unsuspend professional.");
                     });
             }
         );
@@ -2697,6 +3211,7 @@
         const contractsSection = document.getElementById('contracts-section');
         const reportsSection = document.getElementById('reports-section');
         const plansSection = document.getElementById('plans-section');
+        const allProfessionalsSection = document.getElementById('all-professionals-section');
         
         const contentArea = document.getElementById('admin-content-area');
         
@@ -2722,6 +3237,8 @@
             if (['all-users', 'suspended-users', 'deleted-users'].includes(view) && usersSection) {
                 usersSection.style.display = 'block';
                 document.getElementById('users-section-title').textContent = sections[view].title;
+            } else if (view === 'all-professionals' && allProfessionalsSection) {
+                allProfessionalsSection.style.display = 'block';
             } else if (view === 'pending-professionals' && pendingSection) {
                 pendingSection.style.display = 'block';
                 if (contentArea) { contentArea.innerHTML = ''; contentArea.appendChild(pendingSection); }
@@ -2742,19 +3259,41 @@
 
     function loadAllProfessionals() { fetchJson("/api/admin/professionals").then(p => renderProfessionalsTable(toArray(p))).catch(renderProfessionalsTableError); }
     function renderProfessionalsTable(pros) {
-        const area = document.getElementById('users-table-area');
+        const area = document.getElementById('all-professionals-table-area');
         if (!area) return;
         if (!pros.length) { area.innerHTML = '<div class="alert alert-light border mb-0">No professionals found.</div>'; return; }
-        area.innerHTML = '<div class="table-responsive"><table class="table align-middle mb-0"><thead><tr><th>Name</th><th>Skill</th><th>Location</th><th>Status</th></tr></thead><tbody>' + 
-            pros.map(p => `<tr><td class="fw-semibold">${p.user?.name ?? 'N/A'}</td><td>${p.skill ?? 'N/A'}</td><td>${p.location ?? 'N/A'}</td><td><span class="badge bg-${p.approval_status === 'approved' ? 'success' : 'warning'}">${p.approval_status ?? 'Pending'}</span></td></tr>`).join('') + 
-            '</tbody></table></div>';
+        
+        const rows = pros.map(p => {
+            const statusBadge = p.status === 'approved' 
+                ? '<span class="badge bg-success">Approved</span>'
+                : p.status === 'rejected'
+                    ? '<span class="badge bg-danger">Rejected</span>'
+                    : '<span class="badge bg-warning">Pending</span>';
+            
+            const suspendedBadge = p.is_suspended 
+                ? '<span class="badge bg-dark ms-1">Suspended</span>' 
+                : '';
+
+            return `<tr data-professional-id="${p.id}">
+                <td class="fw-semibold">${p.name || 'N/A'}</td>
+                <td>${p.email || 'N/A'}</td>
+                <td><span class="badge bg-info">Professional</span></td>
+                <td>${statusBadge} ${suspendedBadge}</td>
+                <td>${p.is_suspended 
+                    ? `<button type="button" class="btn btn-sm btn-success" onclick="window.unsuspendProfessional(${p.id})"><i class="fa-solid fa-check me-1"></i>Unsuspend</button>`
+                    : `<button type="button" class="btn btn-sm btn-warning" onclick="window.suspendProfessional(${p.id})"><i class="fa-solid fa-ban me-1"></i>Suspend</button>`
+                }</td>
+            </tr>`;
+        }).join('');
+
+        area.innerHTML = `<div class="table-responsive"><table class="table align-middle mb-0"><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead><tbody>${rows}</tbody></table></div>`;
     }
     function renderProfessionalsTableError() {
-        const area = document.getElementById('users-table-area');
+        const area = document.getElementById('all-professionals-table-area');
         if (area) area.innerHTML = '<div class="alert alert-danger mb-0">Unable to load professionals.</div>';
     }
 
-    function loadResolvedReports() { fetchJson("/api/admin/reports?status=resolved").then(p => renderReportsTable(toArray(p))).catch(renderReportsTableError); }
+    function loadResolvedReports() { fetchJson("/api/admin/reports?status=resolved").then(p => { reportsData = Array.isArray(p) ? p : []; renderReportsTable(reportsData, true); }).catch(renderReportsTableError); }
     function loadAllPayments() { 
         const area = document.getElementById('users-table-area');
         if (area) area.innerHTML = '<div class="alert alert-info mb-0">Payments section coming soon.</div>';
@@ -2806,7 +3345,7 @@
     }
 
     function loadSuspendedUsers() {
-        fetchJson("/api/admin/users?suspended=1")
+        fetchJson("/api/admin/users/suspended")
             .then((payload) => {
                 renderUsersTable(toArray(payload), 'suspended');
             })
@@ -2816,7 +3355,7 @@
     }
 
     function loadDeletedUsers() {
-        fetchJson("/api/admin/users?deleted=1")
+        fetchJson("/api/admin/users/deleted")
             .then((payload) => {
                 renderUsersTable(toArray(payload), 'deleted');
             })
@@ -2847,19 +3386,26 @@
                     ? '<span class="badge bg-info">Professional</span>'
                     : '<span class="badge bg-secondary">Client</span>';
 
+            let actionBtn = '';
+            if (type === 'all') {
+                if (!user.deleted_at && !user.is_suspended) {
+                    actionBtn = `<button type="button" class="btn btn-sm btn-warning" onclick="suspendUser(${user.id})"><i class="fa-solid fa-ban me-1"></i>Suspend</button>`;
+                } else if (user.is_suspended && !user.deleted_at) {
+                    actionBtn = `<button type="button" class="btn btn-sm btn-success" onclick="unsuspendUser(${user.id})"><i class="fa-solid fa-check me-1"></i>Unsuspend</button>`;
+                }
+            } else if (type === 'suspended') {
+                actionBtn = `<button type="button" class="btn btn-sm btn-success" onclick="unsuspendUser(${user.id})"><i class="fa-solid fa-check me-1"></i>Unsuspend</button>`;
+            } else if (type === 'deleted') {
+                actionBtn = `<button type="button" class="btn btn-sm btn-info" onclick="restoreUser(${user.id})"><i class="fa-solid fa-trash-restore me-1"></i>Restore</button>`;
+            }
+
             return `
                 <tr data-user-id="${user.id}">
                     <td class="fw-semibold">${user.name ?? 'N/A'}</td>
                     <td>${user.email ?? 'N/A'}</td>
                     <td>${roleBadge}</td>
                     <td>${statusBadge}</td>
-                    <td>
-                        <div class="d-flex gap-2">
-                            ${!user.deleted_at && !user.is_suspended ? `<button type="button" class="btn btn-sm btn-warning" onclick="suspendUser(${user.id})"><i class="fa-solid fa-ban"></i></button>` : ''}
-                            ${user.is_suspended && !user.deleted_at ? `<button type="button" class="btn btn-sm btn-success" onclick="unsuspendUser(${user.id})"><i class="fa-solid fa-check"></i></button>` : ''}
-                            ${user.deleted_at ? `<button type="button" class="btn btn-sm btn-info" onclick="restoreUser(${user.id})"><i class="fa-solid fa-trash-restore"></i></button>` : ''}
-                        </div>
-                    </td>
+                    <td>${actionBtn}</td>
                 </tr>
             `;
         }).join('');
@@ -2965,7 +3511,8 @@
     function loadJobs() {
         fetchJson("/api/admin/jobs")
             .then((payload) => {
-                renderJobsTable(toArray(payload));
+                jobsData = Array.isArray(payload) ? payload : (payload.jobs || []);
+                renderJobsTable(jobsData);
             })
             .catch(() => {
                 renderJobsTableError();
@@ -2984,21 +3531,34 @@
         const rows = jobs.map(job => {
             const statusBadge = job.status === 'open' 
                 ? '<span class="badge bg-success">Open</span>'
-                : job.status === 'completed'
-                    ? '<span class="badge bg-info">Completed</span>'
-                    : job.status === 'cancelled'
-                        ? '<span class="badge bg-danger">Cancelled</span>'
-                        : '<span class="badge bg-warning">Pending</span>';
+                : job.status === 'assigned'
+                    ? '<span class="badge bg-primary">Assigned</span>'
+                    : job.status === 'completed'
+                        ? '<span class="badge bg-info">Completed</span>'
+                        : '<span class="badge bg-danger">Cancelled</span>';
+
+            const appsCountClass = job.applications_count === 0 ? 'text-danger fw-bold' : 'text-success';
+            const canCancel = job.status === 'open';
+            const cancelBtn = canCancel 
+                ? `<button type="button" class="btn btn-sm btn-outline-danger" onclick="window.cancelJob(${job.id})"><i class="fa-solid fa-ban me-1"></i>Cancel</button>`
+                : `<button type="button" class="btn btn-sm btn-secondary" disabled><i class="fa-solid fa-ban me-1"></i>Cancel</button>`;
 
             return `
                 <tr data-job-id="${job.id}">
-                    <td class="fw-semibold">${job.title ?? 'N/A'}</td>
-                    <td>${job.skill ?? 'N/A'}</td>
-                    <td>${job.location ?? 'N/A'}</td>
+                    <td class="fw-semibold">${job.title || 'N/A'}</td>
+                    <td>${job.client?.name || 'N/A'}</td>
                     <td>${job.budget ? '$' + job.budget : 'N/A'}</td>
+                    <td>${job.skill || 'N/A'}</td>
+                    <td>${job.location || 'N/A'}</td>
                     <td>${statusBadge}</td>
-                    <td>${job.client?.name ?? 'N/A'}</td>
+                    <td class="${appsCountClass}">${job.applications_count || 0}</td>
                     <td>${job.created_at ? new Date(job.created_at).toLocaleDateString() : 'N/A'}</td>
+                    <td>
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="window.viewJob(${job.id})"><i class="fa-solid fa-eye me-1"></i>View</button>
+                            ${cancelBtn}
+                        </div>
+                    </td>
                 </tr>
             `;
         }).join('');
@@ -3009,12 +3569,14 @@
                     <thead>
                         <tr>
                             <th scope="col">Title</th>
-                            <th scope="col">Skill</th>
-                            <th scope="col">Location</th>
-                            <th scope="col">Budget</th>
-                            <th scope="col">Status</th>
                             <th scope="col">Client</th>
+                            <th scope="col">Budget</th>
+                            <th scope="col">Skills</th>
+                            <th scope="col">Location</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Applications</th>
                             <th scope="col">Created</th>
+                            <th scope="col">Actions</th>
                         </tr>
                     </thead>
                     <tbody>${rows}</tbody>
@@ -3028,10 +3590,113 @@
         if (area) area.innerHTML = '<div class="alert alert-danger mb-0">Unable to load jobs.</div>';
     }
 
+    let jobsData = [];
+    function viewJob(id) {
+        const job = jobsData.find(j => j.id === id);
+        if (!job) return;
+
+        document.getElementById('job-modal-subtitle').textContent = `Job #${job.id}`;
+
+        const statusBadge = job.status === 'open' 
+            ? '<span class="badge bg-success px-3 py-2"><i class="fa-solid fa-check me-1"></i>Open</span>'
+            : job.status === 'assigned'
+                ? '<span class="badge bg-primary px-3 py-2"><i class="fa-solid fa-user-check me-1"></i>Assigned</span>'
+                : job.status === 'completed'
+                    ? '<span class="badge bg-info px-3 py-2"><i class="fa-solid fa-circle-check me-1"></i>Completed</span>'
+                    : '<span class="badge bg-danger px-3 py-2"><i class="fa-solid fa-ban me-1"></i>Cancelled</span>';
+
+        const appsHtml = job.applications_count === 0 
+            ? `<div class="alert alert-warning d-flex align-items-center mb-0"><i class="fa-solid fa-triangle-exclamation me-2 fs-5"></i><div><strong>No applications</strong><br><small>This job hasn't received any applications yet</small></div></div>`
+            : `<div class="alert alert-success d-flex align-items-center mb-0"><i class="fa-solid fa-users me-2 fs-5"></i><div><strong>${job.applications_count} Application(s)</strong><br><small>Professionals have applied to this job</small></div></div>`;
+
+        document.getElementById('job-view-modal-body').innerHTML = `
+            <div class="text-center mb-4">
+                <h3 class="fw-bold mb-2">${job.title || 'N/A'}</h3>
+                ${statusBadge}
+            </div>
+            ${appsHtml}
+            <div class="row g-4 mt-2">
+                <div class="col-md-6">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-header bg-white fw-bold"><i class="fa-solid fa-user me-2 text-primary"></i>Client Information</div>
+                        <div class="card-body">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="bg-primary bg-opacity-10 rounded-circle p-3 me-3">
+                                    <i class="fa-solid fa-user text-primary fa-lg"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-0">${job.client?.name || 'N/A'}</h6>
+                                    <small class="text-muted">${job.client?.email || 'N/A'}</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-header bg-white fw-bold"><i class="fa-solid fa-info-circle me-2 text-info"></i>Job Details</div>
+                        <div class="card-body">
+                            <div class="mb-2"><i class="fa-solid fa-dollar-sign text-success me-2"></i><strong>Budget:</strong> <span class="text-success fw-bold fs-5">${job.budget ? '$' + job.budget : 'N/A'}</span></div>
+                            <div class="mb-2"><i class="fa-solid fa-location-dot text-danger me-2"></i><strong>Location:</strong> ${job.location || 'N/A'}</div>
+                            <div class="mb-2"><i class="fa-solid fa-code text-warning me-2"></i><strong>Skills:</strong> ${job.skill || 'N/A'}</div>
+                            <div><i class="fa-solid fa-calendar text-secondary me-2"></i><strong>Posted:</strong> ${job.created_at ? new Date(job.created_at).toLocaleDateString() : 'N/A'}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card mt-4 border-0 shadow-sm">
+                <div class="card-header bg-white fw-bold"><i class="fa-solid fa-file-lines me-2 text-dark"></i>Job Description</div>
+                <div class="card-body bg-light">
+                    <p class="mb-0" style="white-space: pre-wrap;">${job.description || 'No description provided.'}</p>
+                </div>
+            </div>
+        `;
+
+        const modal = new bootstrap.Modal(document.getElementById('job-view-modal'));
+        modal.show();
+    }
+
+    function cancelJob(id) {
+        showJobActionModal(
+            'Cancel Job',
+            'Are you sure you want to cancel this job? This action cannot be undone.',
+            'danger',
+            () => {
+                postJson(`/api/admin/jobs/${id}/cancel`)
+                    .then(() => {
+                        loadJobs();
+                        loadAdminStats();
+                    })
+                    .catch(err => alert(err.message || 'Failed to cancel job.'));
+            }
+        );
+    }
+
+    function showJobActionModal(title, message, btnClass, onConfirm) {
+        const modalEl = document.getElementById('job-action-modal');
+        const titleEl = document.getElementById('job-action-modal-title');
+        const bodyEl = document.getElementById('job-action-modal-body');
+        const confirmBtn = document.getElementById('job-action-confirm-btn');
+
+        titleEl.textContent = title;
+        bodyEl.textContent = message;
+        confirmBtn.className = `btn btn-${btnClass}`;
+        confirmBtn.textContent = 'Confirm';
+
+        const modal = new bootstrap.Modal(modalEl);
+        modal.show();
+
+        confirmBtn.onclick = () => {
+            modal.hide();
+            onConfirm();
+        };
+    }
+
     function loadContracts() {
         fetchJson("/api/admin/contracts")
             .then((payload) => {
-                renderContractsTable(toArray(payload));
+                contractsData = Array.isArray(payload) ? payload : [];
+                renderContractsTable(contractsData);
             })
             .catch(() => {
                 renderContractsTableError();
@@ -3060,14 +3725,18 @@
 
             return `
                 <tr data-contract-id="${contract.id}">
-                    <td class="fw-semibold">${contract.title ?? 'N/A'}</td>
-                    <td>${contract.job?.title ?? 'N/A'}</td>
-                    <td>${contract.client?.name ?? 'N/A'}</td>
-                    <td>${contract.professional?.name ?? 'N/A'}</td>
+                    <td class="fw-semibold">#${contract.id}</td>
+                    <td>${contract.job?.title || 'N/A'}</td>
+                    <td>${contract.client?.name || 'N/A'}</td>
+                    <td>${contract.professional?.name || 'N/A'}</td>
+                    <td>${contract.budget ? '$' + contract.budget : 'N/A'}</td>
                     <td>${statusBadge}</td>
                     <td>${contract.created_at ? new Date(contract.created_at).toLocaleDateString() : 'N/A'}</td>
                     <td>
-                        ${canCancel ? `<button type="button" class="btn btn-sm btn-danger" onclick="forceCancelContract(${contract.id})"><i class="fa-solid fa-times"></i> Force Cancel</button>` : ''}
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="viewContract(${contract.id})"><i class="fa-solid fa-eye me-1"></i>View</button>
+                            ${canCancel ? `<button type="button" class="btn btn-sm btn-danger" onclick="forceCancelContract(${contract.id})"><i class="fa-solid fa-ban me-1"></i>Cancel</button>` : `<button type="button" class="btn btn-sm btn-secondary" disabled><i class="fa-solid fa-ban me-1"></i>Cancel</button>`}
+                        </div>
                     </td>
                 </tr>
             `;
@@ -3078,10 +3747,11 @@
                 <table class="table align-middle mb-0">
                     <thead>
                         <tr>
-                            <th scope="col">Title</th>
-                            <th scope="col">Job</th>
+                            <th scope="col">ID</th>
+                            <th scope="col">Job Title</th>
                             <th scope="col">Client</th>
                             <th scope="col">Professional</th>
+                            <th scope="col">Budget</th>
                             <th scope="col">Status</th>
                             <th scope="col">Created</th>
                             <th scope="col">Actions</th>
@@ -3098,19 +3768,94 @@
         if (area) area.innerHTML = '<div class="alert alert-danger mb-0">Unable to load contracts.</div>';
     }
 
-    function removeContractRow(id) {
-        const row = document.querySelector(`tr[data-contract-id="${id}"]`);
-        if (row) row.remove();
+    let contractsData = [];
+
+    function viewContract(id) {
+        const contract = contractsData.find(c => c.id === id);
+        if (!contract) return;
+
+        document.getElementById('contract-modal-subtitle').textContent = `Contract #${contract.id}`;
+
+        const statusBadge = contract.status === 'active' 
+            ? '<span class="badge bg-success px-3 py-2"><i class="fa-solid fa-check-circle me-1"></i>Active</span>'
+            : contract.status === 'completed'
+                ? '<span class="badge bg-info px-3 py-2"><i class="fa-solid fa-circle-check me-1"></i>Completed</span>'
+                : '<span class="badge bg-danger px-3 py-2"><i class="fa-solid fa-ban me-1"></i>Cancelled</span>';
+
+        document.getElementById('contract-view-modal-body').innerHTML = `
+            <div class="text-center mb-4">
+                <h3 class="fw-bold mb-2"><i class="fa-solid fa-file-contract me-2"></i>Contract</h3>
+                ${statusBadge}
+            </div>
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-header bg-primary text-white fw-bold"><i class="fa-solid fa-user me-2"></i>Client</div>
+                        <div class="card-body">
+                            <div class="text-center mb-3">
+                                <div class="bg-primary bg-opacity-10 rounded-circle p-4 d-inline-block">
+                                    <i class="fa-solid fa-user text-primary fa-2x"></i>
+                                </div>
+                            </div>
+                            <h5 class="text-center mb-1">${contract.client?.name || 'N/A'}</h5>
+                            <p class="text-center text-muted mb-0"><i class="fa-solid fa-envelope me-2"></i>${contract.client?.email || 'N/A'}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-header bg-success text-white fw-bold"><i class="fa-solid fa-user-tie me-2"></i>Professional</div>
+                        <div class="card-body">
+                            <div class="text-center mb-3">
+                                <div class="bg-success bg-opacity-10 rounded-circle p-4 d-inline-block">
+                                    <i class="fa-solid fa-user-tie text-success fa-2x"></i>
+                                </div>
+                            </div>
+                            <h5 class="text-center mb-1">${contract.professional?.name || 'N/A'}</h5>
+                            <p class="text-center text-muted mb-0"><i class="fa-solid fa-envelope me-2"></i>${contract.professional?.email || 'N/A'}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card mt-4 border-0 shadow-sm">
+                <div class="card-header bg-dark text-white fw-bold"><i class="fa-solid fa-briefcase me-2"></i>Job Information</div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-4">
+                            <div class="fw-bold text-primary fs-4">${contract.job?.title || 'N/A'}</div>
+                            <small class="text-muted">Job Title</small>
+                        </div>
+                        <div class="col-4">
+                            <div class="fw-bold text-success fs-4">${contract.budget ? '$' + contract.budget : 'N/A'}</div>
+                            <small class="text-muted">Budget</small>
+                        </div>
+                        <div class="col-4">
+                            <div class="fw-bold text-info fs-5">${contract.created_at ? new Date(contract.created_at).toLocaleDateString() : 'N/A'}</div>
+                            <small class="text-muted">Created</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card mt-4 border-0 shadow-sm">
+                <div class="card-header bg-secondary text-white fw-bold"><i class="fa-solid fa-file-lines me-2"></i>Job Description</div>
+                <div class="card-body bg-light">
+                    <p class="mb-0" style="white-space: pre-wrap;">${contract.job?.description || 'No description provided.'}</p>
+                </div>
+            </div>
+        `;
+
+        const modal = new bootstrap.Modal(document.getElementById('contract-view-modal'));
+        modal.show();
     }
 
     function forceCancelContract(id) {
-        const modalEl = document.getElementById('admin-contract-modal');
-        const titleEl = document.getElementById('admin-contract-modal-title');
-        const bodyEl = document.getElementById('admin-contract-modal-body');
-        const confirmBtn = document.getElementById('admin-contract-confirm-btn');
+        const modalEl = document.getElementById('contract-action-modal');
+        const titleEl = document.getElementById('contract-action-modal-title');
+        const bodyEl = document.getElementById('contract-action-modal-body');
+        const confirmBtn = document.getElementById('contract-action-confirm-btn');
 
         titleEl.textContent = 'Force Cancel Contract';
-        bodyEl.textContent = 'Are you sure you want to force cancel this contract? This action cannot be undone.';
+        bodyEl.innerHTML = '<div class="alert alert-warning"><i class="fa-solid fa-exclamation-triangle me-2"></i><strong>Warning:</strong> This action should only be used for fraud, disputes, or violations!</div><p class="mb-0">Are you sure you want to force cancel this contract? This cannot be undone.</p>';
         confirmBtn.className = 'btn btn-danger';
         confirmBtn.textContent = 'Force Cancel';
 
@@ -3119,28 +3864,27 @@
 
         confirmBtn.onclick = () => {
             modal.hide();
-            postJson(`/api/admin/contracts/${id}/force-cancel`)
+            postJson(`/api/admin/contracts/${id}/cancel`)
                 .then(() => {
-                    removeContractRow(id);
+                    loadContracts();
                     loadAdminStats();
                 })
                 .catch(err => alert(err.message || 'Failed to cancel contract.'));
         };
     }
 
-    let currentResolveReportId = null;
-
     function loadReports() {
         fetchJson("/api/admin/reports")
             .then((payload) => {
-                renderReportsTable(toArray(payload));
+                reportsData = Array.isArray(payload) ? payload : [];
+                renderReportsTable(reportsData);
             })
             .catch(() => {
                 renderReportsTableError();
             });
     }
 
-    function renderReportsTable(reports) {
+    function renderReportsTable(reports, isResolvedView = false) {
         const area = document.getElementById('reports-table-area');
         if (!area) return;
 
@@ -3150,43 +3894,93 @@
         }
 
         const rows = reports.map(report => {
-            const statusBadge = report.status === 'resolved' 
-                ? '<span class="badge bg-success">Resolved</span>'
-                : '<span class="badge bg-warning">Pending</span>';
+            if (isResolvedView) {
+                const actionBadge = report.action_taken === 'suspend_user' 
+                    ? '<span class="badge bg-danger">Suspended User</span>'
+                    : report.action_taken === 'cancel_contract'
+                        ? '<span class="badge bg-warning text-dark">Contract Cancelled</span>'
+                        : '<span class="badge bg-secondary">No Action</span>';
 
-            return `
-                <tr data-report-id="${report.id}">
-                    <td class="fw-semibold">${report.title ?? 'N/A'}</td>
-                    <td>${report.reporter?.name ?? 'N/A'}</td>
-                    <td>${report.reported?.name ?? 'N/A'}</td>
-                    <td>${report.reason ?? 'N/A'}</td>
-                    <td>${statusBadge}</td>
-                    <td>${report.created_at ? new Date(report.created_at).toLocaleDateString() : 'N/A'}</td>
-                    <td>
-                        ${report.status !== 'resolved' ? `<button type="button" class="btn btn-sm btn-success" onclick="showResolveReportModal(${report.id})"><i class="fa-solid fa-check"></i> Resolve</button>` : ''}
-                    </td>
-                </tr>
-            `;
+                return `
+                    <tr data-report-id="${report.id}">
+                        <td class="fw-semibold">#${report.id}</td>
+                        <td>${report.contract ? '#' + report.contract.id : 'N/A'}</td>
+                        <td>${report.reporter?.name || 'N/A'}</td>
+                        <td>${report.reported?.name || 'N/A'}</td>
+                        <td><span class="text-truncate d-inline-block" style="max-width: 120px;">${report.reason || 'N/A'}</span></td>
+                        <td>${actionBadge}</td>
+                        <td>${report.resolved_at ? new Date(report.resolved_at).toLocaleDateString() : 'N/A'}</td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="viewReport(${report.id})"><i class="fa-solid fa-eye me-1"></i>View</button>
+                        </td>
+                    </tr>
+                `;
+            } else {
+                const statusBadge = report.status === 'resolved' 
+                    ? '<span class="badge bg-success">Resolved</span>'
+                    : '<span class="badge bg-warning">Pending</span>';
+
+                return `
+                    <tr data-report-id="${report.id}">
+                        <td class="fw-semibold">#${report.id}</td>
+                        <td>${report.contract ? '#' + report.contract.id : 'N/A'}</td>
+                        <td>${report.reporter?.name || 'N/A'}</td>
+                        <td>${report.reported?.name || 'N/A'}</td>
+                        <td><span class="text-truncate d-inline-block" style="max-width: 150px;">${report.reason || 'N/A'}</span></td>
+                        <td>${statusBadge}</td>
+                        <td>${report.created_at ? new Date(report.created_at).toLocaleDateString() : 'N/A'}</td>
+                        <td>
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="viewReport(${report.id})"><i class="fa-solid fa-eye me-1"></i>View</button>
+                                ${report.status !== 'resolved' ? `<button type="button" class="btn btn-sm btn-success" onclick="openResolveModal(${report.id})"><i class="fa-solid fa-check me-1"></i>Resolve</button>` : ''}
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }
         }).join('');
 
-        area.innerHTML = `
-            <div class="table-responsive">
-                <table class="table align-middle mb-0">
-                    <thead>
-                        <tr>
-                            <th scope="col">Title</th>
-                            <th scope="col">Reporter</th>
-                            <th scope="col">Reported</th>
-                            <th scope="col">Reason</th>
-                            <th scope="col">Status</th>
-                            <th scope="col">Date</th>
-                            <th scope="col">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>${rows}</tbody>
-                </table>
-            </div>
-        `;
+        if (isResolvedView) {
+            area.innerHTML = `
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th scope="col">ID</th>
+                                <th scope="col">Contract</th>
+                                <th scope="col">Reporter</th>
+                                <th scope="col">Reported</th>
+                                <th scope="col">Reason</th>
+                                <th scope="col">Action Taken</th>
+                                <th scope="col">Resolved At</th>
+                                <th scope="col">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>
+            `;
+        } else {
+            area.innerHTML = `
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th scope="col">ID</th>
+                                <th scope="col">Contract</th>
+                                <th scope="col">Reporter</th>
+                                <th scope="col">Reported</th>
+                                <th scope="col">Reason</th>
+                                <th scope="col">Status</th>
+                                <th scope="col">Date</th>
+                                <th scope="col">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>
+            `;
+        }
     }
 
     function renderReportsTableError() {
@@ -3194,19 +3988,156 @@
         if (area) area.innerHTML = '<div class="alert alert-danger mb-0">Unable to load reports.</div>';
     }
 
-    function showResolveReportModal(id) {
-        currentResolveReportId = id;
+    let reportsData = [];
+
+    function viewReport(id) {
+        const report = reportsData.find(r => r.id === id);
+        if (!report) return;
+
+        document.getElementById('report-modal-subtitle').textContent = `Report #${report.id}`;
+
+        const statusBadge = report.status === 'resolved' 
+            ? '<span class="badge bg-success px-3 py-2"><i class="fa-solid fa-check-circle me-1"></i>Resolved</span>'
+            : '<span class="badge bg-warning px-3 py-2"><i class="fa-solid fa-clock me-1"></i>Pending</span>';
+
+        const actionTakenHtml = report.action_taken 
+            ? `<div class="col-md-6">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-header bg-success text-white fw-bold"><i class="fa-solid fa-gavel me-2"></i>Action Taken</div>
+                        <div class="card-body">
+                            ${report.action_taken === 'suspend_user' 
+                                ? '<span class="badge bg-danger px-3 py-2"><i class="fa-solid fa-ban me-1"></i>Suspended User</span>'
+                                : report.action_taken === 'cancel_contract'
+                                    ? '<span class="badge bg-warning text-dark px-3 py-2"><i class="fa-solid fa-file-circle-xmark me-1"></i>Contract Cancelled</span>'
+                                    : '<span class="badge bg-secondary px-3 py-2"><i class="fa-solid fa-minus me-1"></i>No Action</span>'}
+                            ${report.resolved_at ? `<div class="mt-2 text-muted small"><i class="fa-solid fa-check me-1"></i>Resolved on: ${new Date(report.resolved_at).toLocaleString()}</div>` : ''}
+                        </div>
+                    </div>
+                </div>`
+            : '';
+
+        document.getElementById('report-view-modal-body').innerHTML = `
+            <div class="text-center mb-4">
+                <h4 class="fw-bold mb-2">Report #${report.id}</h4>
+                ${statusBadge}
+            </div>
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-header bg-primary text-white fw-bold"><i class="fa-solid fa-user me-2"></i>Reporter</div>
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-primary bg-opacity-10 rounded-circle p-3 me-3">
+                                    <i class="fa-solid fa-user text-primary fa-lg"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-0">${report.reporter?.name || 'N/A'}</h6>
+                                    <small class="text-muted">${report.reporter?.email || 'N/A'}</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-header bg-danger text-white fw-bold"><i class="fa-solid fa-flag me-2"></i>Reported User</div>
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-danger bg-opacity-10 rounded-circle p-3 me-3">
+                                    <i class="fa-solid fa-user-slash text-danger fa-lg"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-0">${report.reported?.name || 'N/A'}</h6>
+                                    <small class="text-muted">${report.reported?.email || 'N/A'}</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                ${actionTakenHtml}
+            </div>
+            ${report.contract ? `
+            <div class="card mt-4 border-0 shadow-sm">
+                <div class="card-header bg-dark text-white fw-bold"><i class="fa-solid fa-file-contract me-2"></i>Contract Information</div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-3">
+                            <div class="fw-bold text-primary fs-5">#${report.contract.id}</div>
+                            <small class="text-muted">Contract ID</small>
+                        </div>
+                        <div class="col-3">
+                            <div class="fw-bold">${report.contract.job?.title || 'N/A'}</div>
+                            <small class="text-muted">Job Title</small>
+                        </div>
+                        <div class="col-3">
+                            <div class="fw-bold text-success">${report.contract.client?.name || 'N/A'}</div>
+                            <small class="text-muted">Client</small>
+                        </div>
+                        <div class="col-3">
+                            <div class="fw-bold text-info">${report.contract.professional?.name || 'N/A'}</div>
+                            <small class="text-muted">Professional</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            ` : ''}
+            <div class="card mt-4 border-0 shadow-sm">
+                <div class="card-header bg-warning text-dark fw-bold"><i class="fa-solid fa-message me-2"></i>Report Reason</div>
+                <div class="card-body bg-light">
+                    <p class="mb-0" style="white-space: pre-wrap;">${report.reason || 'No reason provided.'}</p>
+                </div>
+            </div>
+            <div class="text-center mt-3 text-muted">
+                <small><i class="fa-solid fa-calendar me-1"></i>Reported on: ${report.created_at ? new Date(report.created_at).toLocaleString() : 'N/A'}</small>
+            </div>
+        `;
+
+        const resolveBtn = document.getElementById('report-resolve-btn');
+        if (report.status === 'resolved') {
+            resolveBtn.style.display = 'none';
+        } else {
+            resolveBtn.style.display = 'inline-flex';
+            resolveBtn.onclick = () => {
+                const viewModal = bootstrap.Modal.getInstance(document.getElementById('report-view-modal'));
+                viewModal.hide();
+                openResolveModal(report.id);
+            };
+        }
+
+        const modal = new bootstrap.Modal(document.getElementById('report-view-modal'));
+        modal.show();
+    }
+
+    function openResolveModal(id) {
+        const report = reportsData.find(r => r.id === id);
+        if (!report) return;
+
+        document.getElementById('report-resolve-detail').innerHTML = `
+            <div class="alert alert-secondary">
+                <strong>Report #${report.id}</strong> - ${report.reported?.name || 'N/A'}
+            </div>
+        `;
+        document.getElementById('report-action-select').value = '';
         document.getElementById('report-resolution-notes').value = '';
-        const modal = new bootstrap.Modal(document.getElementById('admin-report-modal'));
+
+        const modal = new bootstrap.Modal(document.getElementById('report-resolve-modal'));
         modal.show();
 
         document.getElementById('report-resolve-confirm-btn').onclick = () => {
+            const action = document.getElementById('report-action-select').value;
             const notes = document.getElementById('report-resolution-notes').value;
-            postJson(`/api/admin/reports/${id}/resolve`, { notes })
+
+            if (!action) {
+                alert('Please select an action');
+                return;
+            }
+
+            postJson(`/api/admin/reports/${id}/resolve`, { action, notes })
                 .then(() => {
                     modal.hide();
                     loadReports();
                     loadAdminStats();
+                    alert('Report resolved successfully');
                 })
                 .catch(err => alert(err.message || 'Failed to resolve report.'));
         };
@@ -3215,7 +4146,7 @@
     function loadPlans() {
         fetchJson("/api/admin/plans")
             .then((payload) => {
-                renderPlansTable(toArray(payload));
+                renderPlansTable(Array.isArray(payload) ? payload : []);
             })
             .catch(() => {
                 renderPlansTableError();
@@ -3233,18 +4164,17 @@
 
         const rows = plans.map(plan => `
             <tr data-plan-id="${plan.id}">
-                <td class="fw-semibold">${plan.name ?? 'N/A'}</td>
-                <td>$${plan.price ?? 0}</td>
-                <td>${plan.duration_days ?? 0} days</td>
-                <td>${plan.job_posts_allowed ?? 0}</td>
-                <td>${plan.description ?? '-'}</td>
+                <td class="fw-semibold">${plan.name || 'N/A'}</td>
+                <td><span class="badge bg-success px-3 py-2">$${plan.price ?? 0}</span></td>
+                <td><span class="badge bg-warning text-dark px-3 py-2">${plan.job_posts_limit ?? 0} posts</span></td>
+                <td><span class="badge bg-info px-3 py-2">${plan.duration_days ?? 0} days</span></td>
                 <td>
                     <div class="d-flex gap-2">
-                        <button type="button" class="btn btn-sm btn-primary" onclick="showEditPlanModal(${plan.id}, '${plan.name}', ${plan.price}, ${plan.duration_days}, ${plan.job_posts_allowed}, '${plan.description || ''}')">
-                            <i class="fa-solid fa-edit"></i>
+                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="showEditPlanModal(${plan.id}, '${plan.name}', ${plan.price}, ${plan.job_posts_limit}, ${plan.duration_days})">
+                            <i class="fa-solid fa-edit me-1"></i>Edit
                         </button>
-                        <button type="button" class="btn btn-sm btn-danger" onclick="showDeletePlanModal(${plan.id})">
-                            <i class="fa-solid fa-trash"></i>
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="showDeletePlanModal(${plan.id})">
+                            <i class="fa-solid fa-trash me-1"></i>Delete
                         </button>
                     </div>
                 </td>
@@ -3254,13 +4184,12 @@
         area.innerHTML = `
             <div class="table-responsive">
                 <table class="table align-middle mb-0">
-                    <thead>
+                    <thead class="table-light">
                         <tr>
                             <th scope="col">Name</th>
                             <th scope="col">Price</th>
+                            <th scope="col">Job Posts Limit</th>
                             <th scope="col">Duration</th>
-                            <th scope="col">Job Posts</th>
-                            <th scope="col">Description</th>
                             <th scope="col">Actions</th>
                         </tr>
                     </thead>
@@ -3275,39 +4204,37 @@
         if (area) area.innerHTML = '<div class="alert alert-danger mb-0">Unable to load plans.</div>';
     }
 
-    let currentDeletePlanId = null;
-
     function showCreatePlanModal() {
         document.getElementById('plan-id').value = '';
         document.getElementById('plan-name').value = '';
         document.getElementById('plan-price').value = '';
+        document.getElementById('plan-job-limit').value = '';
         document.getElementById('plan-duration').value = '';
-        document.getElementById('plan-job-posts').value = '';
-        document.getElementById('plan-description').value = '';
-        document.getElementById('admin-plan-modal-title').textContent = 'Create Plan';
-        new bootstrap.Modal(document.getElementById('admin-plan-modal')).show();
+        document.getElementById('plan-modal-title').innerHTML = '<i class="fa-solid fa-layer-group me-2"></i>Create Plan';
+        new bootstrap.Modal(document.getElementById('plan-modal')).show();
     }
 
-    function showEditPlanModal(id, name, price, duration, jobPosts, description) {
+    function showEditPlanModal(id, name, price, jobLimit, duration) {
         document.getElementById('plan-id').value = id;
         document.getElementById('plan-name').value = name;
         document.getElementById('plan-price').value = price;
+        document.getElementById('plan-job-limit').value = jobLimit;
         document.getElementById('plan-duration').value = duration;
-        document.getElementById('plan-job-posts').value = jobPosts;
-        document.getElementById('plan-description').value = description;
-        document.getElementById('admin-plan-modal-title').textContent = 'Edit Plan';
-        new bootstrap.Modal(document.getElementById('admin-plan-modal')).show();
+        document.getElementById('plan-modal-title').innerHTML = '<i class="fa-solid fa-edit me-2"></i>Edit Plan';
+        new bootstrap.Modal(document.getElementById('plan-modal')).show();
     }
 
     function savePlan() {
         const id = document.getElementById('plan-id').value;
-        const data = {
-            name: document.getElementById('plan-name').value,
-            price: parseFloat(document.getElementById('plan-price').value),
-            duration_days: parseInt(document.getElementById('plan-duration').value),
-            job_posts_allowed: parseInt(document.getElementById('plan-job-posts').value),
-            description: document.getElementById('plan-description').value
-        };
+        const name = document.getElementById('plan-name').value;
+        const price = parseFloat(document.getElementById('plan-price').value);
+        const job_posts_limit = parseInt(document.getElementById('plan-job-limit').value);
+        const duration_days = parseInt(document.getElementById('plan-duration').value);
+
+        if (!name || !price || !job_posts_limit || !duration_days) {
+            alert('Please fill all fields');
+            return;
+        }
 
         const url = id ? `/api/admin/plans/${id}` : '/api/admin/plans';
         const method = id ? 'PUT' : 'POST';
@@ -3315,33 +4242,41 @@
         fetch(url, {
             method: method,
             headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('token') },
-            body: JSON.stringify(data)
+            body: JSON.stringify({ name, price, job_posts_limit, duration_days })
         })
         .then(res => res.json())
-        .then(() => {
-            bootstrap.Modal.getInstance(document.getElementById('admin-plan-modal')).hide();
+        .then(data => {
+            bootstrap.Modal.getInstance(document.getElementById('plan-modal')).hide();
             loadPlans();
+            if (!id) alert('Plan created successfully!');
+            else alert('Plan updated successfully!');
         })
         .catch(err => alert(err.message || 'Failed to save plan.'));
     }
 
     function showDeletePlanModal(id) {
-        currentDeletePlanId = id;
-        const modal = new bootstrap.Modal(document.getElementById('admin-plan-delete-modal'));
-        modal.show();
+        document.getElementById('delete-plan-id').value = id;
+        new bootstrap.Modal(document.getElementById('plan-delete-modal')).show();
+    }
 
-        document.getElementById('plan-delete-confirm-btn').onclick = () => {
-            modal.hide();
-            fetch(`/api/admin/plans/${id}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
-            })
-            .then(() => {
-                document.querySelector(`tr[data-plan-id="${id}"]`)?.remove();
+    function confirmDeletePlan() {
+        const id = document.getElementById('delete-plan-id').value;
+        
+        fetch(`/api/admin/plans/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
+        })
+        .then(res => res.json())
+        .then(data => {
+            bootstrap.Modal.getInstance(document.getElementById('plan-delete-modal')).hide();
+            if (data.message && data.message.includes('Cannot delete')) {
+                alert(data.message);
+            } else {
                 loadPlans();
-            })
-            .catch(err => alert(err.message || 'Failed to delete plan.'));
-        };
+                alert('Plan deleted successfully!');
+            }
+        })
+        .catch(err => alert(err.message || 'Failed to delete plan.'));
     }
 
     document.addEventListener("DOMContentLoaded", function () {
@@ -3353,6 +4288,7 @@
             bindSidebarNavigation();
             bindJobPostsReload();
             bindDashboardTools();
+            bindClientProfileForm();
             loadClientIdentity();
             handleSubscriptionAction();
             loadStats();
@@ -3382,4 +4318,34 @@
     window.loadAdminStats = loadAdminStats;
     window.loadPendingProfessionals = loadPendingProfessionals;
     window.toggleAdminDarkMode = toggleAdminDarkMode;
+    window.loadUsers = loadUsers;
+    window.loadSuspendedUsers = loadSuspendedUsers;
+    window.loadDeletedUsers = loadDeletedUsers;
+    window.loadAllProfessionals = loadAllProfessionals;
+    window.suspendUser = suspendUser;
+    window.unsuspendUser = unsuspendUser;
+    window.restoreUser = restoreUser;
+    window.approveProfessional = approveProfessional;
+    window.rejectProfessional = rejectProfessional;
+    window.suspendProfessional = suspendProfessional;
+    window.unsuspendProfessional = unsuspendProfessional;
+    window.loadJobs = loadJobs;
+    window.viewJob = viewJob;
+    window.cancelJob = cancelJob;
+    window.loadContracts = loadContracts;
+    window.viewContract = viewContract;
+    window.forceCancelContract = forceCancelContract;
+    window.loadReports = loadReports;
+    window.loadResolvedReports = loadResolvedReports;
+    window.viewReport = viewReport;
+    window.openResolveModal = openResolveModal;
+    window.loadPlans = loadPlans;
+    window.showCreatePlanModal = showCreatePlanModal;
+    window.showEditPlanModal = showEditPlanModal;
+    window.savePlan = savePlan;
+    window.showDeletePlanModal = showDeletePlanModal;
+    window.confirmDeletePlan = confirmDeletePlan;
+    window.buyPlan = buyPlan;
+    window.loadClientPlans = loadClientPlans;
+    window.showProProfile = showProProfile;
 })();

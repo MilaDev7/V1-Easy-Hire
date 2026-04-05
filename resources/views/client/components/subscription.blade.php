@@ -13,7 +13,6 @@
                 </p>
                 <h6 class="fw-bold mb-0 text-white">Upgrade Your Plan</h6>
             </div>
-
             <span
                 class="px-3 py-1 rounded-pill small fw-semibold"
                 style="background: rgba(255, 255, 255, 0.10); color: #e3f6eb; width: fit-content;"
@@ -22,57 +21,70 @@
             </span>
         </div>
 
-        <div class="row g-2">
-            <div class="col-12 col-md-4">
-                <div class="card border-0 rounded-4 h-100" style="background: rgba(255, 255, 255, 0.12);">
-                    <div class="card-body p-3">
-                        <div class="d-flex align-items-center justify-content-between mb-2">
-                            <h6 class="fw-bold text-uppercase mb-0" style="color: #c8f0d6; letter-spacing: 0.08em;">Plan Basic</h6>
-                            <span class="small fw-semibold px-2 py-1 rounded-pill" style="background: rgba(255, 255, 255, 0.12); color: #eefbf3;">Starter</span>
-                        </div>
-                        <h3 class="fw-bold text-white mb-0">Br50</h3>
-                        <div class="d-flex align-items-center justify-content-between mt-1">
-                            <p class="mb-0 small" style="color: rgba(255, 255, 255, 0.78);">5 Job Posts</p>
-                            <button class="btn btn-light btn-sm rounded-pill fw-semibold px-3 py-1">Buy Now</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-12 col-md-4">
-                <div class="card border-0 rounded-4 h-100" style="background: rgba(138, 219, 174, 0.20); box-shadow: 0 8px 22px rgba(7, 19, 16, 0.14);">
-                    <div class="card-body p-3">
-                        <div class="d-flex align-items-center justify-content-between mb-2">
-                            <div class="d-flex align-items-center gap-2">
-                                <h6 class="fw-bold text-uppercase mb-0" style="color: #effff4; letter-spacing: 0.08em;">Plan Pro</h6>
-                                <span class="small fw-bold px-2 py-1 rounded-pill" style="background: #e5f8ec; color: #1b4037;">Popular</span>
-                            </div>
-                            <span class="small fw-semibold px-2 py-1 rounded-pill" style="background: rgba(255, 255, 255, 0.14); color: #f6fff9;">Growth</span>
-                        </div>
-                        <h3 class="fw-bold text-white mb-0">Br110</h3>
-                        <div class="d-flex align-items-center justify-content-between mt-1">
-                            <p class="mb-0 small" style="color: rgba(255, 255, 255, 0.84);">15 Job Posts</p>
-                            <button class="btn btn-light btn-sm rounded-pill fw-semibold px-3 py-1">Buy Now</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-12 col-md-4">
-                <div class="card border-0 rounded-4 h-100" style="background: rgba(255, 255, 255, 0.12);">
-                    <div class="card-body p-3">
-                        <div class="d-flex align-items-center justify-content-between mb-2">
-                            <h6 class="fw-bold text-uppercase mb-0" style="color: #d0f4dc; letter-spacing: 0.08em;">Plan Premium</h6>
-                            <span class="small fw-semibold px-2 py-1 rounded-pill" style="background: rgba(255, 255, 255, 0.12); color: #eefbf3;">Scale</span>
-                        </div>
-                        <h3 class="fw-bold text-white mb-0">Br500</h3>
-                        <div class="d-flex align-items-center justify-content-between mt-1">
-                            <p class="mb-0 small" style="color: rgba(255, 255, 255, 0.78);">45 Job Posts</p>
-                            <button class="btn btn-light btn-sm rounded-pill fw-semibold px-3 py-1">Buy Now</button>
-                        </div>
-                    </div>
-                </div>
+        <div id="client-plans-container" class="row g-2">
+            <div class="col-12 text-center text-white-50 py-5">
+                <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                Loading plans...
             </div>
         </div>
     </div>
 </section>
+
+<script>
+    async function loadClientPlans() {
+        const container = document.getElementById('client-plans-container');
+        if (!container) return;
+
+        try {
+            const response = await fetch('/api/plans');
+            const plans = await response.json();
+            
+            if (!plans || plans.length === 0) {
+                container.innerHTML = '<div class="col-12 text-center text-white-50 py-4">No plans available at the moment.</div>';
+                return;
+            }
+
+            container.innerHTML = plans.map((plan, index) => {
+                const isPopular = index === 1;
+                const bgStyle = isPopular 
+                    ? 'background: rgba(138, 219, 174, 0.20); box-shadow: 0 8px 22px rgba(7, 19, 16, 0.14);'
+                    : 'background: rgba(255, 255, 255, 0.12);';
+                const planColor = isPopular ? '#effff4' : '#c8f0d6';
+                const popularBadge = isPopular 
+                    ? '<span class="small fw-bold px-2 py-1 rounded-pill" style="background: #e5f8ec; color: #1b4037;">Popular</span>'
+                    : '';
+
+                return `
+                    <div class="col-12 col-md-4">
+                        <div class="card border-0 rounded-4 h-100" style="${bgStyle}">
+                            <div class="card-body p-3">
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <h6 class="fw-bold text-uppercase mb-0" style="color: ${planColor}; letter-spacing: 0.08em;">${plan.name || 'Plan'}</h6>
+                                    ${popularBadge}
+                                </div>
+                                <h3 class="fw-bold text-white mb-0">Br${plan.price || 0}</h3>
+                                <div class="d-flex align-items-center justify-content-between mt-1">
+                                    <p class="mb-0 small" style="color: rgba(255, 255, 255, 0.78);">${plan.job_posts_limit || 0} Job Posts</p>
+                                </div>
+                                <div class="d-flex align-items-center justify-content-between mt-1">
+                                    <p class="mb-0 small" style="color: rgba(255, 255, 255, 0.78);">${plan.duration_days || 0} Days</p>
+                                    <button class="btn btn-light btn-sm rounded-pill fw-semibold px-3 py-1" onclick="window.buyPlan(${plan.id})">Buy Now</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        } catch (error) {
+            container.innerHTML = '<div class="col-12 text-center text-white-50 py-4">Failed to load plans. Please refresh.</div>';
+        }
+    }
+
+    window.loadClientPlans = loadClientPlans;
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        if (document.querySelector('.client-subscription-section')) {
+            loadClientPlans();
+        }
+    });
+</script>
