@@ -11,7 +11,8 @@ class Subscription extends Model
         'plan_id',
         'remaining_posts',
         'expires_at',
-        'status'
+        'status',
+        'tx_ref',
     ];
 
     public function user()
@@ -23,5 +24,4 @@ class Subscription extends Model
     {
         return $this->belongsTo(\App\Models\Plan::class);
     }
-
 }

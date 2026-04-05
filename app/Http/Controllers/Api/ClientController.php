@@ -2,14 +2,11 @@
 
 namespace App\Http\Controllers\Api;
 
-
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use App\Models\Contract;
 use App\Models\Application;
+use App\Models\Contract;
 use App\Models\JobPost;
 use App\Models\Subscription;
-
 
 class ClientController extends Controller
 {
@@ -23,7 +20,7 @@ class ClientController extends Controller
             'email' => $user->email,
             'role' => $user->role,
             'profile_photo' => $user->profile_photo
-                ? asset('storage/' . $user->profile_photo)
+                ? asset('storage/'.$user->profile_photo)
                 : asset('images/user1.jpg'),
         ]);
     }
@@ -37,18 +34,30 @@ class ClientController extends Controller
 
         return response()->json([
             'count' => $contracts->count(),
-            'data' => $contracts
+            'data' => $contracts,
         ]);
     }
 
     // ✅ All Contracts
     public function allContracts()
     {
-        $contracts = Contract::where('client_id', auth()->id())
+        $userId = auth()->id();
+
+        $contracts = Contract::where('client_id', $userId)
             ->with(['job', 'client', 'professional.professional'])
             ->latest()
             ->get()
-            ->map(function ($contract) {
+            ->map(function ($contract) use ($userId) {
+                // Check if already reviewed
+                $hasReview = \App\Models\Review::where('contract_id', $contract->id)
+                    ->where('reviewer_id', $userId)
+                    ->exists();
+
+                // Check if already reported
+                $hasReport = \App\Models\Report::where('contract_id', $contract->id)
+                    ->where('reporter_id', $userId)
+                    ->exists();
+
                 return [
                     'id' => $contract->id,
                     'title' => $contract->job->title ?? 'Untitled Contract',
@@ -57,6 +66,8 @@ class ClientController extends Controller
                     'professional_profile_id' => optional($contract->professional->professional)->id,
                     'status' => $contract->status ?? 'N/A',
                     'created_at' => optional($contract->created_at)->format('Y-m-d') ?? 'N/A',
+                    'has_review' => $hasReview,
+                    'has_report' => $hasReport,
                 ];
             });
 
@@ -64,7 +75,7 @@ class ClientController extends Controller
     }
 
     // ✅ Applications
-   
+
     public function applications()
     {
         // Find applications where the related JOB belongs to this client
@@ -80,7 +91,7 @@ class ClientController extends Controller
                     'professional_name' => $app->professional->name ?? 'Unknown',
                     'professional_profile_id' => optional($app->professional->professional)->id,
                     'date_applied' => $app->created_at->format('Y-m-d'),
-                    'status' => $app->status
+                    'status' => $app->status,
                 ];
             });
 
@@ -93,11 +104,9 @@ class ClientController extends Controller
         $count = JobPost::where('client_id', auth()->id())->count();
 
         return response()->json([
-            'total_job_posts' => $count
+            'total_job_posts' => $count,
         ]);
     }
-
-
 
     // ✅ Remaining Job Posts
     public function remainingJobPosts()
@@ -107,19 +116,19 @@ class ClientController extends Controller
             ->with('plan')
             ->first();
 
-        if (!$subscription || !$subscription->plan) {
+        if (! $subscription) {
             return response()->json([
-                'remaining' => 0
+                'remaining' => 0,
             ]);
         }
 
-        $totalAllowed = $subscription->plan->job_posts_limit;
+        $totalAllowed = $subscription->remaining_posts;
         $used = JobPost::where('client_id', auth()->id())
             ->where('status', '!=', 'cancelled')
             ->count();
 
         return response()->json([
-            'remaining' => max($totalAllowed - $used, 0)
+            'remaining' => max($totalAllowed - $used, 0),
         ]);
     }
 
@@ -132,7 +141,7 @@ class ClientController extends Controller
                 return [
                     'id' => $post->id,
                     'title' => $post->title,
-                    'description' => substr($post->description, 0, 80) . '...',
+                    'description' => substr($post->description, 0, 80).'...',
                     'skill' => $post->skill,
                     'status' => $post->status ?? 'open',
                     'location' => $post->location,
@@ -142,5 +151,4 @@ class ClientController extends Controller
 
         return response()->json($posts);
     }
-  
 }

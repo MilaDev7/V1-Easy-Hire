@@ -72,13 +72,71 @@
 </aside>
 
 <div class="modal fade" id="dashboard-settings-modal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content border-0 shadow">
             <div class="modal-header">
                 <h5 class="modal-title">Settings</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
+                <!-- Profile Section -->
+                <div class="mb-4">
+                    <h6 class="fw-bold mb-3"><i class="fa-solid fa-user me-2"></i>Profile</h6>
+                    
+                    <!-- Photo -->
+                    <div class="text-center mb-4">
+                        <div class="position-relative d-inline-block">
+                            <img id="settings-profile-preview" src="{{ asset('images/user1.jpg') }}" class="rounded-circle" style="width: 100px; height: 100px; object-fit: cover;">
+                            <label for="profile-photo" class="position-absolute bottom-0 end-0 bg-primary text-white rounded-circle p-2" style="width: 32px; height: 32px; cursor: pointer;">
+                                <i class="fa-solid fa-camera fa-sm"></i>
+                            </label>
+                            <input type="file" class="d-none" id="profile-photo" name="profile_photo" accept="image/*">
+                        </div>
+                        <p class="text-muted small mt-2">Click camera icon to change photo</p>
+                    </div>
+                    
+                    <!-- Name -->
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Name</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control bg-light" id="profile-name" name="name" readonly>
+                            <button type="button" class="btn btn-outline-secondary edit-field-btn" data-field="profile-name">
+                                <i class="fa-solid fa-pen"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Email -->
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Email</label>
+                        <div class="input-group">
+                            <input type="email" class="form-control bg-light" id="profile-email" name="email" readonly>
+                            <button type="button" class="btn btn-outline-secondary edit-field-btn" data-field="profile-email">
+                                <i class="fa-solid fa-pen"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Location -->
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Location</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control bg-light" id="profile-location" name="location" readonly>
+                            <button type="button" class="btn btn-outline-secondary edit-field-btn" data-field="profile-location">
+                                <i class="fa-solid fa-pen"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="text-center">
+                        <button type="button" class="btn btn-primary" id="save-profile-btn">
+                            <i class="fa-solid fa-save me-1"></i> Save Changes
+                        </button>
+                    </div>
+                </div>
+
+                <hr class="my-4">
+
                 <div class="d-flex justify-content-between align-items-center rounded-3 border p-3 mb-3">
                     <div>
                         <h6 class="mb-1">Dark Mode</h6>
