@@ -101,6 +101,8 @@ class SubscriptionController extends Controller
             'job_limit' => $limit,
             'active_jobs' => $activeJobs,
             'remaining_jobs' => max($remaining, 0),
+            'direct_requests_limit' => $subscription->plan->direct_requests_limit ?? 0,
+            'direct_requests_remaining' => $subscription->direct_requests_remaining ?? 0,
             'expires_at' => $subscription->expires_at,
             'duration_days' => $subscription->plan->duration_days ?? 30,
         ]);

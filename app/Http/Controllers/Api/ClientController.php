@@ -44,7 +44,7 @@ class ClientController extends Controller
         $userId = auth()->id();
 
         $contracts = Contract::where('client_id', $userId)
-            ->with(['job', 'client', 'professional.professional'])
+            ->with(['job', 'client', 'professional.professional', 'directRequest'])
             ->latest()
             ->get()
             ->map(function ($contract) use ($userId) {
@@ -58,9 +58,13 @@ class ClientController extends Controller
                     ->where('reporter_id', $userId)
                     ->exists();
 
+                $title = $contract->job->title
+                    ?? $contract->directRequest->title
+                    ?? 'Direct Request';
+
                 return [
                     'id' => $contract->id,
-                    'title' => $contract->job->title ?? 'Untitled Contract',
+                    'title' => $title,
                     'client_name' => $contract->client->name ?? 'N/A',
                     'professional_name' => $contract->professional->name ?? 'N/A',
                     'professional_profile_id' => optional($contract->professional->professional)->id,

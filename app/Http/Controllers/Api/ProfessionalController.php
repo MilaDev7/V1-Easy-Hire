@@ -294,13 +294,17 @@ class ProfessionalController extends Controller
     public function myContracts()
     {
         $contracts = Contract::where('professional_id', auth()->id())
-            ->with(['job', 'client'])
+            ->with(['job', 'client', 'directRequest'])
             ->latest()
             ->get()
             ->map(function ($contract) {
+                $title = $contract->job->title
+                    ?? $contract->directRequest->title
+                    ?? 'Direct Request';
+
                 return [
                     'id' => $contract->id,
-                    'job_title' => $contract->job->title ?? 'Untitled Job',
+                    'job_title' => $title,
                     'client_name' => $contract->client->name ?? 'N/A',
                     'budget' => $contract->agreed_price,
                     'status' => $contract->status,

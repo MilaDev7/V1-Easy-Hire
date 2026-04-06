@@ -117,6 +117,7 @@ class ChapaController extends Controller
             if ($existingSubscription) {
                 $existingSubscription->update([
                     'remaining_posts' => $existingSubscription->remaining_posts + $plan->job_posts_limit,
+                    'direct_requests_remaining' => ($existingSubscription->direct_requests_remaining ?? 0) + $plan->direct_requests_limit,
                     'expires_at' => now()->addDays($plan->duration_days),
                     'status' => 'active',
                     'tx_ref' => $txRef,
@@ -126,6 +127,7 @@ class ChapaController extends Controller
                     'user_id' => $userId,
                     'plan_id' => $planId,
                     'remaining_posts' => $plan->job_posts_limit,
+                    'direct_requests_remaining' => $plan->direct_requests_limit,
                     'expires_at' => now()->addDays($plan->duration_days),
                     'status' => 'active',
                     'tx_ref' => $txRef,
@@ -202,6 +204,7 @@ class ChapaController extends Controller
                 if ($existingSubscription) {
                     $existingSubscription->update([
                         'remaining_posts' => $existingSubscription->remaining_posts + $plan->job_posts_limit,
+                        'direct_requests_remaining' => ($existingSubscription->direct_requests_remaining ?? 0) + $plan->direct_requests_limit,
                         'expires_at' => now()->addDays($plan->duration_days),
                         'status' => 'active',
                         'tx_ref' => $txRef,
@@ -213,6 +216,7 @@ class ChapaController extends Controller
                         'user_id' => $userId,
                         'plan_id' => $planId,
                         'remaining_posts' => $plan->job_posts_limit,
+                        'direct_requests_remaining' => $plan->direct_requests_limit,
                         'expires_at' => now()->addDays($plan->duration_days),
                         'status' => 'active',
                         'tx_ref' => $txRef,

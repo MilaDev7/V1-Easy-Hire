@@ -4,18 +4,17 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Contract;
-use Illuminate\Http\Request;
-use App\Models\Subscription;
 use App\Models\JobPost;
+use Illuminate\Http\Request;
 
 class ContractController extends Controller
 {
-    //PROFESSIONAL MARKS COMPLETED
+    // PROFESSIONAL MARKS COMPLETED
     public function markCompleted($id)
     {
-          $contract = \App\Models\Contract::find($id);
+        $contract = \App\Models\Contract::find($id);
 
-        if (!$contract) {
+        if (! $contract) {
             return response()->json(['message' => 'Contract not found'], 404);
         }
 
@@ -34,16 +33,16 @@ class ContractController extends Controller
         $contract->save();
 
         return response()->json([
-            'message' => 'Work marked as completed, waiting for client confirmation'
+            'message' => 'Work marked as completed, waiting for client confirmation',
         ]);
     }
 
-    //CLIENT CONFIRMS
+    // CLIENT CONFIRMS
     public function confirm($id)
     {
         $contract = Contract::find($id);
 
-        if (!$contract) {
+        if (! $contract) {
             return response()->json(['message' => 'Contract not found'], 404);
         }
 
@@ -65,67 +64,61 @@ class ContractController extends Controller
         }
 
         return response()->json([
-            'message' => 'Job completed successfully'
+            'message' => 'Job completed successfully',
         ]);
     }
 
-//client cancel contract
+    // client cancel contract
     public function cancel($id)
-{
-    $contract = \App\Models\Contract::findOrFail($id);
+    {
+        $contract = \App\Models\Contract::findOrFail($id);
 
-    // ✅ Only client can cancel
-    if ($contract->client_id !== auth()->id()) {
-        return response()->json(['message' => 'Unauthorized'], 403);
-    }
+        // ✅ Only client can cancel
+        if ($contract->client_id !== auth()->id()) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
 
+        if ($contract->status === 'completed') {
+            return response()->json([
+                'message' => 'Cannot cancel completed contract',
+            ], 400);
+        }
 
-    if ($contract->status === 'completed') {
+        // ❌ Already cancelled
+        if ($contract->status === 'cancelled') {
+            return response()->json([
+                'message' => 'Contract already cancelled',
+            ], 400);
+        }
+
+        $contract->status = 'cancelled';
+        $contract->save();
+
+        $job = JobPost::findOrFail($contract->job_id);
+        $job->status = 'cancelled';
+        $job->save();
+
         return response()->json([
-            'message' => 'Cannot cancel completed contract'
-        ], 400);
+            'message' => 'Contract cancelled successfully',
+        ]);
+
     }
 
-    // ❌ Already cancelled
-    if ($contract->status === 'cancelled') {
+    public function myContracts(Request $request)
+    {
+        $userId = auth()->id();
+
+        $query = \App\Models\Contract::where('professional_id', $userId);
+
+        // ✅ Optional filter by status
+        if ($request->has('status')) {
+            $query->where('status', $request->status);
+        }
+
+        $contracts = $query->with(['job', 'client', 'directRequest'])->get();
+
         return response()->json([
-            'message' => 'Contract already cancelled'
-        ], 400);
+            'contracts' => $contracts,
+        ]);
     }
-
-    $contract->status = 'cancelled';
-    $contract->save();
-
-    $job = JobPost::findOrFail($contract->job_id);
-    $job->status = 'cancelled';
-    $job->save();
-
-    return response()->json([
-        'message' => 'Contract cancelled successfully'
-    ]);
-
- 
-
 }
-
-
-
-public function myContracts(Request $request)
-{
-    $userId = auth()->id();
-
-    $query = \App\Models\Contract::where('professional_id', $userId);
-
-    // ✅ Optional filter by status
-    if ($request->has('status')) {
-        $query->where('status', $request->status);
-    }
-
-    $contracts = $query->with(['job', 'client'])->get();
-
-    return response()->json([
-        'contracts' => $contracts
-    ]);
-}
-
-};

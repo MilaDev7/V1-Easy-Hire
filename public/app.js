@@ -1290,6 +1290,12 @@
 
         if (currentPlanJobs) currentPlanJobs.textContent = getSubscriptionJobPostLimit(subscription);
 
+        const currentPlanRequests = document.getElementById("current-plan-requests");
+        if (currentPlanRequests) {
+            const requests = subscription?.direct_requests_remaining ?? 0;
+            currentPlanRequests.textContent = requests;
+        }
+
         const actionButton = document.getElementById("subscription-action-button");
 
         if (actionButton) {
@@ -2904,6 +2910,11 @@
                     return;
                 }
 
+                if (view === "direct-requests") {
+                    loadDirectRequests();
+                    return;
+                }
+
                 loadProfessionalJobsView();
             });
         });
@@ -2980,6 +2991,211 @@
             });
         }
     }
+
+    function loadDirectRequests() {
+        setActiveProfessionalNav("direct-requests");
+        clearProfessionalFeedback();
+        
+        const contentArea = document.getElementById("professional-content-area") || document.getElementById("content-area");
+        if (!contentArea) return;
+        
+        contentArea.innerHTML = `
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p class="mt-2 text-muted">Loading requests...</p>
+            </div>
+        `;
+        
+        fetchJson("/api/pro/requests")
+            .then((requests) => {
+                renderDirectRequests(requests);
+            })
+            .catch((err) => {
+                if (contentArea) {
+                    contentArea.innerHTML = '<div class="alert alert-danger mb-0">Failed to load requests.</div>';
+                }
+            });
+    }
+
+    function renderDirectRequests(requests) {
+        const contentArea = document.getElementById("professional-content-area") || document.getElementById("content-area");
+        if (!contentArea) return;
+        
+        setProfessionalContentHeader("Direct Requests", "Incoming job requests from clients", false);
+        
+        if (!requests || requests.length === 0) {
+            contentArea.innerHTML = '<div class="alert alert-light border mb-0">No requests yet.</div>';
+            return;
+        }
+        
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML.replace(/'/g, "\\'").replace(/"/g, '\\"');
+        }
+        
+        const rows = requests.map((req) => {
+            const statusBadge = req.status === 'pending' 
+                ? '<span class="badge bg-warning text-dark">Pending</span>'
+                : req.status === 'accepted'
+                    ? '<span class="badge bg-success">Accepted</span>'
+                    : '<span class="badge bg-danger">Rejected</span>';
+            
+            const actionButtons = req.status === 'pending' 
+                ? `<div class="d-flex gap-2">
+                    <button class="btn btn-sm btn-success" onclick="acceptDirectRequest(${req.id}, '${escapeHtml(req.title)}', '${escapeHtml(req.client?.name)}', ${req.budget || 0})">
+                        <i class="fa-solid fa-check me-1"></i> Accept
+                    </button>
+                    <button class="btn btn-sm btn-danger" onclick="rejectDirectRequest(${req.id}, '${escapeHtml(req.title)}', '${escapeHtml(req.client?.name)}', ${req.budget || 0})">
+                        <i class="fa-solid fa-times me-1"></i> Reject
+                    </button>
+                </div>`
+                : '<span class="text-muted small">No action available</span>';
+            
+            return `
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h6 class="fw-bold mb-0">${req.title || 'Untitled'}</h6>
+                            ${statusBadge}
+                        </div>
+                        <p class="text-muted mb-2">${req.description || 'No description'}</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="text-muted small">From: </span>
+                                <span class="fw-semibold">${req.client?.name || 'Unknown'}</span>
+                                ${req.budget ? `<span class="badge bg-success ms-2">Br${req.budget}</span>` : ''}
+                            </div>
+                            ${actionButtons}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+        contentArea.innerHTML = rows;
+    }
+
+    window.acceptDirectRequest = function(id, title, clientName, budget) {
+        const modal = document.getElementById('direct-request-action-modal');
+        if (modal) bootstrap.Modal.getInstance(modal)?.hide();
+        
+        setTimeout(function() {
+            const header = document.getElementById('action-modal-header');
+            const titleEl = document.getElementById('action-modal-title');
+            const iconEl = document.getElementById('action-modal-icon');
+            const requestTitle = document.getElementById('action-modal-request-title');
+            const clientNameEl = document.getElementById('action-modal-client-name');
+            const budgetEl = document.getElementById('action-modal-budget');
+            const messageEl = document.getElementById('action-modal-message');
+            const confirmBtn = document.getElementById('confirm-action-btn');
+
+            // Reset and set Accept styling
+            header.className = 'modal-header bg-success text-white border-0';
+            titleEl.innerHTML = '<i class="fa-solid fa-check-circle me-2"></i>Accept Request';
+            iconEl.innerHTML = '<i class="fa-solid fa-handshake fa-4x text-success"></i>';
+            requestTitle.textContent = title || 'Untitled Request';
+            clientNameEl.textContent = 'From: ' + (clientName || 'Unknown Client');
+            budgetEl.textContent = budget ? 'Br ' + budget : '';
+            budgetEl.style.display = budget ? 'inline-block' : 'none';
+            messageEl.textContent = 'A contract will be created with this client. Are you sure?';
+
+            confirmBtn.className = 'btn btn-success px-4';
+            confirmBtn.innerHTML = '<i class="fa-solid fa-check me-1"></i>Accept';
+
+            confirmBtn.onclick = function() {
+                confirmBtn.disabled = true;
+                confirmBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Accepting...';
+
+                fetch(`/api/pro/requests/${id}/accept`, {
+                    method: 'POST',
+                    headers: { 
+                        'Authorization': 'Bearer ' + localStorage.getItem('token'),
+                        'Accept': 'application/json'
+                    }
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.message && data.message.includes('3 active contracts')) {
+                        // Show error in modal
+                        const messageEl = document.getElementById('action-modal-message');
+                        messageEl.innerHTML = '<div class="alert alert-warning mb-0"><i class="fa-solid fa-exclamation-triangle me-2"></i>' + data.message + '</div>';
+                        confirmBtn.disabled = false;
+                        confirmBtn.innerHTML = '<i class="fa-solid fa-check me-1"></i>Accept';
+                        return;
+                    }
+                    bootstrap.Modal.getInstance(modal).hide();
+                    const contentArea = document.getElementById("professional-content-area") || document.getElementById("content-area");
+                    if (contentArea) {
+                        contentArea.innerHTML = '<div class="alert alert-success mb-3"><i class="fa-solid fa-check-circle me-2"></i>Request accepted! Contract created.</div>' + contentArea.innerHTML;
+                    }
+                    loadDirectRequests();
+                    loadProfessionalStats();
+                })
+                .catch(err => {
+                    bootstrap.Modal.getInstance(modal).hide();
+                });
+            };
+
+            bootstrap.Modal.getOrCreateInstance(modal).show();
+        }, 100);
+    };
+
+    window.rejectDirectRequest = function(id, title, clientName, budget) {
+        const modal = document.getElementById('direct-request-action-modal');
+        if (modal) bootstrap.Modal.getInstance(modal)?.hide();
+        
+        setTimeout(function() {
+            const header = document.getElementById('action-modal-header');
+            const titleEl = document.getElementById('action-modal-title');
+            const iconEl = document.getElementById('action-modal-icon');
+            const requestTitle = document.getElementById('action-modal-request-title');
+            const clientNameEl = document.getElementById('action-modal-client-name');
+            const budgetEl = document.getElementById('action-modal-budget');
+            const messageEl = document.getElementById('action-modal-message');
+            const confirmBtn = document.getElementById('confirm-action-btn');
+
+            header.className = 'modal-header bg-danger text-white border-0';
+            titleEl.innerHTML = '<i class="fa-solid fa-times-circle me-2"></i>Reject Request';
+            iconEl.innerHTML = '<i class="fa-solid fa-times-circle fa-4x text-danger"></i>';
+            requestTitle.textContent = title || 'Untitled Request';
+            clientNameEl.textContent = 'From: ' + (clientName || 'Unknown Client');
+            budgetEl.textContent = budget ? 'Br ' + budget : '';
+            budgetEl.style.display = budget ? 'inline-block' : 'none';
+            messageEl.textContent = 'The client will be refunded. Are you sure?';
+
+            confirmBtn.className = 'btn btn-danger px-4';
+            confirmBtn.innerHTML = '<i class="fa-solid fa-times me-1"></i>Reject';
+
+            confirmBtn.onclick = function() {
+                confirmBtn.disabled = true;
+                confirmBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Rejecting...';
+
+                fetch(`/api/pro/requests/${id}/reject`, {
+                    method: 'POST',
+                    headers: { 
+                        'Authorization': 'Bearer ' + localStorage.getItem('token'),
+                        'Accept': 'application/json'
+                    }
+                })
+                .then(res => res.json())
+                .then(data => {
+                    bootstrap.Modal.getInstance(modal).hide();
+                    const contentArea = document.getElementById("professional-content-area") || document.getElementById("content-area");
+                    if (contentArea) {
+                        contentArea.innerHTML = '<div class="alert alert-success mb-3"><i class="fa-solid fa-check-circle me-2"></i>Request rejected successfully. Client has been refunded.</div>' + contentArea.innerHTML;
+                    }
+                    loadDirectRequests();
+                })
+                .catch(err => {
+                    bootstrap.Modal.getInstance(modal).hide();
+                });
+            };
+
+            bootstrap.Modal.getOrCreateInstance(modal).show();
+        }, 100);
+    };
 
     function loadProfessionalJobsView() {
         setActiveProfessionalNav("browse-jobs");
@@ -4250,10 +4466,11 @@
                 <td class="fw-semibold">${plan.name || 'N/A'}</td>
                 <td><span class="badge bg-success px-3 py-2">$${plan.price ?? 0}</span></td>
                 <td><span class="badge bg-warning text-dark px-3 py-2">${plan.job_posts_limit ?? 0} posts</span></td>
+                <td><span class="badge ${plan.direct_requests_limit > 0 ? 'bg-primary' : 'bg-secondary'} px-3 py-2">${plan.direct_requests_limit ?? 0} requests</span></td>
                 <td><span class="badge bg-info px-3 py-2">${plan.duration_days ?? 0} days</span></td>
                 <td>
                     <div class="d-flex gap-2">
-                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="showEditPlanModal(${plan.id}, '${plan.name}', ${plan.price}, ${plan.job_posts_limit}, ${plan.duration_days})">
+                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="showEditPlanModal(${plan.id}, '${plan.name}', ${plan.price}, ${plan.job_posts_limit}, ${plan.duration_days}, ${plan.direct_requests_limit || 0})">
                             <i class="fa-solid fa-edit me-1"></i>Edit
                         </button>
                         <button type="button" class="btn btn-sm btn-outline-danger" onclick="showDeletePlanModal(${plan.id})">
@@ -4271,7 +4488,8 @@
                         <tr>
                             <th scope="col">Name</th>
                             <th scope="col">Price</th>
-                            <th scope="col">Job Posts Limit</th>
+                            <th scope="col">Job Posts</th>
+                            <th scope="col">Direct Requests</th>
                             <th scope="col">Duration</th>
                             <th scope="col">Actions</th>
                         </tr>
@@ -4293,16 +4511,18 @@
         document.getElementById('plan-price').value = '';
         document.getElementById('plan-job-limit').value = '';
         document.getElementById('plan-duration').value = '';
+        document.getElementById('plan-direct-requests').value = '0';
         document.getElementById('plan-modal-title').innerHTML = '<i class="fa-solid fa-layer-group me-2"></i>Create Plan';
         new bootstrap.Modal(document.getElementById('plan-modal')).show();
     }
 
-    function showEditPlanModal(id, name, price, jobLimit, duration) {
+    function showEditPlanModal(id, name, price, jobLimit, duration, directRequests) {
         document.getElementById('plan-id').value = id;
         document.getElementById('plan-name').value = name;
         document.getElementById('plan-price').value = price;
         document.getElementById('plan-job-limit').value = jobLimit;
         document.getElementById('plan-duration').value = duration;
+        document.getElementById('plan-direct-requests').value = directRequests || 0;
         document.getElementById('plan-modal-title').innerHTML = '<i class="fa-solid fa-edit me-2"></i>Edit Plan';
         new bootstrap.Modal(document.getElementById('plan-modal')).show();
     }
@@ -4313,6 +4533,7 @@
         const price = parseFloat(document.getElementById('plan-price').value);
         const job_posts_limit = parseInt(document.getElementById('plan-job-limit').value);
         const duration_days = parseInt(document.getElementById('plan-duration').value);
+        const direct_requests_limit = parseInt(document.getElementById('plan-direct-requests').value) || 0;
 
         if (!name || !price || !job_posts_limit || !duration_days) {
             alert('Please fill all fields');
@@ -4325,14 +4546,12 @@
         fetch(url, {
             method: method,
             headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('token') },
-            body: JSON.stringify({ name, price, job_posts_limit, duration_days })
+            body: JSON.stringify({ name, price, job_posts_limit, duration_days, direct_requests_limit })
         })
         .then(res => res.json())
         .then(data => {
             bootstrap.Modal.getInstance(document.getElementById('plan-modal')).hide();
             loadPlans();
-            if (!id) alert('Plan created successfully!');
-            else alert('Plan updated successfully!');
         })
         .catch(err => alert(err.message || 'Failed to save plan.'));
     }
@@ -4356,7 +4575,6 @@
                 alert(data.message);
             } else {
                 loadPlans();
-                alert('Plan deleted successfully!');
             }
         })
         .catch(err => alert(err.message || 'Failed to delete plan.'));
@@ -4485,6 +4703,5 @@
     window.showDeletePlanModal = showDeletePlanModal;
     window.confirmDeletePlan = confirmDeletePlan;
     window.buyPlan = buyPlan;
-    window.loadClientPlans = loadClientPlans;
     window.showProProfile = showProProfile;
 })();

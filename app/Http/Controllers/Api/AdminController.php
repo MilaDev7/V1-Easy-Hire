@@ -323,7 +323,7 @@ class AdminController extends Controller
     // View contract
     public function contracts()
     {
-        $contracts = \App\Models\Contract::with(['client', 'professional', 'job'])->latest()->get()->map(function ($contract) {
+        $contracts = \App\Models\Contract::with(['client', 'professional', 'job', 'directRequest'])->latest()->get()->map(function ($contract) {
             return [
                 'id' => $contract->id,
                 'status' => $contract->status,
@@ -332,6 +332,7 @@ class AdminController extends Controller
                 'client' => $contract->client ? ['id' => $contract->client->id, 'name' => $contract->client->name, 'email' => $contract->client->email] : null,
                 'professional' => $contract->professional ? ['id' => $contract->professional->id, 'name' => $contract->professional->name, 'email' => $contract->professional->email] : null,
                 'job' => $contract->job ? ['id' => $contract->job->id, 'title' => $contract->job->title, 'description' => $contract->job->description] : null,
+                'direct_request' => $contract->directRequest ? ['id' => $contract->directRequest->id, 'title' => $contract->directRequest->title, 'description' => $contract->directRequest->description] : null,
             ];
         });
 
@@ -373,6 +374,7 @@ class AdminController extends Controller
             'name' => 'required|string',
             'price' => 'required|numeric',
             'job_posts_limit' => 'required|integer',
+            'direct_requests_limit' => 'nullable|integer|min=0',
             'duration_days' => 'required|integer|min=1',
         ]);
 
