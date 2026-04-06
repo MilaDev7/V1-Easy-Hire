@@ -156,6 +156,30 @@
 </section>
 
 
+<!-- Subscription Plans Section -->
+<section class="py-5" style="background: linear-gradient(135deg, #1e4a42, #2d665b);">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="fw-bold mb-2 text-white">Our Subscription Plans</h2>
+            <p class="opacity-75" style="color: rgba(220, 244, 230, 0.7);">Choose the perfect plan for your hiring needs</p>
+        </div>
+
+        <div id="home-plans-container" class="row g-2 justify-content-center">
+            <div class="col-12 text-center text-white-50 py-4">
+                <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                Loading plans...
+            </div>
+        </div>
+
+        <div class="text-center mt-4" id="home-get-started-btn" style="display: none;">
+            <a href="/register?role=client" class="btn btn-light btn-lg rounded-pill px-4">
+                Get Started as a Client
+            </a>
+        </div>
+    </div>
+</section>
+
+
  <!-- Professional Trust Badges -->
 <section class="py-4 bg-white  border-bottom">
 <div class="container my-5">
@@ -218,6 +242,93 @@ function searchExperts() {
 
     window.location.href = `/search?location=${location}&service=${service}`;
 }
+
+async function loadHomePlans() {
+    const container = document.getElementById('home-plans-container');
+    if (!container) return;
+
+    try {
+        const response = await fetch('/api/plans');
+        const plans = await response.json();
+        
+        if (!plans || plans.length === 0) {
+            container.innerHTML = '<div class="col-12 text-center text-muted py-4">No plans available at the moment.</div>';
+            return;
+        }
+
+        container.innerHTML = plans.map((plan, index) => {
+            const isPopular = index === 1;
+            const bgStyle = isPopular 
+                ? 'background: rgba(138, 219, 174, 0.20); box-shadow: 0 8px 22px rgba(7, 19, 16, 0.14);'
+                : 'background: rgba(255, 255, 255, 0.12);';
+            const planColor = isPopular ? '#effff4' : '#c8f0d6';
+            const popularBadge = isPopular 
+                ? '<span class="small fw-bold px-2 py-1 rounded-pill" style="background: #e5f8ec; color: #1b4037;">Popular</span>'
+                : '';
+
+            return `
+                <div class="col-12 col-md-4">
+                    <div class="card border-0 rounded-4 h-100" style="${bgStyle}">
+                        <div class="card-body p-3">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <h6 class="fw-bold text-uppercase mb-0" style="color: ${planColor}; letter-spacing: 0.08em;">${plan.name || 'Plan'}</h6>
+                                ${popularBadge}
+                            </div>
+                            <h3 class="fw-bold text-white mb-0">Br${plan.price || 0}</h3>
+                            <div class="d-flex align-items-center justify-content-between mt-1">
+                                <p class="mb-0 small" style="color: rgba(255, 255, 255, 0.78);">${plan.job_posts_limit || 0} Job Posts</p>
+                            </div>
+                            <div class="d-flex align-items-center justify-content-between mt-1">
+                                <p class="mb-0 small" style="color: rgba(255, 255, 255, 0.78);">${plan.duration_days || 0} Days</p>
+                                <button class="btn btn-light btn-sm rounded-pill fw-semibold px-3 py-1" onclick="homeBuyPlan(${plan.id})">Buy Now</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    } catch (error) {
+        container.innerHTML = '<div class="col-12 text-center text-muted py-4">Failed to load plans. Please refresh.</div>';
+    }
+}
+
+function homeBuyPlan(planId) {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        window.location.href = '/login?redirect=/';
+        return;
+    }
+
+    fetch('/api/buy-plan/' + planId, {
+        method: 'POST',
+        headers: {
+            'Authorization': 'Bearer ' + token,
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.redirect_url) {
+            window.location.href = data.redirect_url;
+        } else if (data.message) {
+            alert(data.message);
+        }
+    })
+    .catch(err => {
+        alert('Failed to purchase plan. Please try again.');
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Hide "Get Started" button if logged in
+    const token = localStorage.getItem('token');
+    if (token) {
+        const btn = document.getElementById('home-get-started-btn');
+        if (btn) btn.style.display = 'none';
+    }
+    
+    loadHomePlans();
+});
 </script>
 
 @endsection
