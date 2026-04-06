@@ -20,16 +20,16 @@ class Chapa
     public static function generateReference(?string $transactionPrefix = null)
     {
         if ($transactionPrefix) {
-            return $transactionPrefix.'_'.uniqid(time());
+            return $transactionPrefix . '_' . uniqid(time());
         }
 
-        return env('APP_NAME', 'EasyHire').'_chapa_'.uniqid(time());
+        return env('APP_NAME', 'EasyHire') . '_chapa_' . uniqid(time());
     }
 
     public function initializePayment(array $data)
     {
         $response = Http::withToken($this->secretKey)->post(
-            $this->baseUrl.'/transaction/initialize',
+            $this->baseUrl . '/transaction/initialize',
             $data
         );
 
@@ -43,11 +43,15 @@ class Chapa
         return $response->json();
     }
 
+
     public function verifyTransaction($txRef)
     {
-        $response = Http::withToken($this->secretKey)->get(
-            $this->baseUrl.'/transaction/verify/'.$txRef
-        );
+        $response = Http::withToken($this->secretKey)
+            ->withoutVerifying()
+
+            ->get(
+                $this->baseUrl . '/transaction/verify/' . $txRef
+            );
 
         if ($response->failed()) {
             Log::error('Chapa transaction verification failed', [
