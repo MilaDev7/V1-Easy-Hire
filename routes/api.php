@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\ApplicationController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ClientController;
 use App\Http\Controllers\Api\ContractController;
+use App\Http\Controllers\Api\DirectRequestController;
 use App\Http\Controllers\Api\JobPostController;
 use App\Http\Controllers\Api\ProfessionalController;
 use App\Http\Controllers\Api\ProfileController;
@@ -67,6 +68,9 @@ Route::middleware(['auth:sanctum', 'check_status'])->group(function () {
         Route::post('/contracts/{id}/confirm', [ContractController::class, 'confirm']);
         Route::post('/contracts/{id}/cancel', [ContractController::class, 'cancel']);
 
+        // Direct Requests
+        Route::post('/send-request/{proId}', [DirectRequestController::class, 'sendRequest']);
+
         // Subscriptions
         Route::post('/buy-plan/{id}', [SubscriptionController::class, 'buy']);
 
@@ -110,6 +114,11 @@ Route::middleware(['auth:sanctum', 'check_status'])->group(function () {
 
         // Contracts
         // Route::get('/my-contracts', [ContractController::class, 'myContracts']);
+
+        // Direct Requests
+        Route::get('/pro/requests', [DirectRequestController::class, 'myRequests']);
+        Route::post('/pro/requests/{id}/accept', [DirectRequestController::class, 'acceptRequest']);
+        Route::post('/pro/requests/{id}/reject', [DirectRequestController::class, 'rejectRequest']);
     });
 
     // Route for frontend
