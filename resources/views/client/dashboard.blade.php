@@ -149,6 +149,51 @@
         </div>
     </div>
 
+    <!-- Application Error Modal -->
+    <div class="modal fade" id="application-error-modal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-warning text-dark border-0">
+                    <h5 class="modal-title fw-bold"><i class="fa-solid fa-circle-exclamation me-2"></i>Cannot Accept</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center py-4">
+                    <i class="fa-solid fa-hourglass-half fa-4x text-warning mb-3"></i>
+                    <p class="fs-5 mb-0" id="application-error-message"></p>
+                </div>
+                <div class="modal-footer border-top justify-content-center">
+                    <button type="button" class="btn btn-warning px-4" data-bs-dismiss="modal">OK</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Job Confirmation Modal -->
+    <div class="modal fade" id="delete-job-modal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-danger text-white border-0">
+                    <h5 class="modal-title fw-bold"><i class="fa-solid fa-triangle-exclamation me-2"></i>Delete Job</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center py-4">
+                    <i class="fa-solid fa-trash fa-4x text-danger mb-3"></i>
+                    <p class="fs-5">Are you sure you want to delete this job?</p>
+                    <p class="text-muted" id="delete-job-title"></p>
+                    <div id="delete-job-refund-notice" class="alert alert-info mb-0">
+                        <i class="fa-solid fa-info-circle me-1"></i> You will get 1 post refunded since no one has applied.
+                    </div>
+                </div>
+                <div class="modal-footer border-top justify-content-center">
+                    <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger px-4" id="confirm-delete-job-btn">
+                        <i class="fa-solid fa-trash me-1"></i> Delete
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{{ asset('js/api.js') }}"></script>
     <script src="{{ asset('js/auth.js') }}"></script>

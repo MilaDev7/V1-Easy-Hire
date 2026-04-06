@@ -380,6 +380,36 @@
         </div>
     </div>
 
+    <!-- Cover Letter Modal -->
+    <div class="modal fade" id="apply-cover-letter-modal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title fw-bold"><i class="fa-solid fa-paper-plane me-2"></i>Apply for Job</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="apply-cover-letter-form">
+                    <div class="modal-body">
+                        <p class="text-muted mb-3">Write a brief cover letter to let the client know why you're the right fit for this job.</p>
+                        <div class="mb-3">
+                            <label for="cover-letter-input" class="form-label fw-semibold">Cover Letter</label>
+                            <textarea class="form-control" id="cover-letter-input" rows="5" 
+                                placeholder="Describe your experience and why you're perfect for this job..." 
+                                maxlength="1000"></textarea>
+                            <div class="form-text text-end"><span id="cover-letter-count">0</span>/1000</div>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-top">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary" id="submit-cover-letter-btn">
+                            <i class="fa-solid fa-paper-plane me-1"></i>Submit Application
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{{ asset('js/auth.js') }}"></script>
     <script src="{{ asset('app.js') }}"></script>

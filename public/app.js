@@ -255,9 +255,10 @@
                     jobPost.city ||
                     jobPost.address ||
                     "N/A";
-                const createdDate = formatDate(
-                    jobPost.created_at || jobPost.createdAt || jobPost.date
-                );
+                const startDate = jobPost.start_date ? formatDate(jobPost.start_date) : "Not set";
+                const deadline = jobPost.deadline ? formatDate(jobPost.deadline) : "Not set";
+                const jobId = jobPost.id;
+                const canDelete = status === 'open' || status === 'expired';
 
                 return `
                     <tr>
@@ -265,7 +266,13 @@
                         <td>${skill}</td>
                         <td><span class="badge text-bg-light border">${status}</span></td>
                         <td>${location}</td>
-                        <td>${createdDate}</td>
+                        <td>${startDate}</td>
+                        <td>${deadline}</td>
+                        <td>
+                            ${canDelete ? `<button type="button" class="btn btn-sm btn-outline-danger delete-job-btn" data-job-id="${jobId}" data-job-title="${title}">
+                                <i class="fa-solid fa-trash"></i> Delete
+                            </button>` : '<span class="text-muted small">No action</span>'}
+                        </td>
                     </tr>
                 `;
             })
@@ -280,13 +287,17 @@
                             <th scope="col">Skill</th>
                             <th scope="col">Status</th>
                             <th scope="col">Location</th>
-                            <th scope="col">Created At</th>
+                            <th scope="col">Start Date</th>
+                            <th scope="col">Deadline</th>
+                            <th scope="col">Actions</th>
                         </tr>
                     </thead>
                     <tbody>${rows}</tbody>
                 </table>
             </div>
         `;
+        
+        bindDeleteJobButtons();
     }
 
     function renderJobPostsError() {
@@ -776,6 +787,14 @@
                                     ${skillOptions}
                                 </select>
                             </div>
+                            <div class="col-md-6">
+                                <label for="job-start-date" class="form-label fw-semibold">Start Date (Optional)</label>
+                                <input id="job-start-date" name="start_date" type="date" class="form-control">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="job-deadline" class="form-label fw-semibold">Deadline (Optional)</label>
+                                <input id="job-deadline" name="deadline" type="date" class="form-control">
+                            </div>
                             <div class="col-12">
                                 <div id="post-job-feedback"></div>
                             </div>
@@ -813,9 +832,17 @@
                 skill: (formData.get("skill") || "").toString().trim(),
             };
             const budgetValue = (formData.get("budget") || "").toString().trim();
+            const startDate = (formData.get("start_date") || "").toString().trim();
+            const deadline = (formData.get("deadline") || "").toString().trim();
 
             if (budgetValue) {
                 payload.budget = budgetValue;
+            }
+            if (startDate) {
+                payload.start_date = startDate;
+            }
+            if (deadline) {
+                payload.deadline = deadline;
             }
 
             submitButton.disabled = true;
@@ -832,6 +859,57 @@
                     submitButton.disabled = false;
                     feedback.innerHTML =
                         '<div class="alert alert-danger mb-0">Unable to post job. Check your subscription and form values.</div>';
+                });
+        });
+    }
+
+    function bindDeleteJobButtons() {
+        document.querySelectorAll(".delete-job-btn").forEach((button) => {
+            button.addEventListener("click", function () {
+                const jobId = this.dataset.jobId;
+                const jobTitle = this.dataset.jobTitle;
+                
+                window.pendingDeleteJobId = jobId;
+                
+                document.getElementById("delete-job-title").textContent = `"${jobTitle}"`;
+                document.getElementById("delete-job-refund-notice").classList.remove("d-none");
+                
+                bootstrap.Modal.getOrCreateInstance(document.getElementById("delete-job-modal")).show();
+            });
+        });
+        
+        document.getElementById("confirm-delete-job-btn")?.addEventListener("click", function() {
+            const jobId = window.pendingDeleteJobId;
+            const btn = this;
+            
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Deleting...';
+            
+            fetch(`/api/job-posts/${jobId}`, {
+                method: "DELETE",
+                headers: buildHeaders(),
+            })
+                .then(async (response) => {
+                    const payload = await response.json().catch(() => ({}));
+                    
+                    if (!response.ok) {
+                        throw new Error(payload?.message || "Failed to delete");
+                    }
+                    
+                    bootstrap.Modal.getInstance(document.getElementById("delete-job-modal")).hide();
+                    
+                    loadJobPosts();
+                    loadStats();
+                })
+                .catch((error) => {
+                    const errorMsg = document.getElementById("content-area");
+                    if (errorMsg) {
+                        errorMsg.innerHTML = '<div class="alert alert-danger mb-0">' + (error.message || "Unable to delete job") + '</div>';
+                    }
+                })
+                .finally(() => {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fa-solid fa-trash me-1"></i> Delete';
                 });
         });
     }
@@ -1118,6 +1196,19 @@
         }
     }
 
+    function showApplicationErrorModal(message) {
+        const modalElement = document.getElementById("application-error-modal");
+        const messageElement = document.getElementById("application-error-message");
+
+        if (!modalElement || !messageElement) {
+            window.alert(message);
+            return;
+        }
+
+        messageElement.textContent = message;
+        bootstrap.Modal.getOrCreateInstance(modalElement).show();
+    }
+
     function getSubscriptionPlanId(subscription) {
         return subscription.plan_id || subscription.id || subscription.plan?.id || "";
     }
@@ -1390,10 +1481,20 @@
                     .then(() => {
                         loadApplicationsResults();
                         loadStats();
+                        if (typeof loadProfessionalStats === 'function') loadProfessionalStats();
                     })
-                    .catch(() => {
+                    .catch((error) => {
                         button.disabled = false;
-                        window.alert(`Unable to ${action} application.`);
+                        const message = error.message || `Unable to ${action} application.`;
+                        showApplicationErrorModal(message);
+                        
+                        // Refresh applications list after modal closes
+                        document.getElementById('application-error-modal').addEventListener('hidden.bs.modal', function handler() {
+                            loadApplicationsResults();
+                            loadStats();
+                            if (typeof loadProfessionalStats === 'function') loadProfessionalStats();
+                            this.removeEventListener('hidden.bs.modal', handler);
+                        });
                     });
             });
         });
@@ -1420,6 +1521,7 @@
                     .then(() => {
                         loadAllContracts();
                         loadStats();
+                        if (typeof loadProfessionalStats === 'function') loadProfessionalStats();
                     })
                     .catch(() => {
                         button.disabled = false;
@@ -1492,6 +1594,7 @@
         const reviewInput = document.getElementById("contract-review-comment");
         const reportInput = document.getElementById("contract-report-reason");
         const feedback = document.getElementById("contract-confirm-feedback");
+        const submitButton = document.getElementById("contract-confirm-submit");
 
         if (!modalElement || !contractIdInput || !ratingInput || !reviewInput || !reportInput || !feedback) {
             return;
@@ -1502,6 +1605,10 @@
         reviewInput.value = "";
         reportInput.value = "";
         feedback.innerHTML = "";
+        
+        if (submitButton) {
+            submitButton.disabled = false;
+        }
 
         const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
         modal.show();
@@ -2204,6 +2311,12 @@
                 const skillMatch = Boolean(job.skill_match);
                 const buttonClass = alreadyApplied ? "btn btn-secondary" : "btn btn-dark";
                 const buttonText = alreadyApplied ? "Applied" : "Apply";
+                const startDate = job.start_date ? formatDate(job.start_date) : null;
+                const deadline = job.deadline ? formatDate(job.deadline) : null;
+                
+                const dateBadges = [];
+                if (startDate) dateBadges.push(`<span class="badge text-bg-light border">Start: ${startDate}</span>`);
+                if (deadline) dateBadges.push(`<span class="badge text-bg-light border">Deadline: ${deadline}</span>`);
 
                 return `
                     <article class="card professional-job-card shadow-sm h-100" style="border-left: 4px solid #20c997 !important;">
@@ -2229,6 +2342,8 @@
                                     ${skillMatch ? "Skill Match" : "Skill Check"}
                                 </span>
                             </div>
+                            
+                            ${dateBadges.length > 0 ? `<div class="d-flex flex-wrap gap-2 mb-3">${dateBadges.join('')}</div>` : ''}
 
                             <div class="professional-job-meta text-muted mb-4">
                                 Frontend placeholder match check is currently based on your primary skill and the job skill.
@@ -2302,49 +2417,17 @@
                     return;
                 }
 
-                if (button.disabled) {
-                    return;
-                }
-
-                button.disabled = true;
-                button.textContent = "Applying...";
-                clearProfessionalFeedback();
-
-                postJson("/api/pro/apply", {
-                    job_id: Number(jobId),
-                })
-                    .then(() => {
-                        button.className = "btn btn-secondary professional-apply-button";
-                        button.dataset.hasApplied = "true";
-                        button.textContent = "Applied";
-                        showProfessionalFeedback("success", "Application submitted successfully.");
-                        loadProfessionalStats();
-                    })
-                    .catch((error) => {
-                        const message = error.message || "Unable to apply for this job.";
-
-                        if (message.toLowerCase().includes("already applied")) {
-                            button.disabled = true;
-                            button.dataset.hasApplied = "true";
-                            button.className = "btn btn-secondary professional-apply-button";
-                            button.textContent = "Applied";
-                            showProfessionalApplyInvalidModal("You already applied for this job.");
-                            return;
-                        }
-
-                        if (message.toLowerCase().includes("skill mismatch")) {
-                            button.disabled = false;
-                            button.className = "btn btn-dark professional-apply-button";
-                            button.textContent = "Apply";
-                            showProfessionalApplyInvalidModal("You cannot apply outside your skill.");
-                            return;
-                        }
-
-                        button.disabled = false;
-                        button.className = "btn btn-dark professional-apply-button";
-                        button.textContent = "Apply";
-                        showProfessionalFeedback("danger", message);
-                    });
+                // Show cover letter modal instead of direct apply
+                window.pendingApplyJobId = jobId;
+                window.pendingApplyButton = button;
+                const modal = document.getElementById("apply-cover-letter-modal");
+                const textarea = document.getElementById("cover-letter-input");
+                const countSpan = document.getElementById("cover-letter-count");
+                
+                if (textarea) textarea.value = "";
+                if (countSpan) countSpan.textContent = "0";
+                
+                bootstrap.Modal.getOrCreateInstance(modal).show();
             });
         });
     }
@@ -4298,6 +4381,62 @@
 
         if (professionalDashboard) {
             initializeProfessionalDashboard();
+            
+            // Cover letter modal form handler
+            const coverLetterForm = document.getElementById("apply-cover-letter-form");
+            const coverLetterInput = document.getElementById("cover-letter-input");
+            const coverLetterCount = document.getElementById("cover-letter-count");
+            const submitBtn = document.getElementById("submit-cover-letter-btn");
+            
+            if (coverLetterInput && coverLetterCount) {
+                coverLetterInput.addEventListener("input", function() {
+                    coverLetterCount.textContent = this.value.length;
+                });
+            }
+            
+            if (coverLetterForm && submitBtn) {
+                coverLetterForm.addEventListener("submit", function(e) {
+                    e.preventDefault();
+                    
+                    const jobId = window.pendingApplyJobId;
+                    const button = window.pendingApplyButton;
+                    const coverLetter = coverLetterInput.value.trim();
+                    
+                    if (!coverLetter || coverLetter.length < 10) {
+                        alert("Please write a cover letter (at least 10 characters).");
+                        return;
+                    }
+                    
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Submitting...';
+                    
+                    postJson("/api/pro/apply", {
+                        job_id: Number(jobId),
+                        cover_letter: coverLetter,
+                    })
+                        .then(() => {
+                            bootstrap.Modal.getInstance(document.getElementById("apply-cover-letter-modal")).hide();
+                            submitBtn.disabled = false;
+                            submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane me-1"></i>Submit Application';
+                            
+                            if (button) {
+                                button.className = "btn btn-secondary professional-apply-button";
+                                button.dataset.hasApplied = "true";
+                                button.textContent = "Applied";
+                                button.disabled = true;
+                            }
+                            
+                            showProfessionalFeedback("success", "Application submitted successfully.");
+                            loadProfessionalStats();
+                        })
+                        .catch((error) => {
+                            submitBtn.disabled = false;
+                            submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane me-1"></i>Submit Application';
+                            const message = error.message || "Unable to apply for this job.";
+                            showProfessionalApplyInvalidModal(message);
+                        });
+                });
+            }
         }
 
         if (adminDashboard) {
