@@ -309,6 +309,13 @@
                         >
                             <i class="fa-solid fa-paper-plane text-primary me-2"></i> My Applications
                         </button>
+                        <button
+                            type="button"
+                            class="btn btn-outline-dark text-start professional-nav-button"
+                            data-view="direct-requests"
+                        >
+                            <i class="fa-solid fa-envelope text-warning me-2"></i> Requests
+                        </button>
                     </div>
 
                     <div class="mt-auto pt-3 border-top">
@@ -410,9 +417,38 @@
         </div>
     </div>
 
+    <!-- Direct Request Action Modal -->
+    <div class="modal fade" id="direct-request-action-modal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header border-0" id="action-modal-header" style="background: #6c757d; color: white;">
+                    <h5 class="modal-title fw-bold" id="action-modal-title">
+                        <i class="fa-solid fa-handshake me-2"></i>Direct Request
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center py-4">
+                    <div id="action-modal-icon" class="mb-3">
+                        <i class="fa-solid fa-envelope-open-text fa-4x" style="color: #6c757d;"></i>
+                    </div>
+                    <h5 class="mb-2" id="action-modal-request-title"></h5>
+                    <p class="text-muted mb-2" id="action-modal-client-name"></p>
+                    <div id="action-modal-budget" class="badge fs-6 mb-3" style="background: #198754;"></div>
+                    <p class="mb-0" id="action-modal-message"></p>
+                </div>
+                <div class="modal-footer border-top justify-content-center">
+                    <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn px-4" id="confirm-action-btn" style="background: #6c757d; color: white;">
+                        <i class="fa-solid fa-check me-1"></i>Confirm
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{{ asset('js/auth.js') }}"></script>
-    <script src="{{ asset('app.js') }}"></script>
+    <script src="{{ asset('app.js') }}?v={{ now()->timestamp }}"></script>
     <script>
         document.addEventListener("DOMContentLoaded", function () {
             if (typeof window.requireRole === "function") {

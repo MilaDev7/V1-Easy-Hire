@@ -83,6 +83,8 @@
         });
     }
 
+    var currentProIdForRequest = null;
+
     function renderProfessionalsResults(professionals) {
         var results = document.getElementById("professionals-results");
         if (!results) return;
@@ -108,6 +110,9 @@
                 '</div>' +
                 '<p class="mb-2"><span class="fw-semibold">Skills:</span> ' + skill + '</p>' +
                 '<p class="mb-2"><span class="fw-semibold">Location:</span> ' + location + '</p>' +
+                '<button class="btn btn-outline-success w-100 mt-2" onclick="showProProfile(' + pro.id + ')">' +
+                '<i class="fa-solid fa-user me-1"></i> View Profile' +
+                '</button>' +
                 '</div></div></div>';
         }).join("");
 

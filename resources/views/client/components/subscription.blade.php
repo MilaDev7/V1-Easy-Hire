@@ -53,6 +53,9 @@
                 const popularBadge = isPopular 
                     ? '<span class="small fw-bold px-2 py-1 rounded-pill" style="background: #e5f8ec; color: #1b4037;">Popular</span>'
                     : '';
+                const directRequests = plan.direct_requests_limit > 0 
+                    ? `${plan.direct_requests_limit} Direct Requests`
+                    : 'No Direct Requests';
 
                 return `
                     <div class="col-12 col-md-4">
@@ -65,6 +68,9 @@
                                 <h3 class="fw-bold text-white mb-0">Br${plan.price || 0}</h3>
                                 <div class="d-flex align-items-center justify-content-between mt-1">
                                     <p class="mb-0 small" style="color: rgba(255, 255, 255, 0.78);">${plan.job_posts_limit || 0} Job Posts</p>
+                                </div>
+                                <div class="d-flex align-items-center justify-content-between mt-1">
+                                    <p class="mb-0 small" style="color: rgba(255, 255, 255, 0.78);">${directRequests}</p>
                                 </div>
                                 <div class="d-flex align-items-center justify-content-between mt-1">
                                     <p class="mb-0 small" style="color: rgba(255, 255, 255, 0.78);">${plan.duration_days || 0} Days</p>

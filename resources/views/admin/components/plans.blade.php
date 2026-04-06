@@ -41,9 +41,16 @@
                         <input type="number" class="form-control" id="plan-job-limit" placeholder="e.g., 5" min="1">
                     </div>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label fw-bold"><i class="fa-solid fa-clock me-2 text-info"></i>Duration (Days)</label>
-                    <input type="number" class="form-control" id="plan-duration" placeholder="e.g., 30" min="1">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold"><i class="fa-solid fa-clock me-2 text-info"></i>Duration (Days)</label>
+                        <input type="number" class="form-control" id="plan-duration" placeholder="e.g., 30" min="1">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold"><i class="fa-solid fa-paper-plane me-2 text-purple"></i>Direct Requests Limit</label>
+                        <input type="number" class="form-control" id="plan-direct-requests" placeholder="e.g., 3" min="0">
+                        <small class="text-muted">0 = Not available</small>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer border-top">

@@ -119,6 +119,10 @@
                             <p class="text-white-50 small mb-0 text-uppercase">Jobs Remaining</p>
                             <p class="text-white mb-0 fw-semibold" id="current-plan-jobs">--</p>
                         </div>
+                        <div class="text-center" style="min-width: 130px;">
+                            <p class="text-white-50 small mb-0 text-uppercase">Direct Requests</p>
+                            <p class="text-white mb-0 fw-semibold" id="current-plan-requests">--</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -144,6 +148,43 @@
                 <div class="modal-body p-4" id="pro-profile-modal-body"></div>
                 <div class="modal-footer border-top">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-success d-none" id="hire-pro-btn" onclick="showDirectRequestModal()">
+                        <i class="fa-solid fa-paper-plane me-1"></i> Hire / Send Request
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Direct Request Modal -->
+    <div class="modal fade" id="direct-request-modal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-success text-white border-0">
+                    <h5 class="modal-title fw-bold"><i class="fa-solid fa-paper-plane me-2"></i>Send Request</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <input type="hidden" id="direct-request-pro-id">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Title</label>
+                        <input type="text" class="form-control" id="direct-request-title" placeholder="e.g., Need web developer">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Description</label>
+                        <textarea class="form-control" id="direct-request-desc" rows="4" placeholder="Describe your project..."></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Budget (Optional)</label>
+                        <input type="number" class="form-control" id="direct-request-budget" placeholder="e.g., 500">
+                    </div>
+                    <div id="direct-request-feedback"></div>
+                </div>
+                <div class="modal-footer border-top">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-success" id="send-direct-request-btn" onclick="sendDirectRequest()">
+                        <i class="fa-solid fa-paper-plane me-1"></i> Send Request
+                    </button>
                 </div>
             </div>
         </div>
@@ -197,9 +238,13 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{{ asset('js/api.js') }}"></script>
     <script src="{{ asset('js/auth.js') }}"></script>
+    <script src="{{ asset('js/direct-request.js') }}"></script>
     <script src="{{ asset('app.js') }}"></script>
     
     <script>
+        // Ensure variable is available globally
+        var currentProIdForRequest = currentProIdForRequest || null;
+
         // Generate star rating HTML
         function generateStars(rating) {
             var html = '';
@@ -223,6 +268,8 @@
 
         // Show professional profile modal
         function showProProfile(proId) {
+            currentProIdForRequest = proId;
+            
             var token = localStorage.getItem("token");
             var headers = {"Accept": "application/json"};
             if (token) headers["Authorization"] = "Bearer " + token;
@@ -230,6 +277,17 @@
             document.getElementById("pro-profile-modal-body").innerHTML = '<div class="text-center py-5"><span class="spinner-border spinner-border-sm me-2"></span>Loading...</div>';
             var modal = new bootstrap.Modal(document.getElementById("pro-profile-modal"));
             modal.show();
+
+            // Show/hide hire button based on login and role
+            var hireBtn = document.getElementById("hire-pro-btn");
+            var role = localStorage.getItem("role");
+            if (hireBtn) {
+                if (token && role === "client") {
+                    hireBtn.classList.remove("d-none");
+                } else {
+                    hireBtn.classList.add("d-none");
+                }
+            }
 
             fetch("/api/professionals/" + proId, {method: "GET", headers: headers})
             .then(function(r) { 

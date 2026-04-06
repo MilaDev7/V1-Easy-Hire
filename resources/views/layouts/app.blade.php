@@ -174,6 +174,7 @@ font-size: 12px;
 <!-- Your global API -->
 <script src="{{ asset('js/api.js') }}"></script>
 <script src="{{ asset('js/auth.js') }}"></script>
+<script src="{{ asset('js/direct-request.js') }}"></script>
 
 <!-- Page-specific scripts -->
 @yield('scripts')
