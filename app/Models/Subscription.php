@@ -10,6 +10,7 @@ class Subscription extends Model
         'user_id',
         'plan_id',
         'remaining_posts',
+        'direct_requests_remaining',
         'expires_at',
         'status',
         'tx_ref',

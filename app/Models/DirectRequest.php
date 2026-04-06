@@ -4,26 +4,16 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class Contract extends Model
+class DirectRequest extends Model
 {
     protected $fillable = [
-        'job_id',
-        'direct_request_id',
         'client_id',
         'professional_id',
-        'agreed_price',
+        'title',
+        'description',
+        'budget',
         'status',
     ];
-
-    public function directRequest()
-    {
-        return $this->belongsTo(DirectRequest::class);
-    }
-
-    public function job()
-    {
-        return $this->belongsTo(JobPost::class, 'job_id');
-    }
 
     public function client()
     {

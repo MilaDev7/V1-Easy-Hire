@@ -10,6 +10,7 @@ class Plan extends Model
         'name',
         'price',
         'job_posts_limit',
+        'direct_requests_limit',
         'duration_days',
     ];
 
