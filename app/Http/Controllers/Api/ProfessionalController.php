@@ -192,6 +192,8 @@ class ProfessionalController extends Controller
                     'skills' => $job->skill,
                     'status' => $job->status,
                     'location' => $job->location,
+                    'start_date' => $job->start_date,
+                    'deadline' => $job->deadline,
                     'has_applied' => in_array($job->id, $appliedJobIds, true),
                     'skill_match' => $skillMatch,
                 ];
@@ -207,6 +209,7 @@ class ProfessionalController extends Controller
         $userId = auth()->id();
         $request->validate([
             'job_id' => 'required|exists:job_posts,id',
+            'cover_letter' => 'nullable|string|max:1000',
         ]);
 
         $job = JobPost::findOrFail($request->job_id);
@@ -248,7 +251,7 @@ class ProfessionalController extends Controller
         Application::create([
             'job_id' => $job->id,
             'professional_id' => $userId,
-            'cover_letter' => 'Dashboard quick apply placeholder.',
+            'cover_letter' => $request->cover_letter ?? 'Dashboard quick apply placeholder.',
             'status' => 'pending',
         ]);
 
@@ -344,14 +347,18 @@ class ProfessionalController extends Controller
             ->where('status', 'completed')
             ->count();
 
-        $applications = Application::where('professional_id', $userId)
+        $pendingApplications = Application::where('professional_id', $userId)
             ->where('status', 'pending')
             ->count();
+
+        $maxApplies = 5;
+        $usedSlots = $pendingApplications + $active;
+        $remainingApply = max($maxApplies - $usedSlots, 0);
 
         return response()->json([
             'active_contracts' => $active,
             'completed_jobs' => $completed,
-            'remaining_apply' => max(5 - $applications, 0),
+            'remaining_apply' => $remainingApply,
         ]);
     }
 }

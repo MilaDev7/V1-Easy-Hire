@@ -3,95 +3,93 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use App\Models\Application;
 use App\Models\JobPost;
 use App\Models\Professional;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\Request;
 
 class ApplicationController extends Controller
 {
-
-
     /**
      * Professional applies for a job
      */
     public function apply(Request $request, $jobId)
     {
 
-      
-$user = auth()->user();
-$professional = $user->professional;
+        $user = auth()->user();
+        $professional = $user->professional;
 
+        // ✅ 1. check approval (you already have probably)
 
-// ✅ 1. check approval (you already have probably)
+        // ✅ 2. LIMIT ACTIVE APPLICATIONS
+        $pendingCount = \App\Models\Application::where('professional_id', $user->id)
+            ->where('status', 'pending')
+            ->count();
 
-// ✅ 2. LIMIT ACTIVE APPLICATIONS
-$pendingCount = \App\Models\Application::where('professional_id', $user->id)
-    ->where('status', 'pending')
-    ->count();
+        if ($pendingCount >= 5) {
+            return response()->json([
+                'message' => 'Too many pending applications',
+            ], 403);
+        }
 
-if ($pendingCount >= 5) {
-    return response()->json([
-        'message' => 'Too many pending applications'
-    ], 403);
-}
+        // 1. Count only ACTIVE accepted jobs
+        // We check applications where status is 'accepted'
+        // AND the linked job status is NOT 'completed' and NOT 'cancelled'
+        $activeJobsCount = \App\Models\Application::where('professional_id', $user->id)
+            ->where('status', 'accepted')
+            ->whereHas('job', function ($query) {
+                $query->whereNotIn('status', ['completed', 'cancelled']);
+            })
+            ->count();
 
-
-    // 1. Count only ACTIVE accepted jobs
-    // We check applications where status is 'accepted' 
-    // AND the linked job status is NOT 'completed' and NOT 'cancelled'
-    $activeJobsCount = \App\Models\Application::where('professional_id', $user->id)
-        ->where('status', 'accepted')
-        ->whereHas('job', function ($query) {
-            $query->whereNotIn('status', ['completed', 'cancelled']);
-        })
-        ->count();
-
-    // 2. Check the limit (3 active jobs)
+        // 2. Check the limit (3 active jobs)
         if ($activeJobsCount >= 3) {
-        return response()->json([
-            'message' => 'You reached the maximum limit of active jobs (3). Please complete your current jobs before applying for more.'
-        ], 403);
-    }
+            return response()->json([
+                'message' => 'You reached the maximum limit of active jobs (3). Please complete your current jobs before applying for more.',
+            ], 403);
+        }
 
-$alreadyApplied = \App\Models\Application::where('job_id', $jobId)
-    ->where('professional_id', $user->id)
-    ->exists();
+        $alreadyApplied = \App\Models\Application::where('job_id', $jobId)
+            ->where('professional_id', $user->id)
+            ->exists();
 
-if ($alreadyApplied) {
-    return response()->json([
-        'message' => 'You already applied to this job'
-    ], 400);
-}
+        if ($alreadyApplied) {
+            return response()->json([
+                'message' => 'You already applied to this job',
+            ], 400);
+        }
 
         // 1. Fetch the Job Post first (Fixes the "Undefined status" error)
         $job = JobPost::findOrFail($jobId);
-if ($job->skill !== $professional->skill) {
-    return response()->json([
-        'message' => 'You cannot apply to jobs outside your skill'
-    ], 403);
-}
-
+        if ($job->skill !== $professional->skill) {
+            return response()->json([
+                'message' => 'You cannot apply to jobs outside your skill',
+            ], 403);
+        }
 
         // 2. Fetch the Professional profile linked to the logged-in user
         $professionalProfile = Professional::where('user_id', auth()->id())->first();
 
         // 3. Security Check: Does the professional profile exist?
-        if (!$professionalProfile) {
+        if (! $professionalProfile) {
             return response()->json(['message' => 'Professional profile not found.'], 404);
         }
 
         // 4. Security Check: Is the professional approved by Admin?
         if ($professionalProfile->status !== 'approved') {
             return response()->json([
-                'message' => 'Your account is not approved yet. Only approved professionals can apply.'
+                'message' => 'Your account is not approved yet. Only approved professionals can apply.',
             ], 403);
         }
 
         // 5. Security Check: Is the job still open?
         if ($job->status !== 'open') {
             return response()->json(['message' => 'Job is no longer open for applications.'], 400);
+        }
+
+        // 5b. Check if job is expired (past deadline)
+        if ($job->deadline && $job->deadline < now()->toDateString()) {
+            return response()->json(['message' => 'Job deadline has passed.'], 400);
         }
 
         // 6. Validation
@@ -118,12 +116,10 @@ if ($job->skill !== $professional->skill) {
 
         return response()->json([
             'message' => 'Application submitted successfully',
-            'application' => $application
+            'application' => $application,
         ], 201);
 
-        
     }
-
 
     /**
      * Professional views their own applications
@@ -172,30 +168,45 @@ if ($job->skill !== $professional->skill) {
             return response()->json(['message' => 'Job is already assigned or closed'], 400);
         }
 
-        // 3. Accept this application
+        // 3. Check if professional has 3 or more active contracts
+        $activeContracts = \App\Models\Contract::where('professional_id', $application->professional_id)
+            ->where('status', 'active')
+            ->count();
+
+        if ($activeContracts >= 3) {
+            // Auto-reject the application so the professional gets their slot back
+            $application->status = 'rejected';
+            $application->save();
+
+            return response()->json([
+                'message' => 'Cannot accept. This professional has 3 unfinished jobs. Application has been rejected.',
+            ], 400);
+        }
+
+        // 4. Accept this application
         $application->status = 'accepted';
         $application->save();
 
-        // 4. Automatically Reject all other applicants for this job
+        // 5. Automatically Reject all other applicants for this job
         Application::where('job_id', $job->id)
             ->where('id', '!=', $application->id)
             ->update(['status' => 'rejected']);
 
-            // 4.5 ✅ Create contract
-\App\Models\Contract::create([
-    'job_id' => $job->id,
-    'client_id' => $job->client_id,
-    'professional_id' => $application->professional_id,
-    'agreed_price' => $job->budget,
-]);
+        // 5.5 ✅ Create contract
+        \App\Models\Contract::create([
+            'job_id' => $job->id,
+            'client_id' => $job->client_id,
+            'professional_id' => $application->professional_id,
+            'agreed_price' => $job->budget,
+        ]);
 
-        // 5. Update Job status to 'assigned'
+        // 6. Update Job status to 'assigned'
         $job->status = 'assigned';
         $job->save();
 
         return response()->json([
             'message' => 'Professional assigned successfully',
-            'application' => $application
+            'application' => $application,
         ]);
     }
 
@@ -217,7 +228,7 @@ if ($job->skill !== $professional->skill) {
 
         return response()->json([
             'message' => 'Application rejected successfully',
-            'application' => $application
+            'application' => $application,
         ]);
     }
 
@@ -237,42 +248,36 @@ if ($job->skill !== $professional->skill) {
     /**
      * Client confirms job is done and leaves a rating
      */
-   
-
     public function withdraw($id)
-{
-    $application = \App\Models\Application::findOrFail($id);
+    {
+        $application = \App\Models\Application::findOrFail($id);
 
-    // ✅ must be owner
-    if ($application->professional_id !== auth()->id()) {
-        return response()->json(['message' => 'Unauthorized'], 403);
-    }
+        // ✅ must be owner
+        if ($application->professional_id !== auth()->id()) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
 
-    // ✅ only pending applications can be withdrawn
-    if ($application->status !== 'pending') {
+        // ✅ only pending applications can be withdrawn
+        if ($application->status !== 'pending') {
+            return response()->json([
+                'message' => 'Only pending applications can be withdrawn',
+            ], 400);
+        }
+
+        $application->delete();
+
         return response()->json([
-            'message' => 'Only pending applications can be withdrawn'
-        ], 400);
+            'message' => 'Application withdrawn successfully',
+        ]);
+        $professional = auth()->user()->professional;
+
+        if (! $professional) {
+            return response()->json([
+                'message' => 'Professional profile not found',
+            ], 404);
+        }
+
+        // ✅ SKILL CHECK
+
     }
-
-    $application->delete();
-
-    return response()->json([
-        'message' => 'Application withdrawn successfully'
-    ]);
-    $professional = auth()->user()->professional;
-
-if (!$professional) {
-    return response()->json([
-        'message' => 'Professional profile not found'
-    ], 404);
-}
-
-// ✅ SKILL CHECK
-
-
-}
-
-
-
 }

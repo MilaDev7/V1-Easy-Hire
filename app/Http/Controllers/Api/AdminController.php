@@ -291,17 +291,32 @@ class AdminController extends Controller
     {
         $job = \App\Models\JobPost::findOrFail($id);
 
+        $applicationCount = \App\Models\Application::where('job_id', $job->id)->count();
+
         if ($job->status !== 'open') {
             return response()->json([
                 'message' => 'Only open jobs can be cancelled',
             ], 400);
         }
 
+        // Refund if no applications
+        if ($applicationCount === 0) {
+            $subscription = \App\Models\Subscription::where('user_id', $job->client_id)
+                ->where('status', 'active')
+                ->first();
+
+            if ($subscription) {
+                $subscription->increment('remaining_posts');
+            }
+        }
+
         $job->status = 'cancelled';
         $job->save();
 
         return response()->json([
-            'message' => 'Job cancelled successfully',
+            'message' => $applicationCount === 0
+                ? 'Job cancelled successfully. 1 post refunded.'
+                : 'Job cancelled successfully.',
         ]);
     }
 

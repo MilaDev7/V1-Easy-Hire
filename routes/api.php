@@ -58,6 +58,7 @@ Route::middleware(['auth:sanctum', 'check_status'])->group(function () {
 
         // Job Management
         Route::post('/job-posts', [JobPostController::class, 'store']);
+        Route::delete('/job-posts/{id}', [ClientController::class, 'deleteJob']);
         Route::get('/jobs/{id}/applications', [ApplicationController::class, 'jobApplications']);
         Route::post('/applications/{id}/accept', [ApplicationController::class, 'accept']);
         Route::post('/applications/{id}/reject', [ApplicationController::class, 'reject']);

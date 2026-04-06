@@ -145,10 +145,47 @@ class ClientController extends Controller
                     'skill' => $post->skill,
                     'status' => $post->status ?? 'open',
                     'location' => $post->location,
+                    'start_date' => $post->start_date,
+                    'deadline' => $post->deadline,
                     'created_at' => $post->created_at->format('Y-m-d'),
                 ];
             });
 
         return response()->json($posts);
+    }
+
+    public function deleteJob($id)
+    {
+        $job = \App\Models\JobPost::findOrFail($id);
+
+        // Only job owner can delete
+        if ($job->client_id !== auth()->id()) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        // Check if job has any applications
+        $applicationCount = \App\Models\Application::where('job_id', $job->id)->count();
+
+        // Delete the job
+        $job->delete();
+
+        // Refund if no applications
+        if ($applicationCount === 0) {
+            $subscription = Subscription::where('user_id', auth()->id())
+                ->where('status', 'active')
+                ->first();
+
+            if ($subscription) {
+                $subscription->increment('remaining_posts');
+
+                return response()->json([
+                    'message' => 'Job deleted. 1 post refunded.',
+                ]);
+            }
+        }
+
+        return response()->json([
+            'message' => 'Job deleted successfully.',
+        ]);
     }
 }
