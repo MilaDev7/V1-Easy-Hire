@@ -20,15 +20,16 @@
                 </div>
 
                 <!-- 3. Passwords -->
-                <div class="row">
-                    <div class="col-6 mb-3">
-                        <label class="form-label small fw-bold">Password</label>
-                        <input id="regPassword" type="password" class="form-control">
-                    </div>
-                    <div class="col-6 mb-3">
-                        <label class="form-label small fw-bold">Confirm</label>
-                        <input id="regConfirm" type="password" class="form-control">
-                    </div>
+                <div class="mb-3 position-relative">
+                    <label class="form-label small fw-bold">Password</label>
+                    <input id="regPassword" type="password" class="form-control" style="padding-right: 40px;">
+                    <button type="button" class="btn btn-sm position-absolute end-0 top-0 me-2 mt-1" onclick="togglePasswords()">
+                        <i class="fa-solid fa-eye" id="toggleIcon"></i>
+                    </button>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Confirm</label>
+                    <input id="regConfirm" type="password" class="form-control">
                 </div>
 
                 <!-- 4. Role Selection -->
@@ -120,6 +121,38 @@
                     errorBox.innerHTML = err.message || "Something went wrong";
                 }
             });
+    }
+
+    function togglePasswords() {
+        const pwd = document.getElementById('regPassword');
+        const confirm = document.getElementById('regConfirm');
+        const icon = document.getElementById('toggleIcon');
+        
+        if (pwd.type === 'password') {
+            pwd.type = 'text';
+            confirm.type = 'text';
+            icon.classList.remove('fa-eye');
+            icon.classList.add('fa-eye-slash');
+        } else {
+            pwd.type = 'password';
+            confirm.type = 'password';
+            icon.classList.remove('fa-eye-slash');
+            icon.classList.add('fa-eye');
+        }
+    }
+
+    function togglePassword(inputId, btn) {
+        const input = document.getElementById(inputId);
+        const icon = btn.querySelector('i');
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.classList.remove('fa-eye');
+            icon.classList.add('fa-eye-slash');
+        } else {
+            input.type = 'password';
+            icon.classList.remove('fa-eye-slash');
+            icon.classList.add('fa-eye');
+        }
     }
 </script>
 @endsection

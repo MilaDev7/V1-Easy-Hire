@@ -9,8 +9,11 @@
                 <div class="mb-3">
                     <input type="email" id="loginEmail" class="form-control" placeholder="Email">
                 </div>
-                <div class="mb-3">
+                <div class="mb-3 position-relative">
                     <input type="password" id="loginPass" class="form-control" placeholder="Password">
+                    <button type="button" class="btn btn-sm position-absolute end-0 top-0 pe-2 pt-2" onclick="togglePassword('loginPass', this)">
+                        <i class="fa-solid fa-eye"></i>
+                    </button>
                 </div>
                 <button onclick="handleLogin()" class="btn btn-dark w-100 py-2 fw-bold">Sign In</button>
             </div>
@@ -91,6 +94,20 @@
                 alert("Server connection failed.");
             });
 
+    }
+
+    function togglePassword(inputId, btn) {
+        const input = document.getElementById(inputId);
+        const icon = btn.querySelector('i');
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.classList.remove('fa-eye');
+            icon.classList.add('fa-eye-slash');
+        } else {
+            input.type = 'password';
+            icon.classList.remove('fa-eye-slash');
+            icon.classList.add('fa-eye');
+        }
     }
 </script>
 @endsection
