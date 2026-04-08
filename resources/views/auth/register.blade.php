@@ -19,7 +19,13 @@
                     <input id="regEmail" type="email" class="form-control" placeholder="cli@test.com">
                 </div>
 
-                <!-- 3. Passwords -->
+                <!-- 3. Phone -->
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Phone Number</label>
+                    <input id="regPhone" type="tel" class="form-control" placeholder="09XXXXXXXX" maxlength="10" pattern="[0-9]{10}">
+                </div>
+
+                <!-- 4. Passwords -->
                 <div class="mb-3 position-relative">
                     <label class="form-label small fw-bold">Password</label>
                     <input id="regPassword" type="password" class="form-control" style="padding-right: 40px;">
@@ -32,7 +38,7 @@
                     <input id="regConfirm" type="password" class="form-control">
                 </div>
 
-                <!-- 4. Role Selection -->
+                <!-- 5. Role Selection -->
                 <div class="mb-4">
                     <label class="form-label small fw-bold">Register as:</label>
                     <select id="regRole" class="form-select border-primary">
@@ -64,6 +70,7 @@
 
         const name = document.getElementById("regName").value;
         const email = document.getElementById("regEmail").value;
+        const phone = document.getElementById("regPhone").value.trim();
         const password = document.getElementById("regPassword").value;
         const confirm = document.getElementById("regConfirm").value;
         const role = document.getElementById("regRole").value;
@@ -81,6 +88,13 @@
             return;
         }
 
+        if (!/^[0-9]{10}$/.test(phone)) {
+            errorBox.innerHTML = "Phone number must be exactly 10 digits.";
+            btn.disabled = false;
+            btn.innerHTML = "Create Account";
+            return;
+        }
+
         fetch(`/api/register/${role}`, {
                 method: "POST",
                 headers: {
@@ -90,6 +104,7 @@
                 body: JSON.stringify({
                     name: name,
                     email: email,
+                    phone: phone,
                     password: password,
                     password_confirmation: confirm
                 })
