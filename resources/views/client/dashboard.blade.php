@@ -123,10 +123,6 @@
                             <p class="text-white-50 small mb-0 text-uppercase">Expires</p>
                             <p class="text-white mb-0 fw-semibold" id="current-plan-expiry">--</p>
                         </div>
-                        <div class="text-center" style="min-width: 100px;">
-                            <p class="text-white-50 small mb-0 text-uppercase">Jobs Remaining</p>
-                            <p class="text-white mb-0 fw-semibold" id="current-plan-jobs">--</p>
-                        </div>
                         <div class="text-center" style="min-width: 130px;">
                             <p class="text-white-50 small mb-0 text-uppercase">Direct Requests</p>
                             <p class="text-white mb-0 fw-semibold" id="current-plan-requests">--</p>

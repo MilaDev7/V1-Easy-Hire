@@ -532,7 +532,7 @@ function bindProfessionalApplicationActions() {
 
                     return payload;
                 })
-                .then(() => {
+                .then((payload) => {
                     if (row) {
                         row.remove();
                     }
