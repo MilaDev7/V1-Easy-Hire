@@ -137,8 +137,6 @@ class ProfileController extends Controller
             $updateData['email'] = $request->email;
         }
 
-        $user->update($updateData);
-
         $pro = Professional::where('user_id', $user->id)->first();
 
         $proUpdateData = [];
@@ -162,6 +160,9 @@ class ProfileController extends Controller
         if ($pro) {
             $pro->update($proUpdateData);
         }
+
+        // Persist user changes after all optional fields (including photo) are prepared.
+        $user->update($updateData);
 
         return response()->json([
             'success' => true,
