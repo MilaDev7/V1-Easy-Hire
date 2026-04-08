@@ -1,9 +1,72 @@
+// Auth initialization and state management
+
+let currentUser = null;
+
 function getToken() {
     return localStorage.getItem("token");
 }
 
 function getStoredRole() {
     return localStorage.getItem("role");
+}
+
+function getCurrentUser() {
+    return currentUser;
+}
+
+// Initialize auth - must be called before rendering UI
+async function initAuth() {
+    const token = getToken();
+    const role = getStoredRole();
+    
+    // If no token, return null (not logged in)
+    if (!token) {
+        return null;
+    }
+    
+    try {
+        const response = await fetch("/api/me", {
+            headers: {
+                "Authorization": "Bearer " + token,
+                "Accept": "application/json"
+            }
+        });
+        
+        if (!response.ok) {
+            // Token invalid, clear storage
+            localStorage.removeItem("token");
+            localStorage.removeItem("role");
+            return null;
+        }
+        
+        const user = await response.json();
+        currentUser = user;
+        
+        // Also store role if not already stored
+        if (role !== user.role) {
+            localStorage.setItem("role", user.role || "");
+        }
+        
+        return user;
+    } catch (error) {
+        console.error("Auth init failed:", error);
+        return null;
+    }
+}
+
+// Check if user is logged in
+function isLoggedIn() {
+    return currentUser !== null;
+}
+
+// Get dashboard URL based on role
+function getDashboardUrl() {
+    if (!currentUser) return "/";
+    
+    const role = currentUser.role;
+    if (role === 'admin') return "/admin/dashboard";
+    if (role === 'professional') return "/professional/dashboard";
+    return "/client/dashboard";
 }
 
 function requireAuth() {
@@ -34,7 +97,26 @@ function requireRole(expectedRole) {
 }
 
 function logout() {
-    localStorage.removeItem("token");
-    localStorage.removeItem("role");
-    window.location.href = "/login";
+    const token = localStorage.getItem("token");
+    
+    // Call API logout to destroy session
+    if (token) {
+        fetch("/api/logout", {
+            method: "POST",
+            headers: {
+                "Authorization": "Bearer " + token,
+                "Accept": "application/json"
+            }
+        }).finally(() => {
+            localStorage.removeItem("token");
+            localStorage.removeItem("role");
+            currentUser = null;
+            window.location.href = "/login";
+        });
+    } else {
+        localStorage.removeItem("token");
+        localStorage.removeItem("role");
+        currentUser = null;
+        window.location.href = "/login";
+    }
 }

@@ -3,68 +3,80 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use App\Models\User;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\ValidationException;
 use App\Models\Professional;
-use Illuminate\Support\Facades\Auth; 
+use App\Models\User;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 
-use Illuminate\Support\Facades\DB; // Recommended for transactions
-
+// Recommended for transactions
 
 class AuthController extends Controller
 {
+    // Get current user (works for all roles)
+    public function me()
+    {
+        $user = auth()->user();
+
+        return response()->json([
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'role' => $user->getRoleNames()->first(),
+            'profile_photo' => $user->profile_photo
+                ? asset('storage/'.$user->profile_photo)
+                : asset('images/user1.jpg'),
+        ]);
+    }
+
     // Register Professional
 
+    public function registerProfessional(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string',
+            'email' => 'required|email|unique:users',
+            'password' => 'required|string|min:6|confirmed',
+        ]);
 
-public function registerProfessional(Request $request)
-{
-    $request->validate([
-        'name' => 'required|string',
-        'email' => 'required|email|unique:users',
-         'password' => 'required|string|min:6|confirmed',
-    ]);
+        $user = User::create([
+            'name' => $request->name,
+            'email' => $request->email,
+            'password' => Hash::make($request->password),
+            'role' => 'professional',
+        ]);
 
-    $user = User::create([
-        'name' => $request->name,
-        'email'=> $request->email,
-        'password'=> Hash::make($request->password),
-        'role' => 'professional',
-    ]);
+        // ✅ assign role
+        $user->assignRole('professional');
 
-    // ✅ assign role
-    $user->assignRole('professional');
-
-    // 🔥 CREATE PROFESSIONAL PROFILE
-       Professional::create([
+        // 🔥 CREATE PROFESSIONAL PROFILE
+        Professional::create([
             'user_id' => $user->id,
             'skill' => '',
             'experience' => 0,
             'bio' => '',
         ]);
 
-    $token = $user->createToken('auth_token')->plainTextToken;
+        $token = $user->createToken('auth_token')->plainTextToken;
 
-    return response()->json([
-        'message' => 'Professional registered',
-        'access_token' => $token,
-        'token_type' => 'Bearer',
-    ]);
-}
+        return response()->json([
+            'message' => 'Professional registered',
+            'access_token' => $token,
+            'token_type' => 'Bearer',
+        ]);
+    }
 
     // Register Client
     public function registerClient(Request $request)
     {
         $request->validate([
-            'name'     => 'required|string|max:255',
-            'email'    => 'required|string|email|max:255|unique:users',
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:6|confirmed', // password_confirmation needed
         ]);
 
         $user = User::create([
-            'name'     => $request->name,
-            'email'    => $request->email,
+            'name' => $request->name,
+            'email' => $request->email,
             'password' => Hash::make($request->password),
             'role' => 'client',
         ]);
@@ -74,50 +86,47 @@ public function registerProfessional(Request $request)
         $token = $user->createToken('API Token')->plainTextToken;
 
         return response()->json([
-            'message'      => 'Client registered',
+            'message' => 'Client registered',
             'access_token' => $token,
-            'token_type'   => 'Bearer',
+            'token_type' => 'Bearer',
         ]);
     }
 
     // Login
 
+    public function login(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email',
+            'password' => 'required',
+        ]);
 
-public function login(Request $request)
-{
-    $request->validate([
-        'email'=>'required|email',
-        'password'=>'required',
-    ]);
+        $user = User::where('email', $request->email)->first();
 
-    $user = User::where('email',$request->email)->first();
+        if (! $user || ! Hash::check($request->password, $user->password)) {
+            return response()->json(['message' => 'Invalid credentials'], 401);
+        }
 
-    if (!$user || !Hash::check($request->password,$user->password)) {
-        return response()->json(['message'=>'Invalid credentials'], 401);
+        if ($user->is_suspended) {
+            return response()->json([
+                'message' => 'Your account is suspended',
+            ], 403);
+        }
+
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        // 🔥 check professional status
+        $professional = Professional::where('user_id', $user->id)->first();
+
+        return response()->json([
+            'message' => 'Login successful',
+            'token' => $token,
+            'role' => $user->getRoleNames()->first(),
+            'approval_status' => $professional ? $professional->status : null,
+            'user_name' => $user->name,
+        ]);
+
     }
-
-    Auth::user();
-
-if ($user->is_suspended) {
-    return response()->json([
-        'message' => 'Your account is suspended'
-    ], 403);
-}
-
-    $token = $user->createToken('auth_token')->plainTextToken;
-
-    // 🔥 check professional status
-    $professional = Professional::where('user_id', $user->id)->first();
-return response()->json([
-    'message' => 'Login successful',
-    'token' => $token,
-    'role' => $user->getRoleNames()->first(), // Using Spatie
-    'approval_status' => $professional ? $professional->status : null,
-    'user_name' => $user->name // Good for the dashboard welcome message
-]);
-
-    
-}
 
     // Logout
     public function logout(Request $request)
@@ -125,20 +134,20 @@ return response()->json([
         $request->user()->currentAccessToken()->delete();
 
         return response()->json([
-            'message' => 'Logged out successfully'
+            'message' => 'Logged out successfully',
         ]);
     }
 
-    //delet accout
+    // delet accout
 
     public function deleteAccount()
-{
-    $user = auth()->user();
+    {
+        $user = auth()->user();
 
-    $user->delete();
+        $user->delete();
 
-    return response()->json([
-        'message' => 'Account deleted successfully'
-    ]);
-}
+        return response()->json([
+            'message' => 'Account deleted successfully',
+        ]);
+    }
 }

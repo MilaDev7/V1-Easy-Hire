@@ -47,6 +47,7 @@ Route::post('/client/profile', [ProfileController::class, 'updateClientProfile']
 Route::middleware(['auth:sanctum', 'check_status'])->group(function () {
 
     // General User Actions
+    Route::get('/me', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::delete('/account', [AuthController::class, 'deleteAccount']);
     Route::post('/contracts/{id}/report', [ReportController::class, 'store']);
