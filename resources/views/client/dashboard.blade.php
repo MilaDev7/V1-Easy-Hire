@@ -81,16 +81,24 @@
     @include('client.components.leftnav')
 
     <div class="client-dashboard-main" style="margin-left: 280px; min-height: 100vh; padding: 24px 24px 140px;">
-        <div class="card border-0 shadow-sm mb-4 position-relative" style="background: #e7f1ff; border-top: 4px solid #0d6efd !important;">
-            <div class="card-body text-center py-4">
-                <div>
-                    <p class="text-muted small mb-0">Client Dashboard</p>
-                    <h1 class="h4 mb-0">Overview</h1>
+        <div class="card border-0 shadow-sm mb-4" style="background: #e7f1ff; border-top: 4px solid #0d6efd !important;">
+            <div class="card-body py-4">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="text-center flex-grow-1">
+                        <p class="text-muted small mb-0">Client Dashboard</p>
+                        <h1 class="h4 mb-0">Overview</h1>
+                    </div>
+                    <div class="dropdown">
+                        <button class="btn p-0 border-0 bg-transparent" data-bs-toggle="dropdown" aria-expanded="false">
+                            <img src="{{ asset('images/user1.jpg') }}" id="client-topbar-photo" alt="Profile" class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover; border: 2px solid rgba(0,0,0,0.1);">
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow">
+                            <li><a class="dropdown-item" href="/client/dashboard"><i class="fa-solid fa-user me-2"></i>Account</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="#" onclick="logout(); return false;"><i class="fa-solid fa-right-from-bracket me-2"></i>Logout</a></li>
+                        </ul>
+                    </div>
                 </div>
-
-                <button type="button" class="btn btn-outline-danger btn-sm position-absolute end-0 me-4 top-50 translate-middle-y" onclick="logout()">
-                    <i class="fa-solid fa-right-from-bracket me-1"></i> Logout
-                </button>
             </div>
         </div>
 
