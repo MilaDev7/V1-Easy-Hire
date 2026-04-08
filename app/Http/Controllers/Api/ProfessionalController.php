@@ -83,7 +83,19 @@ class ProfessionalController extends Controller
 
         $professionals = $query->get()->map(function ($pro) {
             $reviews = Review::where('reviewed_id', $pro->user_id)->with('reviewer:id,name')->get();
-            $reportsCount = Report::where('reported_id', $pro->user_id)->count();
+            $reports = Report::where('reported_id', $pro->user_id)
+                ->with('reporter:id,name')
+                ->orderBy('created_at', 'desc')
+                ->take(3)
+                ->get()
+                ->map(function ($r) {
+                    return [
+                        'id' => $r->id,
+                        'reason' => $r->reason,
+                        'reporter_name' => $r->reporter ? $r->reporter->name : 'Anonymous',
+                        'created_at' => $r->created_at->format('Y-m-d'),
+                    ];
+                });
 
             return [
                 'id' => $pro->id,
@@ -106,7 +118,8 @@ class ProfessionalController extends Controller
                         'created_at' => $r->created_at,
                     ];
                 }),
-                'reports_count' => $reportsCount,
+                'reports_count' => Report::where('reported_id', $pro->user_id)->count(),
+                'reports' => $reports,
             ];
         });
 
@@ -146,6 +159,18 @@ class ProfessionalController extends Controller
             });
 
         $reportsCount = Report::where('reported_id', $professional->user_id)->count();
+        $reports = Report::where('reported_id', $professional->user_id)
+            ->with('reporter:id,name')
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($r) {
+                return [
+                    'id' => $r->id,
+                    'reason' => $r->reason,
+                    'reporter_name' => $r->reporter ? $r->reporter->name : 'Anonymous',
+                    'created_at' => $r->created_at->format('Y-m-d'),
+                ];
+            });
         $averageRating = $reviews->count() > 0 ? $reviews->avg('rating') : 0;
 
         return response()->json([
@@ -154,6 +179,7 @@ class ProfessionalController extends Controller
             'reviews' => $reviews,
             'reviews_count' => $reviews->count(),
             'reports_count' => $reportsCount,
+            'reports' => $reports,
             'average_rating' => round($averageRating, 1),
         ]);
     }

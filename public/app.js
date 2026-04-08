@@ -467,15 +467,15 @@
 
         // Load professionals from API
         function loadClientPros() {
-            var skill = document.getElementById("professional-skill") ? document.getElementById("professional-skill").value : '';
-            var location = document.getElementById("professional-location") ? document.getElementById("professional-location").value : '';
+            let skill = document.getElementById("professional-skill") ? document.getElementById("professional-skill").value : '';
+            let location = document.getElementById("professional-location") ? document.getElementById("professional-location").value : '';
             
-            var params = new URLSearchParams({skill: skill, location: location});
-            var token = localStorage.getItem("token");
-            var headers = {"Accept": "application/json"};
+            let params = new URLSearchParams({skill: skill, location: location});
+            let token = localStorage.getItem("token");
+            let headers = {"Accept": "application/json"};
             if (token) headers["Authorization"] = "Bearer " + token;
             
-            var resultsArea = document.getElementById("professionals-results");
+            let resultsArea = document.getElementById("professionals-results");
             if (resultsArea) {
                 resultsArea.innerHTML = '<div class="text-center py-5"><span class="spinner-border spinner-border-sm me-2"></span>Loading...</div>';
             }
@@ -490,8 +490,8 @@
             })
             .then(function(payload) {
                 console.log("Professionals payload:", payload);
-                var pros = payload.data || [];
-                var results = document.getElementById("professionals-results");
+                let pros = payload.data || [];
+                let results = document.getElementById("professionals-results");
                 if (!results) return;
                 
                 if (!pros.length) {
@@ -502,22 +502,37 @@
                 
                 console.log("Rendering " + pros.length + " professional cards");
                 
-                var cards = pros.map(function(p) {
-                    var proId = p.id;
-                    var name = p.name || "N/A";
-                    var photo = p.profile_photo ? "/storage/" + p.profile_photo : "/images/user1.jpg";
-                    var skillText = p.skill || "N/A";
-                    var locationText = p.location || "N/A";
-                    var rating = p.average_rating || 0;
-                    var reviewsCount = p.reviews_count || 0;
-                    var reportsCount = p.reports_count || 0;
-                    var reviewText = reviewsCount > 0 ? reviewsCount + ' review' + (reviewsCount > 1 ? 's' : '') : 'No reviews';
+                let cards = pros.map(function(p) {
+                    let proId = p.id;
+                    let name = p.name || "N/A";
+                    let photo = p.profile_photo ? "/storage/" + p.profile_photo : "/images/user1.jpg";
+                    let skillText = p.skill || "N/A";
+                    let locationText = p.location || "N/A";
+                    let rating = p.average_rating || 0;
+                    let reviewsCount = p.reviews_count || 0;
+                    let reportsCount = p.reports_count || 0;
+                    let reports = p.reports || [];
+                    let reviewText = reviewsCount > 0 ? reviewsCount + ' review' + (reviewsCount > 1 ? 's' : '') : 'No reviews';
                     
                     // Generate stars inline
-                    var starsHtml = '';
-                    var fullStars = Math.floor(rating);
-                    for (var i = 1; i <= 5; i++) {
+                    let starsHtml = '';
+                    let fullStars = Math.floor(rating);
+                    for (let i = 1; i <= 5; i++) {
                         starsHtml += '<i class="fa-solid fa-star" style="color: ' + (i <= fullStars ? '#ffc107;' : '#e4e5e9;') + '"></i>';
+                    }
+                    
+                    // Build reports section - compact with preview + View button
+                    let reportsSection = '';
+                    if (reportsCount > 0) {
+                        let latestReport = reports[0] ? reports[0].reason : '';
+                        let preview = latestReport.length > 35 ? latestReport.substring(0, 35) + '...' : latestReport;
+                        reportsSection = '<div class="mt-2 pt-2 border-top small">' +
+                            '<span class="text-danger"><i class="fa-solid fa-flag me-1"></i>' + reportsCount + ' report' + (reportsCount !== 1 ? 's' : '') + '</span>' +
+                            '<div class="text-muted small mt-1">' + preview + '</div>' +
+                            '<button type="button" class="btn btn-sm btn-outline-danger mt-2" onclick="event.stopPropagation(); window.viewProReports(' + proId + ')">View Reports</button>' +
+                            '</div>';
+                    } else {
+                        reportsSection = '<div class="mt-2 pt-2 border-top small"><span class="text-success"><i class="fa-solid fa-check-circle me-1"></i>No reports</span></div>';
                     }
                     
                     return '<div class="col-md-6 col-xl-4" onclick="window.showProProfile(' + proId + ')" style="cursor:pointer;">' +
@@ -533,8 +548,8 @@
                         '<hr>' +
                         '<div class="d-flex justify-content-between small">' +
                         '<span class="text-muted"><i class="fa-solid fa-star me-1"></i>' + reviewText + '</span>' +
-                        (reportsCount > 0 ? '<span class="text-danger"><i class="fa-solid fa-flag me-1"></i>' + reportsCount + ' report(s)</span>' : '<span class="text-success"><i class="fa-solid fa-check-circle me-1"></i>No reports</span>') +
                         '</div>' +
+                        reportsSection +
                         '</div></div></div>';
                 }).join("");
                 
@@ -542,7 +557,7 @@
             })
             .catch(function(err) {
                 console.error("Error loading professionals:", err);
-                var results = document.getElementById("professionals-results");
+                let results = document.getElementById("professionals-results");
                 if (results) results.innerHTML = '<div class="alert alert-danger mb-0">Unable to load professionals. Check console for details.</div>';
             });
         }
@@ -551,7 +566,7 @@
         window.loadClientPros = loadClientPros;
 
         // Bind search button
-        var searchBtn = document.getElementById("professional-search-button");
+        let searchBtn = document.getElementById("professional-search-button");
         if (searchBtn) {
             searchBtn.addEventListener("click", loadClientPros);
             // Trigger initial load after a small delay
@@ -1682,18 +1697,18 @@
 
     function showProProfile(proId) {
         try {
-            var token = localStorage.getItem("token");
-            var headers = {"Accept": "application/json"};
+            let token = localStorage.getItem("token");
+            let headers = {"Accept": "application/json"};
             if (token) headers["Authorization"] = "Bearer " + token;
 
-            var modalBody = document.getElementById("pro-profile-modal-body");
+            let modalBody = document.getElementById("pro-profile-modal-body");
             if (modalBody) {
                 modalBody.innerHTML = '<div class="text-center py-5"><span class="spinner-border spinner-border-sm me-2"></span>Loading...</div>';
             }
             
-            var modalEl = document.getElementById("pro-profile-modal");
+            let modalEl = document.getElementById("pro-profile-modal");
             if (modalEl) {
-                var modal = new bootstrap.Modal(modalEl);
+                let modal = new bootstrap.Modal(modalEl);
                 modal.show();
             }
 
@@ -1703,23 +1718,24 @@
                 return r.json(); 
             })
             .then(function(data) {
-                var pro = data.professional || {};
-                var name = pro.user ? pro.user.name : (pro.name || "N/A");
-                var email = pro.user ? pro.user.email : "N/A";
-                var photo = pro.profile_photo ? "/storage/" + pro.profile_photo : "/images/user1.jpg";
-                var skill = pro.skill || "N/A";
-                var location = pro.location || "N/A";
-                var experience = pro.experience || "0";
-                var rating = data.average_rating || 0;
-                var bio = pro.bio || "No biography available.";
-                var completedJobs = data.completed_jobs ? data.completed_jobs.length : 0;
-                var reviews = data.reviews || [];
-                var reportsCount = data.reports_count || 0;
+                let pro = data.professional || {};
+                let name = pro.user ? pro.user.name : (pro.name || "N/A");
+                let email = pro.user ? pro.user.email : "N/A";
+                let photo = pro.profile_photo ? "/storage/" + pro.profile_photo : "/images/user1.jpg";
+                let skill = pro.skill || "N/A";
+                let location = pro.location || "N/A";
+                let experience = pro.experience || "0";
+                let rating = data.average_rating || 0;
+                let bio = pro.bio || "No biography available.";
+                let completedJobs = data.completed_jobs ? data.completed_jobs.length : 0;
+                let reviews = data.reviews || [];
+                let reportsCount = data.reports_count || 0;
+                let reports = data.reports || [];
 
                 function proGenerateStars(r) {
-                    var html = '';
-                    var fullStars = Math.floor(r);
-                    for (var i = 1; i <= 5; i++) {
+                    let html = '';
+                    let fullStars = Math.floor(r);
+                    for (let i = 1; i <= 5; i++) {
                         html += '<i class="fa-solid fa-star" style="color: ' + (i <= fullStars ? '#ffc107;' : '#e4e5e9;') + '"></i>';
                     }
                     return html;
@@ -1727,11 +1743,11 @@
 
                 function proFormatDate(dateStr) {
                     if (!dateStr) return 'N/A';
-                    var date = new Date(dateStr);
+                    let date = new Date(dateStr);
                     return date.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'});
                 }
 
-                var reviewsHtml = '';
+                let reviewsHtml = '';
                 if (reviews.length > 0) {
                     reviews.forEach(function(review) {
                         reviewsHtml += '<div class="border-bottom pb-3 mb-3">' +
@@ -1747,13 +1763,6 @@
                     reviewsHtml = '<div class="alert alert-light border mb-0"><i class="fa-solid fa-star me-2"></i>No reviews yet</div>';
                 }
 
-                var reportsHtml = '';
-                if (reportsCount > 0) {
-                    reportsHtml = '<div class="alert alert-danger py-2 mb-0"><i class="fa-solid fa-flag me-2"></i><strong>' + reportsCount + '</strong> report(s) filed against this professional</div>';
-                } else {
-                    reportsHtml = '<div class="alert alert-success py-2 mb-0"><i class="fa-solid fa-check-circle me-2"></i>No reports filed</div>';
-                }
-
                 if (modalBody) {
                     modalBody.innerHTML = `
                         <div class="text-center mb-4">
@@ -1762,8 +1771,6 @@
                             <div class="mb-2">${proGenerateStars(rating)} <span class="text-muted">(${rating.toFixed(1)})</span></div>
                             <span class="badge bg-success px-3 py-2"><i class="fa-solid fa-check-circle me-1"></i>Verified Professional</span>
                         </div>
-                        
-                        ${reportsHtml}
                         
                         <div class="row g-3 mb-4 mt-3">
                             <div class="col-md-6">
@@ -1805,10 +1812,31 @@
                             </div>
                         </div>
                         
-                        <div class="card border-0">
-                            <div class="card-body">
-                                <h6 class="fw-bold mb-3"><i class="fa-solid fa-star me-2 text-warning"></i>Reviews (${reviews.length})</h6>
-                                ${reviewsHtml}
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="card border-0">
+                                    <div class="card-body">
+                                        <h6 class="fw-bold mb-3"><i class="fa-solid fa-star me-2 text-warning"></i>Reviews (${reviews.length})</h6>
+                                        <div style="max-height: 300px; overflow-y: auto;">
+                                            ${reviewsHtml}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card border-0">
+                                    <div class="card-body">
+                                        <h6 class="fw-bold mb-3"><i class="fa-solid fa-flag me-2 text-danger"></i>Reports (${reports.length})</h6>
+                                        <div style="max-height: 300px; overflow-y: auto;">
+                                            ${reports.length > 0 ? reports.map(function(r) {
+                                                return '<div class="border-bottom py-2">' +
+                                                    '<strong class="text-danger"><i class="fa-solid fa-user me-1"></i>' + r.reporter_name + '</strong>' +
+                                                    '<div class="small">' + r.reason + '</div>' +
+                                                    '<div class="text-muted small"><i class="fa-solid fa-calendar me-1"></i>' + r.created_at + '</div></div>';
+                                            }).join('') : '<div class="alert alert-success py-2 mb-0"><i class="fa-solid fa-check-circle me-2"></i>No reports</div>'}
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     `;
@@ -4704,4 +4732,70 @@
     window.confirmDeletePlan = confirmDeletePlan;
     window.buyPlan = buyPlan;
     window.showProProfile = showProProfile;
+
+    // View Reports Modal - opens modal and shows reports only
+    function viewProReports(proId) {
+        try {
+            let token = localStorage.getItem("token");
+            let headers = {"Accept": "application/json"};
+            if (token) headers["Authorization"] = "Bearer " + token;
+
+            let modalBody = document.getElementById("pro-profile-modal-body");
+            if (modalBody) {
+                modalBody.innerHTML = '<div class="text-center py-5"><span class="spinner-border spinner-border-sm me-2"></span>Loading reports...</div>';
+            }
+            
+            let modalEl = document.getElementById("pro-profile-modal");
+            if (modalEl) {
+                let modal = new bootstrap.Modal(modalEl);
+                modal.show();
+            }
+
+            fetch("/api/professionals/" + proId, {method: "GET", headers: headers})
+            .then(function(r) { 
+                if (!r.ok) throw new Error("Request failed with status " + r.status); 
+                return r.json(); 
+            })
+            .then(function(data) {
+                let pro = data.professional || {};
+                let name = pro.user ? pro.user.name : (pro.name || "N/A");
+                let photo = pro.profile_photo ? "/storage/" + pro.profile_photo : "/images/user1.jpg";
+                let reports = data.reports || [];
+
+                if (modalBody) {
+                    modalBody.innerHTML = `
+                        <div class="text-center mb-3">
+                            <img src="${photo}" alt="${name}" class="rounded-circle object-fit-cover border border-3 border-primary" style="width: 80px; height: 80px;">
+                            <h4 class="mt-2 mb-0 fw-bold">${name}</h4>
+                            <span class="badge bg-danger"><i class="fa-solid fa-flag me-1"></i>Reports</span>
+                        </div>
+                        
+                        <div class="card border-0 bg-light">
+                            <div class="card-body">
+                                <h6 class="fw-bold mb-3"><i class="fa-solid fa-flag text-danger me-2"></i>Reports (${reports.length})</h6>
+                                <div style="max-height: 400px; overflow-y: auto;">
+                                    ${reports.length > 0 ? reports.map(function(r) {
+                                        return '<div class="border-bottom py-2">' +
+                                            '<strong class="text-danger"><i class="fa-solid fa-user me-1"></i>' + r.reporter_name + '</strong>' +
+                                            '<div class="small mt-1">' + r.reason + '</div>' +
+                                            '<div class="text-muted small"><i class="fa-solid fa-calendar me-1"></i>' + r.created_at + '</div></div>';
+                                    }).join('') : '<div class="alert alert-success py-2 mb-0"><i class="fa-solid fa-check-circle me-2"></i>No reports</div>'}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+            })
+            .catch(function(err) {
+                console.error("Error loading reports:", err);
+                if (modalBody) {
+                    modalBody.innerHTML = '<div class="alert alert-danger mb-0">Failed to load reports. Error: ' + err.message + '</div>';
+                }
+            });
+        } catch(e) {
+            console.error("Unexpected error in viewProReports:", e);
+        }
+    }
+
+    window.viewProReports = viewProReports;
 })();

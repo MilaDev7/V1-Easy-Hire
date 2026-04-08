@@ -135,6 +135,7 @@ function showProProfile(proId) {
         var completedJobs = data.completed_jobs ? data.completed_jobs.length : 0;
         var reviews = data.reviews || [];
         var reportsCount = data.reports_count || 0;
+        var reports = data.reports || [];
 
         function generateStars(r) {
             var html = '';
@@ -172,8 +173,14 @@ function showProProfile(proId) {
         }
 
         var reportsHtml = '';
-        if (reportsCount > 0) {
-            reportsHtml = '<div class="alert alert-danger py-2 mb-0"><i class="fa-solid fa-flag me-2"></i><strong>' + reportsCount + '</strong> report(s) filed against this professional</div>';
+        if (reports.length > 0) {
+            var reportItems = reports.map(function(r) {
+                return '<div class="border-bottom py-2">' +
+                    '<strong class="text-danger"><i class="fa-solid fa-user me-1"></i>' + r.reporter_name + '</strong>' +
+                    '<div class="small">' + r.reason + '</div>' +
+                    '<div class="text-muted small"><i class="fa-solid fa-calendar me-1"></i>' + r.created_at + '</div></div>';
+            }).join('');
+            reportsHtml = '<div class="card bg-light border-0 mb-3"><div class="card-body"><h6 class="fw-bold mb-2"><i class="fa-solid fa-flag text-danger me-2"></i>Reports (' + reports.length + ')</h6>' + reportItems + '</div></div>';
         } else {
             reportsHtml = '<div class="alert alert-success py-2 mb-0"><i class="fa-solid fa-check-circle me-2"></i>No reports filed</div>';
         }
@@ -186,8 +193,6 @@ function showProProfile(proId) {
                     <div class="mb-2">${generateStars(rating)} <span class="text-muted">(${rating.toFixed(1)})</span></div>
                     <span class="badge bg-success px-3 py-2"><i class="fa-solid fa-check-circle me-1"></i>Verified Professional</span>
                 </div>
-                
-                ${reportsHtml}
                 
                 <div class="row g-3 mb-4 mt-3">
                     <div class="col-md-6">
@@ -229,10 +234,31 @@ function showProProfile(proId) {
                     </div>
                 </div>
                 
-                <div class="card border-0">
-                    <div class="card-body">
-                        <h6 class="fw-bold mb-3"><i class="fa-solid fa-star me-2 text-warning"></i>Reviews (${reviews.length})</h6>
-                        ${reviewsHtml}
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card border-0">
+                            <div class="card-body">
+                                <h6 class="fw-bold mb-3"><i class="fa-solid fa-star me-2 text-warning"></i>Reviews (${reviews.length})</h6>
+                                <div style="max-height: 300px; overflow-y: auto;">
+                                    ${reviewsHtml}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card border-0">
+                            <div class="card-body">
+                                <h6 class="fw-bold mb-3"><i class="fa-solid fa-flag me-2 text-danger"></i>Reports (${reports.length})</h6>
+                                <div style="max-height: 300px; overflow-y: auto;">
+                                    ${reports.length > 0 ? reports.map(function(r) {
+                                        return '<div class="border-bottom py-2">' +
+                                            '<strong class="text-danger"><i class="fa-solid fa-user me-1"></i>' + r.reporter_name + '</strong>' +
+                                            '<div class="small">' + r.reason + '</div>' +
+                                            '<div class="text-muted small"><i class="fa-solid fa-calendar me-1"></i>' + r.created_at + '</div></div>';
+                                    }).join('') : '<div class="alert alert-success py-2 mb-0"><i class="fa-solid fa-check-circle me-2"></i>No reports</div>'}
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             `;
