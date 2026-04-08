@@ -349,7 +349,7 @@ function renderProfessionalsSection() {
                     starsHtml += '<i class="fa-solid fa-star" style="color: ' + (i <= fullStars ? '#ffc107;' : '#e4e5e9;') + '"></i>';
                 }
                 
-                // Build reports section - compact with preview + View button
+                // Build reports section - compact with preview only
                 let reportsSection = '';
                 if (reportsCount > 0) {
                     let latestReport = reports[0] ? reports[0].reason : '';
@@ -357,7 +357,6 @@ function renderProfessionalsSection() {
                     reportsSection = '<div class="mt-2 pt-2 border-top small">' +
                         '<span class="text-danger"><i class="fa-solid fa-flag me-1"></i>' + reportsCount + ' report' + (reportsCount !== 1 ? 's' : '') + '</span>' +
                         '<div class="text-muted small mt-1">' + preview + '</div>' +
-                        '<button type="button" class="btn btn-sm btn-outline-danger mt-2" onclick="event.stopPropagation(); window.viewProReports(' + proId + ')">View Reports</button>' +
                         '</div>';
                 } else {
                     reportsSection = '<div class="mt-2 pt-2 border-top small"><span class="text-success"><i class="fa-solid fa-check-circle me-1"></i>No reports</span></div>';
@@ -766,6 +765,24 @@ function getContractProfessionalName(contract) {
     );
 }
 
+function getContractClientPhone(contract) {
+    return (
+        contract.client_phone ||
+        contract.client?.phone ||
+        contract.client?.phone_number ||
+        "N/A"
+    );
+}
+
+function getContractProfessionalPhone(contract) {
+    return (
+        contract.professional_phone ||
+        contract.professional?.phone ||
+        contract.professional?.phone_number ||
+        "N/A"
+    );
+}
+
 function renderContractsSection() {
     const contentArea = document.getElementById("content-area");
 
@@ -868,7 +885,9 @@ function renderContracts(contracts) {
                 <tr>
                     <td class="fw-semibold">${getContractTitle(contract)}</td>
                     <td>${getContractClientName(contract)}</td>
+                    <td>${getContractClientPhone(contract)}</td>
                     <td>${getContractProfessionalName(contract)}</td>
+                    <td>${getContractProfessionalPhone(contract)}</td>
                     <td><span class="badge text-bg-light border">${status}</span></td>
                     <td>${createdDate}</td>
                     <td class="text-end">${actionButtons}</td>
@@ -884,7 +903,9 @@ function renderContracts(contracts) {
                     <tr>
                         <th scope="col">Contract Title</th>
                         <th scope="col">Client Name</th>
+                        <th scope="col">Client Phone</th>
                         <th scope="col">Professional Name</th>
+                        <th scope="col">Professional Phone</th>
                         <th scope="col">Status</th>
                         <th scope="col">Created At</th>
                         <th scope="col" class="text-end">Action</th>
@@ -1548,7 +1569,6 @@ function showProProfile(proId) {
         .then(function(data) {
             let pro = data.professional || {};
             let name = pro.user ? pro.user.name : (pro.name || "N/A");
-            let email = pro.user ? pro.user.email : "N/A";
             let photo = pro.profile_photo ? "/storage/" + pro.profile_photo : "/images/user1.jpg";
             let skill = pro.skill || "N/A";
             let location = pro.location || "N/A";
@@ -1557,7 +1577,6 @@ function showProProfile(proId) {
             let bio = pro.bio || "No biography available.";
             let completedJobs = data.completed_jobs ? data.completed_jobs.length : 0;
             let reviews = data.reviews || [];
-            let reportsCount = data.reports_count || 0;
             let reports = data.reports || [];
 
             function proGenerateStars(r) {
@@ -1607,8 +1626,7 @@ function showProProfile(proId) {
                                     <h6 class="fw-bold mb-3"><i class="fa-solid fa-info-circle me-2 text-primary"></i>Basic Info</h6>
                                     <p class="mb-2"><i class="fa-solid fa-code me-2 text-secondary"></i><strong>Skill:</strong> ${skill}</p>
                                     <p class="mb-2"><i class="fa-solid fa-location-dot me-2 text-secondary"></i><strong>Location:</strong> ${location}</p>
-                                    <p class="mb-2"><i class="fa-solid fa-briefcase me-2 text-secondary"></i><strong>Experience:</strong> ${experience} years</p>
-                                    <p class="mb-0"><i class="fa-solid fa-envelope me-2 text-secondary"></i><strong>Email:</strong> ${email}</p>
+                                    <p class="mb-0"><i class="fa-solid fa-briefcase me-2 text-secondary"></i><strong>Experience:</strong> ${experience} years</p>
                                 </div>
                             </div>
                         </div>

@@ -619,6 +619,8 @@ function renderProfessionalContracts(contracts) {
                 <tr>
                     <td class="fw-semibold">${contract.job_title || "Untitled Job"}</td>
                     <td>${contract.client_name || "N/A"}</td>
+                    <td>${contract.client_phone || "N/A"}</td>
+                    <td>${contract.professional_phone || "N/A"}</td>
                     <td>${formatPrice(contract.budget)}</td>
                     <td><span class="badge text-bg-light border">${statusLabel}</span></td>
                     <td>${formatDate(contract.created_at)}</td>
@@ -635,6 +637,8 @@ function renderProfessionalContracts(contracts) {
                     <tr>
                         <th scope="col">Job Title</th>
                         <th scope="col">Client Name</th>
+                        <th scope="col">Client Phone</th>
+                        <th scope="col">Professional Phone</th>
                         <th scope="col">Budget</th>
                         <th scope="col">Status</th>
                         <th scope="col">Created At</th>

@@ -820,7 +820,9 @@ function renderContractsTable(contracts) {
                 <td class="fw-semibold">#${contract.id}</td>
                 <td>${contract.job?.title || 'N/A'}</td>
                 <td>${contract.client?.name || 'N/A'}</td>
+                <td>${contract.client?.phone || 'N/A'}</td>
                 <td>${contract.professional?.name || 'N/A'}</td>
+                <td>${contract.professional?.phone || 'N/A'}</td>
                 <td>${contract.budget ? '$' + contract.budget : 'N/A'}</td>
                 <td>${statusBadge}</td>
                 <td>${contract.created_at ? new Date(contract.created_at).toLocaleDateString() : 'N/A'}</td>
@@ -842,7 +844,9 @@ function renderContractsTable(contracts) {
                         <th scope="col">ID</th>
                         <th scope="col">Job Title</th>
                         <th scope="col">Client</th>
+                        <th scope="col">Client Phone</th>
                         <th scope="col">Professional</th>
+                        <th scope="col">Professional Phone</th>
                         <th scope="col">Budget</th>
                         <th scope="col">Status</th>
                         <th scope="col">Created</th>
@@ -890,7 +894,8 @@ function viewContract(id) {
                             </div>
                         </div>
                         <h5 class="text-center mb-1">${contract.client?.name || 'N/A'}</h5>
-                        <p class="text-center text-muted mb-0"><i class="fa-solid fa-envelope me-2"></i>${contract.client?.email || 'N/A'}</p>
+                        <p class="text-center text-muted mb-1"><i class="fa-solid fa-envelope me-2"></i>${contract.client?.email || 'N/A'}</p>
+                        <p class="text-center text-muted mb-0"><i class="fa-solid fa-phone me-2"></i>${contract.client?.phone || 'N/A'}</p>
                     </div>
                 </div>
             </div>
@@ -904,7 +909,8 @@ function viewContract(id) {
                             </div>
                         </div>
                         <h5 class="text-center mb-1">${contract.professional?.name || 'N/A'}</h5>
-                        <p class="text-center text-muted mb-0"><i class="fa-solid fa-envelope me-2"></i>${contract.professional?.email || 'N/A'}</p>
+                        <p class="text-center text-muted mb-1"><i class="fa-solid fa-envelope me-2"></i>${contract.professional?.email || 'N/A'}</p>
+                        <p class="text-center text-muted mb-0"><i class="fa-solid fa-phone me-2"></i>${contract.professional?.phone || 'N/A'}</p>
                     </div>
                 </div>
             </div>
