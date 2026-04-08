@@ -269,7 +269,7 @@
                             src="{{ asset('images/user1.jpg') }}"
                             alt="Professional Photo"
                             id="professional-dashboard-photo"
-                            class="professional-sidebar-photo rounded-circle border mb-3"
+                            class="professional-sidebar-photo rounded border mb-3"
                         >
                         <h1 class="h4 mb-1" id="professional-dashboard-name">Professional</h1>
                         <p class="text-muted mb-2" id="professional-sidebar-skill">Skill</p>
@@ -352,13 +352,68 @@
     </main>
 
     <div class="modal fade professional-settings-modal" id="professional-settings-modal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content border-0 shadow">
                 <div class="modal-header">
                     <h5 class="modal-title">Settings</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
+                    <!-- Profile Section -->
+                    <div class="mb-4">
+                        <h6 class="fw-bold mb-3"><i class="fa-solid fa-user me-2"></i>Profile</h6>
+                        
+                        <!-- Photo -->
+                        <div class="text-center mb-4 position-relative d-inline-block" style="width: 100px; height: 100px; margin: 0 auto; display: block;">
+                            <img id="professional-settings-profile-preview" src="{{ asset('images/user1.jpg') }}" class="rounded-circle" style="width: 100px; height: 100px; object-fit: cover;">
+                            <input type="file" id="professional-settings-photo-input" class="d-none" accept="image/*">
+                            <button type="button" class="btn btn-sm btn-outline-secondary position-absolute bottom-0 end-0 rounded-circle" style="width: 28px; height: 28px; padding: 0;" onclick="document.getElementById('professional-settings-photo-input').click()">
+                                <i class="fa-solid fa-pen fa-xs"></i>
+                            </button>
+                        </div>
+                        
+                        <!-- Name -->
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <label class="form-label text-muted small mb-0">Name</label>
+                                <button type="button" class="btn btn-sm btn-outline-secondary edit-field-btn py-0" data-field="professional-profile-name">
+                                    <i class="fa-solid fa-pen fa-xs"></i>
+                                </button>
+                            </div>
+                            <input type="text" class="form-control bg-light" id="professional-profile-name" name="name" readonly>
+                        </div>
+                        
+                        <!-- Email -->
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <label class="form-label text-muted small mb-0">Email</label>
+                                <button type="button" class="btn btn-sm btn-outline-secondary edit-field-btn py-0" data-field="professional-profile-email">
+                                    <i class="fa-solid fa-pen fa-xs"></i>
+                                </button>
+                            </div>
+                            <input type="email" class="form-control bg-light" id="professional-profile-email" name="email" readonly>
+                        </div>
+                        
+                        <!-- Location -->
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <label class="form-label text-muted small mb-0">Location</label>
+                                <button type="button" class="btn btn-sm btn-outline-secondary edit-field-btn py-0" data-field="professional-profile-location">
+                                    <i class="fa-solid fa-pen fa-xs"></i>
+                                </button>
+                            </div>
+                            <input type="text" class="form-control bg-light" id="professional-profile-location" name="location" readonly>
+                        </div>
+                        
+                        <div class="text-center">
+                            <button type="button" class="btn btn-primary" id="professional-save-profile-btn">
+                                <i class="fa-solid fa-save me-1"></i> Save Changes
+                            </button>
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+
                     <div class="d-flex justify-content-between align-items-center rounded-3 border p-3 mb-3">
                         <div>
                             <h6 class="mb-1">Dark Mode</h6>

@@ -33,14 +33,18 @@ Route::get('/professionals/{id}', [ProfessionalController::class, 'show']);
 
 // Professional Setup
 Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/pro/profile', [ProfileController::class, 'getProProfile']);
     Route::post('/pro/profile-update', [ProfileController::class, 'updateProProfile']);
+    Route::post('/pro/profile-update-simple', [ProfileController::class, 'updateProProfileSimple']);
     Route::post('/pro/complete-profile', [ProfileController::class, 'updateProProfile']);
 });
 
 // Client Setup
-Route::post('/client/update-photo', [ProfileController::class, 'updateClientPhoto']);
-Route::get('/client/profile', [ProfileController::class, 'getClientProfile']);
-Route::post('/client/profile', [ProfileController::class, 'updateClientProfile']);
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/client/update-photo', [ProfileController::class, 'updateClientPhoto']);
+    Route::get('/client/profile', [ProfileController::class, 'getClientProfile']);
+    Route::post('/client/profile', [ProfileController::class, 'updateClientProfile']);
+});
 
 // Authenticated Routes (Token Required + Check Status)
 

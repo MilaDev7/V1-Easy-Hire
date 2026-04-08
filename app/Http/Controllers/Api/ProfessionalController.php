@@ -25,7 +25,9 @@ class ProfessionalController extends Controller
         return response()->json([
             'id' => $professional->id,
             'name' => $user->name,
-            'profile_photo' => $user->profile_photo,
+            'profile_photo' => $professional->profile_photo
+                ? asset('storage/'.$professional->profile_photo)
+                : ($user->profile_photo ? asset('storage/'.$user->profile_photo) : asset('images/user1.jpg')),
             'skill' => $professional->skill,
             'location' => $professional->location,
             'approval_status' => $professional->status,

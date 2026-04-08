@@ -28,7 +28,7 @@ class ProfileController extends Controller
             'name' => 'nullable|string|min:2|max:255',
             'email' => 'nullable|email|unique:users,email,'.$user->id,
             'location' => 'nullable|string|max:255',
-            'profile_photo' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+            'profile_photo' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp,svg|max:2048',
         ]);
 
         $updateData = [];
@@ -83,6 +83,94 @@ class ProfileController extends Controller
                 'email' => $user->email,
                 'location' => $user->location ?? '',
                 'profile_photo' => $user->profile_photo ? asset('storage/'.$user->profile_photo) : null,
+            ],
+        ]);
+    }
+
+    /**
+     * Get Professional Profile
+     */
+    public function getProProfile()
+    {
+        $user = Auth::user();
+        $pro = Professional::where('user_id', $user->id)->first();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'name' => $user->name,
+                'email' => $user->email,
+                'location' => $pro ? ($pro->location ?? '') : '',
+                'profile_photo' => $pro && $pro->profile_photo ? asset('storage/'.$pro->profile_photo) : ($user->profile_photo ? asset('storage/'.$user->profile_photo) : null),
+            ],
+        ]);
+    }
+
+    /**
+     * Update Professional Profile (Simple - name, email, location, photo)
+     */
+    public function updateProProfileSimple(Request $request)
+    {
+        $user = Auth::user();
+
+        if (! $user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized',
+            ], 401);
+        }
+
+        $request->validate([
+            'name' => 'nullable|string|min:2|max:255',
+            'email' => 'nullable|email|unique:users,email,'.$user->id,
+            'location' => 'nullable|string|max:255',
+            'profile_photo' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp,svg|max:2048',
+        ]);
+
+        $updateData = [];
+
+        if ($request->has('name') && $request->name) {
+            $updateData['name'] = $request->name;
+        }
+
+        if ($request->has('email') && $request->email) {
+            $updateData['email'] = $request->email;
+        }
+
+        $user->update($updateData);
+
+        $pro = Professional::where('user_id', $user->id)->first();
+
+        $proUpdateData = [];
+        if ($request->has('location') && $request->location !== null) {
+            $proUpdateData['location'] = $request->location;
+        }
+
+        if ($request->hasFile('profile_photo')) {
+            if ($pro && $pro->profile_photo) {
+                Storage::disk('public')->delete($pro->profile_photo);
+            }
+            if ($user->profile_photo) {
+                Storage::disk('public')->delete($user->profile_photo);
+            }
+
+            $path = $request->file('profile_photo')->store('profiles', 'public');
+            $proUpdateData['profile_photo'] = $path;
+            $updateData['profile_photo'] = $path;
+        }
+
+        if ($pro) {
+            $pro->update($proUpdateData);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Profile updated successfully!',
+            'data' => [
+                'name' => $user->name,
+                'email' => $user->email,
+                'location' => $pro ? $pro->location : '',
+                'profile_photo' => $pro && $pro->profile_photo ? asset('storage/'.$pro->profile_photo) : ($user->profile_photo ? asset('storage/'.$user->profile_photo) : null),
             ],
         ]);
     }

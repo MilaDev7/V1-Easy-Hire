@@ -9,6 +9,11 @@
             headers.Authorization = "Bearer " + token;
         }
 
+        const csrfToken = document.querySelector('meta[name="csrf-token"]');
+        if (csrfToken) {
+            headers["X-CSRF-TOKEN"] = csrfToken.getAttribute("content");
+        }
+
         return headers;
     }
 
@@ -1908,22 +1913,27 @@
     }
 
     function loadClientProfileForSettings() {
-        console.log("Loading client profile...");
-        fetchJson("/api/client/profile")
+        const token = localStorage.getItem("token");
+        
+        fetch("/api/client/profile", {
+            headers: {
+                "Accept": "application/json",
+                "Authorization": "Bearer " + token,
+            },
+        })
+            .then((res) => res.json())
             .then((data) => {
-                console.log("Profile data:", data);
                 if (data.success && data.data) {
                     const d = data.data;
-                    document.getElementById("profile-name").value = d.name || "";
-                    document.getElementById("profile-email").value = d.email || "";
-                    document.getElementById("profile-location").value = d.location || "";
                     
-                    // Update photo
+                    const nameInput = document.getElementById("profile-name");
+                    const emailInput = document.getElementById("profile-email");
                     const photoPreview = document.getElementById("settings-profile-preview");
-                    if (photoPreview && d.profile_photo) {
-                        photoPreview.src = d.profile_photo;
-                    } else if (photoPreview) {
-                        photoPreview.src = "/images/user1.jpg";
+                    
+                    if (nameInput) nameInput.value = d.name || "";
+                    if (emailInput) emailInput.value = d.email || "";
+                    if (photoPreview) {
+                        photoPreview.src = d.profile_photo || "/images/user1.jpg";
                     }
                 }
             })
@@ -1951,24 +1961,22 @@
             });
         });
         
-        // Photo preview
-        const photoInput = document.getElementById("profile-photo");
-        const photoPreview = document.getElementById("settings-profile-preview");
-        
-        if (photoInput && photoPreview) {
-            photoInput.addEventListener("change", function (e) {
-                if (e.target.files && e.target.files[0]) {
+        const saveBtn = document.getElementById("save-profile-btn");
+        if (!saveBtn) return;
+
+        const photoInput = document.getElementById("settings-photo-input");
+        if (photoInput) {
+            photoInput.addEventListener("change", function() {
+                if (this.files && this.files[0]) {
                     const reader = new FileReader();
-                    reader.onload = function (e) {
-                        photoPreview.src = e.target.result;
+                    reader.onload = function(e) {
+                        const preview = document.getElementById("settings-profile-preview");
+                        if (preview) preview.src = e.target.result;
                     };
-                    reader.readAsDataURL(e.target.files[0]);
+                    reader.readAsDataURL(this.files[0]);
                 }
             });
         }
-
-        const saveBtn = document.getElementById("save-profile-btn");
-        if (!saveBtn) return;
 
         saveBtn.addEventListener("click", function (e) {
             e.preventDefault();
@@ -1976,11 +1984,10 @@
             const formData = new FormData();
             formData.append("name", document.getElementById("profile-name").value);
             formData.append("email", document.getElementById("profile-email").value);
-            formData.append("location", document.getElementById("profile-location").value);
-            
-            const photo = document.getElementById("profile-photo").files[0];
-            if (photo) {
-                formData.append("profile_photo", photo);
+
+            const photoInputForSave = document.getElementById("settings-photo-input");
+            if (photoInputForSave && photoInputForSave.files.length > 0) {
+                formData.append("profile_photo", photoInputForSave.files[0]);
             }
 
             const originalText = saveBtn.innerHTML;
@@ -1989,22 +1996,39 @@
 
             fetch("/api/client/profile", {
                 method: "POST",
-                headers: {
-                    "Authorization": "Bearer " + token,
-                },
+                headers: buildHeaders(),
                 body: formData,
             })
             .then((res) => res.json())
             .then((data) => {
+                console.log("Profile update response:", data);
                 if (data.success) {
                     alert("Profile updated successfully!");
+                    
+                    // Update sidebar and topbar photos if photo was changed
+                    if (photoInputForSave && photoInputForSave.files.length > 0 && data.data && data.data.profile_photo) {
+                        const timestamp = new Date().getTime();
+                        const newPhoto = data.data.profile_photo + '?t=' + timestamp;
+                        
+                        const sidebarPhoto = document.getElementById("client-sidebar-photo");
+                        if (sidebarPhoto) {
+                            sidebarPhoto.src = newPhoto;
+                        }
+                        
+                        const topbarPhoto = document.getElementById("client-topbar-photo");
+                        if (topbarPhoto) {
+                            topbarPhoto.src = newPhoto;
+                        }
+                    }
+                    
                     loadClientIdentity();
                     loadClientProfileForSettings();
                 } else {
                     alert(data.message || "Failed to update profile");
                 }
             })
-            .catch(() => {
+            .catch((err) => {
+                console.error("Profile update error:", err);
                 alert("Failed to update profile. Please try again.");
             })
             .finally(() => {
@@ -2126,7 +2150,8 @@
                 }
 
                 if (sidebarPhotoElement && client.profile_photo) {
-                    sidebarPhotoElement.src = client.profile_photo;
+                    const timestamp = new Date().getTime();
+                    sidebarPhotoElement.src = client.profile_photo + (client.profile_photo.includes('?') ? '&' : '?') + 't=' + timestamp;
                 }
             })
             .catch(() => {
@@ -2490,10 +2515,17 @@
                 
                 setProfessionalStatus(profile.approval_status);
 
-                const photo = document.getElementById("professional-dashboard-photo");
+                const dashboardPhoto = document.getElementById("professional-dashboard-photo");
+                const topbarPhoto = document.getElementById("professional-topbar-photo");
 
-                if (photo && profile.profile_photo) {
-                    photo.src = profile.profile_photo;
+                if (dashboardPhoto && profile.profile_photo) {
+                    const timestamp = new Date().getTime();
+                    dashboardPhoto.src = profile.profile_photo + (profile.profile_photo.includes('?') ? '&' : '?') + 't=' + timestamp;
+                }
+                
+                if (topbarPhoto && profile.profile_photo) {
+                    const timestamp = new Date().getTime();
+                    topbarPhoto.src = profile.profile_photo + (profile.profile_photo.includes('?') ? '&' : '?') + 't=' + timestamp;
                 }
             })
             .catch(() => {
@@ -2948,6 +2980,28 @@
         });
     }
 
+    function loadProfessionalProfileForSettings() {
+        fetchJson("/api/pro/profile")
+            .then((data) => {
+                if (data.success && data.data) {
+                    const d = data.data;
+                    document.getElementById("professional-profile-name").value = d.name || "";
+                    document.getElementById("professional-profile-email").value = d.email || "";
+                    document.getElementById("professional-profile-location").value = d.location || "";
+                    
+                    const photoPreview = document.getElementById("professional-settings-profile-preview");
+                    if (photoPreview && d.profile_photo) {
+                        photoPreview.src = d.profile_photo;
+                    } else if (photoPreview) {
+                        photoPreview.src = "/images/user1.jpg";
+                    }
+                }
+            })
+            .catch((err) => {
+                console.error("Error loading professional profile:", err);
+            });
+    }
+
     function bindProfessionalSettings() {
         const settingsButton = document.getElementById("professional-settings-button");
         const settingsModalElement = document.getElementById("professional-settings-modal");
@@ -2957,6 +3011,107 @@
         const settingsModal = settingsModalElement
             ? bootstrap.Modal.getOrCreateInstance(settingsModalElement)
             : null;
+
+        // Load profile when modal is shown
+        if (settingsModalElement) {
+            settingsModalElement.addEventListener("shown.bs.modal", function() {
+                loadProfessionalProfileForSettings();
+            });
+        }
+
+        // Edit field buttons
+        const editButtons = document.querySelectorAll(".edit-field-btn");
+        editButtons.forEach(btn => {
+            btn.addEventListener("click", function() {
+                const fieldId = this.getAttribute("data-field");
+                const input = document.getElementById(fieldId);
+                if (input) {
+                    input.removeAttribute("readonly");
+                    input.classList.remove("bg-light");
+                    input.focus();
+                    input.addEventListener("blur", function() {
+                        input.setAttribute("readonly", true);
+                        input.classList.add("bg-light");
+                    }, { once: true });
+                }
+            });
+        });
+
+        // Save button
+        const saveBtn = document.getElementById("professional-save-profile-btn");
+        const photoInput = document.getElementById("professional-settings-photo-input");
+        
+        if (photoInput) {
+            photoInput.addEventListener("change", function() {
+                if (this.files && this.files[0]) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const preview = document.getElementById("professional-settings-profile-preview");
+                        if (preview) preview.src = e.target.result;
+                    };
+                    reader.readAsDataURL(this.files[0]);
+                }
+            });
+        }
+
+        if (saveBtn) {
+            saveBtn.addEventListener("click", function (e) {
+                e.preventDefault();
+
+                const formData = new FormData();
+                formData.append("name", document.getElementById("professional-profile-name").value);
+                formData.append("email", document.getElementById("professional-profile-email").value);
+                formData.append("location", document.getElementById("professional-profile-location").value);
+
+                if (photoInput && photoInput.files.length > 0) {
+                    formData.append("profile_photo", photoInput.files[0]);
+                }
+
+                const originalText = saveBtn.innerHTML;
+                saveBtn.disabled = true;
+                saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Saving...';
+
+                fetch("/api/pro/profile-update-simple", {
+                    method: "POST",
+                    headers: buildHeaders(),
+                    body: formData,
+                })
+                .then((res) => res.json())
+                .then((data) => {
+                    if (data.success) {
+                        alert("Profile updated successfully!");
+                        
+                        // Update dashboard and topbar photos if photo was changed
+                        if (photoInput && photoInput.files.length > 0 && data.data && data.data.profile_photo) {
+                            const timestamp = new Date().getTime();
+                            const newPhoto = data.data.profile_photo + '?t=' + timestamp;
+                            
+                            const dashboardPhoto = document.getElementById("professional-dashboard-photo");
+                            if (dashboardPhoto) {
+                                dashboardPhoto.src = newPhoto;
+                            }
+                            
+                            const topbarPhoto = document.getElementById("professional-topbar-photo");
+                            if (topbarPhoto) {
+                                topbarPhoto.src = newPhoto;
+                            }
+                        }
+                        
+                        loadProfessionalIdentity();
+                        loadProfessionalProfileForSettings();
+                    } else {
+                        alert(data.message || "Failed to update profile");
+                    }
+                })
+                .catch(() => {
+                    alert("Failed to update profile. Please try again.");
+                })
+                .finally(() => {
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = originalText;
+                });
+            });
+        }
 
         function syncProfessionalDarkModeLabel() {
             if (!darkModeLabel) {

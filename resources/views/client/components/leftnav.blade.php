@@ -16,7 +16,7 @@
             src="{{ asset('images/user1.jpg') }}"
             alt="Client Profile Photo"
             id="client-sidebar-photo"
-            class="rounded-circle object-fit-cover border"
+            class="rounded border object-fit-cover"
             style="width: 96px; height: 96px;"
         >
     </div>
@@ -87,48 +87,34 @@
                     <h6 class="fw-bold mb-3"><i class="fa-solid fa-user me-2"></i>Profile</h6>
                     
                     <!-- Photo -->
-                    <div class="text-center mb-4">
-                        <div class="position-relative d-inline-block">
-                            <img id="settings-profile-preview" src="{{ asset('images/user1.jpg') }}" class="rounded-circle" style="width: 100px; height: 100px; object-fit: cover;">
-                            <label for="profile-photo" class="position-absolute bottom-0 end-0 bg-primary text-white rounded-circle p-2" style="width: 32px; height: 32px; cursor: pointer;">
-                                <i class="fa-solid fa-camera fa-sm"></i>
-                            </label>
-                            <input type="file" class="d-none" id="profile-photo" name="profile_photo" accept="image/*">
-                        </div>
-                        <p class="text-muted small mt-2">Click camera icon to change photo</p>
+                    <div class="text-center mb-4 position-relative d-inline-block" style="width: 100px; height: 100px; margin: 0 auto; display: block;">
+                        <img id="settings-profile-preview" src="{{ asset('images/user1.jpg') }}" class="rounded-circle" style="width: 100px; height: 100px; object-fit: cover;">
+                        <input type="file" id="settings-photo-input" class="d-none" accept="image/*">
+                        <button type="button" class="btn btn-sm btn-outline-secondary position-absolute bottom-0 end-0 rounded-circle" style="width: 28px; height: 28px; padding: 0;" onclick="document.getElementById('settings-photo-input').click()">
+                            <i class="fa-solid fa-pen fa-xs"></i>
+                        </button>
                     </div>
                     
                     <!-- Name -->
                     <div class="mb-3">
-                        <label class="form-label text-muted small">Name</label>
-                        <div class="input-group">
-                            <input type="text" class="form-control bg-light" id="profile-name" name="name" readonly>
-                            <button type="button" class="btn btn-outline-secondary edit-field-btn" data-field="profile-name">
-                                <i class="fa-solid fa-pen"></i>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <label class="form-label text-muted small mb-0">Name</label>
+                            <button type="button" class="btn btn-sm btn-outline-secondary edit-field-btn py-0" data-field="profile-name">
+                                <i class="fa-solid fa-pen fa-xs"></i>
                             </button>
                         </div>
+                        <input type="text" class="form-control bg-light" id="profile-name" name="name" readonly>
                     </div>
                     
                     <!-- Email -->
                     <div class="mb-3">
-                        <label class="form-label text-muted small">Email</label>
-                        <div class="input-group">
-                            <input type="email" class="form-control bg-light" id="profile-email" name="email" readonly>
-                            <button type="button" class="btn btn-outline-secondary edit-field-btn" data-field="profile-email">
-                                <i class="fa-solid fa-pen"></i>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <label class="form-label text-muted small mb-0">Email</label>
+                            <button type="button" class="btn btn-sm btn-outline-secondary edit-field-btn py-0" data-field="profile-email">
+                                <i class="fa-solid fa-pen fa-xs"></i>
                             </button>
                         </div>
-                    </div>
-                    
-                    <!-- Location -->
-                    <div class="mb-3">
-                        <label class="form-label text-muted small">Location</label>
-                        <div class="input-group">
-                            <input type="text" class="form-control bg-light" id="profile-location" name="location" readonly>
-                            <button type="button" class="btn btn-outline-secondary edit-field-btn" data-field="profile-location">
-                                <i class="fa-solid fa-pen"></i>
-                            </button>
-                        </div>
+                        <input type="email" class="form-control bg-light" id="profile-email" name="email" readonly>
                     </div>
                     
                     <div class="text-center">
