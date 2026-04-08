@@ -39,16 +39,8 @@ class JobPostController extends Controller
             ], 403);
         }
 
-        // 2. Get plan limit
-        $plan = $subscription->plan;
-
-        // 3. Count how many jobs user already posted
-        $jobCount = JobPost::where('client_id', auth()->id())
-            ->where('status', '!=', 'cancelled')
-            ->count();
-
-        // 4. Check limit
-        if ($jobCount >= $subscription->remaining_posts) {
+        // 2. Check remaining post quota directly.
+        if (($subscription->remaining_posts ?? 0) < 1) {
             return response()->json([
                 'message' => 'Job post limit reached for your plan',
             ], 403);

@@ -128,13 +128,9 @@ class ClientController extends Controller
             ]);
         }
 
-        $totalAllowed = $subscription->remaining_posts;
-        $used = JobPost::where('client_id', auth()->id())
-            ->where('status', '!=', 'cancelled')
-            ->count();
-
         return response()->json([
-            'remaining' => max($totalAllowed - $used, 0),
+            // remaining_posts is already tracked as remaining quota.
+            'remaining' => max((int) $subscription->remaining_posts, 0),
         ]);
     }
 
