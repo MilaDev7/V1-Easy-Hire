@@ -10,6 +10,11 @@ use App\Models\Subscription;
 
 class ClientController extends Controller
 {
+    /**
+     * Prefix used to mark non-refundable professional withdrawals.
+     */
+    private const WITHDRAWN_TAG = '[WITHDRAWN_NO_REFUND]';
+
     public function me()
     {
         $user = auth()->user();
@@ -89,6 +94,11 @@ class ClientController extends Controller
             $query->where('client_id', auth()->id());
         })
             ->with(['job', 'professional.professional'])
+            ->where(function ($query) {
+                // Do not show withdrawn applications in client dashboard.
+                $query->whereNull('cover_letter')
+                    ->orWhere('cover_letter', 'not like', self::WITHDRAWN_TAG.'%');
+            })
             ->get()
             ->map(function ($app) {
                 return [
@@ -165,11 +175,29 @@ class ClientController extends Controller
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
-        // Check if job has any applications
-        $applicationCount = \App\Models\Application::where('job_id', $job->id)->count();
+        // Prevent deleting assigned/completed jobs via this endpoint.
+        if (in_array($job->status, ['assigned', 'completed'], true)) {
+            return response()->json([
+                'message' => 'This job cannot be deleted at its current status.',
+            ], 400);
+        }
 
-        // Delete the job
-        $job->delete();
+        $applicationsQuery = Application::where('job_id', $job->id);
+        $applicationCount = (clone $applicationsQuery)->count();
+
+        // Refund professionals fairly on client-side job cancellation:
+        // convert pending applications to rejected (except withdrawn-tagged rows).
+        Application::where('job_id', $job->id)
+            ->where('status', 'pending')
+            ->where(function ($query) {
+                $query->whereNull('cover_letter')
+                    ->orWhere('cover_letter', 'not like', self::WITHDRAWN_TAG.'%');
+            })
+            ->update(['status' => 'rejected']);
+
+        // Keep historical records instead of hard delete to preserve refund accounting.
+        $job->status = 'cancelled';
+        $job->save();
 
         // Refund if no applications
         if ($applicationCount === 0) {
@@ -187,7 +215,7 @@ class ClientController extends Controller
         }
 
         return response()->json([
-            'message' => 'Job deleted successfully.',
+            'message' => 'Job cancelled successfully.',
         ]);
     }
 }

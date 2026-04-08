@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Application;
+use App\Models\Contract;
 use App\Models\JobPost;
 use App\Models\Professional;
 use App\Models\User;
@@ -11,6 +12,38 @@ use Illuminate\Http\Request;
 
 class ApplicationController extends Controller
 {
+    /**
+     * Prefix used to mark professional-withdrawn applications as non-refundable.
+     */
+    private const WITHDRAWN_TAG = '[WITHDRAWN_NO_REFUND]';
+
+    /**
+     * Maximum application credits for professionals.
+     */
+    private const MAX_APPLY_CREDITS = 5;
+
+    /**
+     * Count consumed apply credits.
+     * Consumed = pending applications + active contracts + withdrawn(no-refund) applications.
+     */
+    private function usedApplyCredits(int $professionalId): int
+    {
+        $pendingApplications = Application::where('professional_id', $professionalId)
+            ->where('status', 'pending')
+            ->count();
+
+        $activeContracts = Contract::where('professional_id', $professionalId)
+            ->where('status', 'active')
+            ->count();
+
+        $withdrawnNoRefund = Application::where('professional_id', $professionalId)
+            ->where('status', 'rejected')
+            ->where('cover_letter', 'like', self::WITHDRAWN_TAG.'%')
+            ->count();
+
+        return $pendingApplications + $activeContracts + $withdrawnNoRefund;
+    }
+
     /**
      * Professional applies for a job
      */
@@ -22,14 +55,10 @@ class ApplicationController extends Controller
 
         // ✅ 1. check approval (you already have probably)
 
-        // ✅ 2. LIMIT ACTIVE APPLICATIONS
-        $pendingCount = \App\Models\Application::where('professional_id', $user->id)
-            ->where('status', 'pending')
-            ->count();
-
-        if ($pendingCount >= 5) {
+        // Enforce fixed apply-credit budget.
+        if ($this->usedApplyCredits($user->id) >= self::MAX_APPLY_CREDITS) {
             return response()->json([
-                'message' => 'Too many pending applications',
+                'message' => 'Apply credit limit reached',
             ], 403);
         }
 
@@ -146,7 +175,14 @@ class ApplicationController extends Controller
             ->firstOrFail();
 
         // Assumes relationship 'professional' is defined in JobPost model or through applications
-        $applications = $job->applications()->with('professional')->get();
+        $applications = $job->applications()
+            ->with('professional')
+            ->where(function ($query) {
+                // Hidden withdrawn applications should not appear to clients.
+                $query->whereNull('cover_letter')
+                    ->orWhere('cover_letter', 'not like', self::WITHDRAWN_TAG.'%');
+            })
+            ->get();
 
         return response()->json($applications);
     }
@@ -270,20 +306,17 @@ class ApplicationController extends Controller
             ], 400);
         }
 
-        $application->delete();
+        // No refund on professional withdraw:
+        // convert to rejected and tag it as consumed forever for MVP abuse protection.
+        $application->status = 'rejected';
+        if (! str_starts_with((string) $application->cover_letter, self::WITHDRAWN_TAG)) {
+            $application->cover_letter = self::WITHDRAWN_TAG.' '.$application->cover_letter;
+        }
+        $application->save();
 
         return response()->json([
             'message' => 'Application withdrawn successfully',
         ]);
-        $professional = auth()->user()->professional;
-
-        if (! $professional) {
-            return response()->json([
-                'message' => 'Professional profile not found',
-            ], 404);
-        }
-
-        // ✅ SKILL CHECK
 
     }
 }

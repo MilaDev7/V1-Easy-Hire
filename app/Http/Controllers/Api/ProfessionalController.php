@@ -13,6 +13,37 @@ use Illuminate\Http\Request;
 
 class ProfessionalController extends Controller
 {
+    /**
+     * Prefix used to mark non-refundable professional withdrawals.
+     */
+    private const WITHDRAWN_TAG = '[WITHDRAWN_NO_REFUND]';
+
+    /**
+     * Maximum application credits.
+     */
+    private const MAX_APPLY_CREDITS = 5;
+
+    /**
+     * Consumed credits = pending + active contracts + withdrawn(no-refund).
+     */
+    private function usedApplyCredits(int $professionalId): int
+    {
+        $pendingApplications = Application::where('professional_id', $professionalId)
+            ->where('status', 'pending')
+            ->count();
+
+        $activeContracts = Contract::where('professional_id', $professionalId)
+            ->where('status', 'active')
+            ->count();
+
+        $withdrawnNoRefund = Application::where('professional_id', $professionalId)
+            ->where('status', 'rejected')
+            ->where('cover_letter', 'like', self::WITHDRAWN_TAG.'%')
+            ->count();
+
+        return $pendingApplications + $activeContracts + $withdrawnNoRefund;
+    }
+
     public function me()
     {
         $user = auth()->user();
@@ -250,11 +281,7 @@ class ProfessionalController extends Controller
             return response()->json(['message' => 'Already applied'], 400);
         }
 
-        $count = Application::where('professional_id', $userId)
-            ->where('status', 'pending')
-            ->count();
-
-        if ($count >= 5) {
+        if ($this->usedApplyCredits($userId) >= self::MAX_APPLY_CREDITS) {
             return response()->json(['message' => 'Apply limit reached'], 400);
         }
 
@@ -292,11 +319,15 @@ class ProfessionalController extends Controller
             ->with('job')
             ->get()
             ->map(function ($app) {
+                $isWithdrawn = $app->status === 'rejected'
+                    && str_starts_with((string) $app->cover_letter, self::WITHDRAWN_TAG);
+
                 return [
                     'id' => $app->id,
                     'job_id' => $app->job_id,
                     'job_title' => $app->job->title ?? '',
-                    'status' => $app->status,
+                    // Show explicit status label for UX while reusing existing schema.
+                    'status' => $isWithdrawn ? 'withdrawn' : $app->status,
                 ];
             });
 
@@ -314,7 +345,13 @@ class ProfessionalController extends Controller
             return response()->json(['message' => 'Cannot withdraw'], 400);
         }
 
-        $app->delete();
+        // No refund on professional withdrawal:
+        // keep a tagged rejected row so the credit stays consumed.
+        $app->status = 'rejected';
+        if (! str_starts_with((string) $app->cover_letter, self::WITHDRAWN_TAG)) {
+            $app->cover_letter = self::WITHDRAWN_TAG.' '.$app->cover_letter;
+        }
+        $app->save();
 
         return response()->json(['message' => 'Withdrawn']);
     }
@@ -381,13 +418,7 @@ class ProfessionalController extends Controller
             ->where('status', 'completed')
             ->count();
 
-        $pendingApplications = Application::where('professional_id', $userId)
-            ->where('status', 'pending')
-            ->count();
-
-        $maxApplies = 5;
-        $usedSlots = $pendingApplications + $active;
-        $remainingApply = max($maxApplies - $usedSlots, 0);
+        $remainingApply = max(self::MAX_APPLY_CREDITS - $this->usedApplyCredits($userId), 0);
 
         return response()->json([
             'active_contracts' => $active,
