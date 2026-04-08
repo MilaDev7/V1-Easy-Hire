@@ -322,7 +322,7 @@ class ProfessionalController extends Controller
     public function myContracts()
     {
         $contracts = Contract::where('professional_id', auth()->id())
-            ->with(['job', 'client', 'directRequest'])
+            ->with(['job', 'client', 'professional', 'directRequest'])
             ->latest()
             ->get()
             ->map(function ($contract) {
@@ -334,6 +334,8 @@ class ProfessionalController extends Controller
                     'id' => $contract->id,
                     'job_title' => $title,
                     'client_name' => $contract->client->name ?? 'N/A',
+                    'client_phone' => $contract->client_phone ?? $contract->client->phone ?? 'N/A',
+                    'professional_phone' => $contract->professional_phone ?? $contract->professional->phone ?? 'N/A',
                     'budget' => $contract->agreed_price,
                     'status' => $contract->status,
                     'created_at' => $contract->created_at,

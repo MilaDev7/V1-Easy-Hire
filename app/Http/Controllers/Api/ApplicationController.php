@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Application;
 use App\Models\JobPost;
 use App\Models\Professional;
+use App\Models\User;
 use Illuminate\Http\Request;
 
 class ApplicationController extends Controller
@@ -193,10 +194,15 @@ class ApplicationController extends Controller
             ->update(['status' => 'rejected']);
 
         // 5.5 ✅ Create contract
+        $client = User::find($job->client_id);
+        $professionalUser = User::find($application->professional_id);
+
         \App\Models\Contract::create([
             'job_id' => $job->id,
             'client_id' => $job->client_id,
+            'client_phone' => $client?->phone,
             'professional_id' => $application->professional_id,
+            'professional_phone' => $professionalUser?->phone,
             'agreed_price' => $job->budget,
         ]);
 

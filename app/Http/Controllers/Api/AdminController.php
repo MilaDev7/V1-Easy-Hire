@@ -329,8 +329,8 @@ class AdminController extends Controller
                 'status' => $contract->status,
                 'budget' => $contract->agreed_price ?? $contract->job?->budget,
                 'created_at' => $contract->created_at,
-                'client' => $contract->client ? ['id' => $contract->client->id, 'name' => $contract->client->name, 'email' => $contract->client->email] : null,
-                'professional' => $contract->professional ? ['id' => $contract->professional->id, 'name' => $contract->professional->name, 'email' => $contract->professional->email] : null,
+                'client' => $contract->client ? ['id' => $contract->client->id, 'name' => $contract->client->name, 'email' => $contract->client->email, 'phone' => $contract->client_phone ?? $contract->client->phone ?? 'N/A'] : null,
+                'professional' => $contract->professional ? ['id' => $contract->professional->id, 'name' => $contract->professional->name, 'email' => $contract->professional->email, 'phone' => $contract->professional_phone ?? $contract->professional->phone ?? 'N/A'] : null,
                 'job' => $contract->job ? ['id' => $contract->job->id, 'title' => $contract->job->title, 'description' => $contract->job->description] : null,
                 'direct_request' => $contract->directRequest ? ['id' => $contract->directRequest->id, 'title' => $contract->directRequest->title, 'description' => $contract->directRequest->description] : null,
             ];

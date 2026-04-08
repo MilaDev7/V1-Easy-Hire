@@ -10,7 +10,9 @@ class Contract extends Model
         'job_id',
         'direct_request_id',
         'client_id',
+        'client_phone',
         'professional_id',
+        'professional_phone',
         'agreed_price',
         'status',
     ];

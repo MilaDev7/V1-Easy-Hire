@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Contract;
 use App\Models\DirectRequest;
 use App\Models\Subscription;
+use App\Models\User;
 use Illuminate\Http\Request;
 
 class DirectRequestController extends Controller
@@ -140,10 +141,15 @@ class DirectRequestController extends Controller
 
         try {
             // Create contract with direct request reference
+            $client = User::find($directRequest->client_id);
+            $professional = User::find($userId);
+
             $contract = Contract::create([
                 'direct_request_id' => $directRequest->id,
                 'client_id' => $directRequest->client_id,
+                'client_phone' => $client?->phone,
                 'professional_id' => $userId,
+                'professional_phone' => $professional?->phone,
                 'agreed_price' => $directRequest->budget,
                 'status' => 'active',
             ]);
