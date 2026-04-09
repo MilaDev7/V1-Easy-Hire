@@ -98,25 +98,44 @@ function requireRole(expectedRole) {
 
 function logout() {
     const token = localStorage.getItem("token");
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute("content");
     
     // Call API logout to destroy session
     if (token) {
-        fetch("/api/logout", {
+        const apiLogout = fetch("/api/logout", {
             method: "POST",
             headers: {
                 "Authorization": "Bearer " + token,
                 "Accept": "application/json"
             }
-        }).finally(() => {
+        });
+
+        const webLogout = fetch("/logout", {
+            method: "POST",
+            headers: {
+                "Accept": "application/json",
+                "X-CSRF-TOKEN": csrfToken || ""
+            }
+        });
+
+        Promise.allSettled([apiLogout, webLogout]).finally(() => {
             localStorage.removeItem("token");
             localStorage.removeItem("role");
             currentUser = null;
             window.location.href = "/login";
         });
     } else {
+        fetch("/logout", {
+            method: "POST",
+            headers: {
+                "Accept": "application/json",
+                "X-CSRF-TOKEN": csrfToken || ""
+            }
+        }).finally(() => {
         localStorage.removeItem("token");
         localStorage.removeItem("role");
         currentUser = null;
         window.location.href = "/login";
+        });
     }
 }

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Professional;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 
 // Recommended for transactions
@@ -132,6 +133,43 @@ class AuthController extends Controller
 
     }
 
+    // Web login (session + token for SPA API calls)
+    public function webLogin(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email',
+            'password' => 'required',
+        ]);
+
+        if (! Auth::attempt($request->only('email', 'password'))) {
+            return response()->json(['message' => 'Invalid credentials'], 401);
+        }
+
+        $request->session()->regenerate();
+        $user = Auth::user();
+
+        if ($user->is_suspended) {
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return response()->json([
+                'message' => 'Your account is suspended',
+            ], 403);
+        }
+
+        $token = $user->createToken('auth_token')->plainTextToken;
+        $professional = Professional::where('user_id', $user->id)->first();
+
+        return response()->json([
+            'message' => 'Login successful',
+            'token' => $token,
+            'role' => $user->getRoleNames()->first(),
+            'approval_status' => $professional ? $professional->status : null,
+            'user_name' => $user->name,
+        ]);
+    }
+
     // Logout
     public function logout(Request $request)
     {
@@ -152,6 +190,18 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'Account deleted successfully',
+        ]);
+    }
+
+    // Web logout (session logout used by protected web routes)
+    public function webLogout(Request $request)
+    {
+        Auth::logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return response()->json([
+            'message' => 'Logged out successfully',
         ]);
     }
 }

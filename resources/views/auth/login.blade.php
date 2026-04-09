@@ -30,12 +30,14 @@
     function handleLogin() {
         const email = document.getElementById("loginEmail").value;
         const password = document.getElementById("loginPass").value;
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
 
-        fetch("/api/login", {
+        fetch("/login", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    "Accept": "application/json"
+                    "Accept": "application/json",
+                    "X-CSRF-TOKEN": csrfToken || ""
                 },
                 body: JSON.stringify({
                     email,

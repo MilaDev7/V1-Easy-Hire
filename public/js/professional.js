@@ -533,7 +533,7 @@ function bindProfessionalApplicationActions() {
             button.textContent = "Withdrawing...";
             clearProfessionalFeedback();
 
-            fetch("/api/pro/withdraw-application", {
+            fetch("/api/pro/withdraw", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -717,7 +717,7 @@ function bindProfessionalContractActions() {
             button.textContent = "Completing...";
             clearProfessionalFeedback();
 
-            fetch("/api/pro/complete-contract", {
+            fetch("/api/pro/complete", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ChapaController;
+use App\Http\Controllers\Api\AuthController;
 use App\Models\Application;
 use App\Models\Professional;
 use App\Models\Report;
@@ -34,7 +35,10 @@ Route::get('/search', function () {
 
 Route::get('/login', function () {
     return view('auth.login');
-});
+})->name('login');
+
+Route::post('/login', [AuthController::class, 'webLogin'])->name('login.submit');
+Route::post('/logout', [AuthController::class, 'webLogout'])->name('logout');
 
 Route::get('/register', function () {
     return view('auth.register');
@@ -78,14 +82,20 @@ Route::get('/client-setup', function () {
     return view('auth.client-setup');
 });
 
-Route::get('/client/dashboard', function () {
-    return view('client.dashboard');
+Route::middleware(['auth', 'check_status', 'role:client'])->group(function () {
+    Route::get('/client/dashboard', function () {
+        return view('client.dashboard');
+    });
 });
 
-Route::get('/pro/dashboard', function () {
-    return view('professional.dashboard');
+Route::middleware(['auth', 'check_status', 'role:professional'])->group(function () {
+    Route::get('/pro/dashboard', function () {
+        return view('professional.dashboard');
+    });
 });
 
-Route::get('/admin/dashboard', function () {
-    return view('admin.dashboard');
+Route::middleware(['auth', 'check_status', 'role:admin'])->group(function () {
+    Route::get('/admin/dashboard', function () {
+        return view('admin.dashboard');
+    });
 });

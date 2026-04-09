@@ -131,11 +131,9 @@ Route::middleware(['auth:sanctum', 'check_status'])->group(function () {
 
         Route::get('/pro/applications', [ProfessionalController::class, 'myApplications']);
         Route::post('/pro/withdraw', [ProfessionalController::class, 'withdraw']);
-        Route::post('/pro/withdraw-application', [ProfessionalController::class, 'withdraw']);
 
         Route::get('/pro/contracts', [ProfessionalController::class, 'myContracts']);
         Route::post('/pro/complete', [ProfessionalController::class, 'completeContract']);
-        Route::post('/pro/complete-contract', [ProfessionalController::class, 'completeContract']);
 
         Route::get('/pro/stats', [ProfessionalController::class, 'stats']);
     });
