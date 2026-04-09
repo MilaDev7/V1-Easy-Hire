@@ -22,8 +22,14 @@ class SubscriptionController extends Controller
 
         $user = Auth::user();
 
-        // Keep tx_ref alphanumeric-safe for gateway validation.
-        $txRef = Chapa::generateReference('user_'.$user->id);
+        // Use user name as tx_ref prefix (sanitized for gateway safety).
+        $namePrefix = strtolower(trim((string) $user->name));
+        $namePrefix = preg_replace('/[^a-z0-9]+/', '_', $namePrefix);
+        $namePrefix = trim((string) $namePrefix, '_');
+        if ($namePrefix === '') {
+            $namePrefix = 'user_'.$user->id;
+        }
+        $txRef = Chapa::generateReference($namePrefix);
         $chapa = new Chapa;
 
         $email = trim($user->email);

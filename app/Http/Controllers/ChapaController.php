@@ -73,7 +73,14 @@ class ChapaController extends Controller
 
         $plan = Plan::findOrFail($request->plan_id);
 
-        $txRef = Chapa::generateReference();
+        // Use user name as tx_ref prefix (sanitized for gateway safety).
+        $namePrefix = strtolower(trim((string) $user->name));
+        $namePrefix = preg_replace('/[^a-z0-9]+/', '_', $namePrefix);
+        $namePrefix = trim((string) $namePrefix, '_');
+        if ($namePrefix === '') {
+            $namePrefix = 'user_'.$user->id;
+        }
+        $txRef = Chapa::generateReference($namePrefix);
         $chapa = new Chapa;
 
         $response = $chapa->initializePayment([
@@ -109,7 +116,8 @@ class ChapaController extends Controller
 
     public function verifyPayment(Request $request)
     {
-        $txRef = $request->query('tx_ref');
+        // Some gateway callbacks use trx_ref instead of tx_ref.
+        $txRef = $request->query('tx_ref') ?? $request->query('trx_ref');
 
         Log::info('verifyPayment API called', ['tx_ref' => $txRef, 'full_url' => $request->fullUrl()]);
 
@@ -179,12 +187,13 @@ class ChapaController extends Controller
 
     public function handlePaymentSuccess(Request $request)
     {
-        $txRef = $request->query('tx_ref');
+        // Some return payloads use trx_ref instead of tx_ref.
+        $txRef = $request->query('tx_ref') ?? $request->query('trx_ref');
 
         Log::info('handlePaymentSuccess called', ['tx_ref' => $txRef, 'full_url' => $request->fullUrl()]);
 
         if (! $txRef) {
-            return redirect('/#/?payment=error&message=No transaction reference');
+            return view('payment.failed');
         }
 
         $chapa = new Chapa;
@@ -196,7 +205,7 @@ class ChapaController extends Controller
         ]);
 
         if (! $verification || ! isset($verification['status']) || ! isset($verification['data'])) {
-            return redirect('/#/?payment=error&message=Invalid payment response');
+            return view('payment.failed');
         }
 
         $dataStatus = $verification['data']['status'] ?? '';
@@ -227,7 +236,19 @@ class ChapaController extends Controller
                     'already_processed' => $result['already_processed'],
                 ]);
 
-                return view('payment.success');
+                return view('payment.success', [
+                    'receipt' => [
+                        'tx_ref' => $txRef,
+                        'reference' => $verification['data']['reference'] ?? null,
+                        'amount' => $verification['data']['amount'] ?? null,
+                        'currency' => $verification['data']['currency'] ?? 'ETB',
+                        'email' => $verification['data']['email'] ?? null,
+                        'first_name' => $verification['data']['first_name'] ?? null,
+                        'status' => $verification['data']['status'] ?? 'success',
+                        'paid_at' => $verification['data']['updated_at'] ?? $verification['data']['created_at'] ?? now()->toDateTimeString(),
+                        'plan_id' => $planId,
+                    ],
+                ]);
             }
         }
 
