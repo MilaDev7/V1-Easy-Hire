@@ -182,6 +182,13 @@ class ClientController extends Controller
             ], 400);
         }
 
+        // Idempotency guard: already-cancelled jobs must not refund again.
+        if ($job->status === 'cancelled') {
+            return response()->json([
+                'message' => 'Job already cancelled.',
+            ], 400);
+        }
+
         $applicationsQuery = Application::where('job_id', $job->id);
         $applicationCount = (clone $applicationsQuery)->count();
 

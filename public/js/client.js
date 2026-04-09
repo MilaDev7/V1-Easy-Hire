@@ -720,40 +720,44 @@ function bindDeleteJobButtons() {
         });
     });
     
-    document.getElementById("confirm-delete-job-btn")?.addEventListener("click", function() {
-        const jobId = window.pendingDeleteJobId;
-        const btn = this;
-        
-        btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Deleting...';
-        
-        fetch(`/api/job-posts/${jobId}`, {
-            method: "DELETE",
-            headers: buildHeaders(),
-        })
-            .then(async (response) => {
-                const payload = await response.json().catch(() => ({}));
-                
-                if (!response.ok) {
-                    throw new Error(payload?.message || "Failed to delete");
-                }
-                
-                bootstrap.Modal.getInstance(document.getElementById("delete-job-modal")).hide();
-                
-                loadJobPosts();
-                loadStats();
+    const confirmDeleteBtn = document.getElementById("confirm-delete-job-btn");
+    if (confirmDeleteBtn) {
+        // Avoid stacking duplicate listeners on repeated renders.
+        confirmDeleteBtn.onclick = function() {
+            const jobId = window.pendingDeleteJobId;
+            const btn = this;
+            
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Deleting...';
+            
+            fetch(`/api/job-posts/${jobId}`, {
+                method: "DELETE",
+                headers: buildHeaders(),
             })
-            .catch((error) => {
-                const errorMsg = document.getElementById("content-area");
-                if (errorMsg) {
-                    errorMsg.innerHTML = '<div class="alert alert-danger mb-0">' + (error.message || "Unable to delete job") + '</div>';
-                }
-            })
-            .finally(() => {
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fa-solid fa-trash me-1"></i> Delete';
-            });
-    });
+                .then(async (response) => {
+                    const payload = await response.json().catch(() => ({}));
+                    
+                    if (!response.ok) {
+                        throw new Error(payload?.message || "Failed to delete");
+                    }
+                    
+                    bootstrap.Modal.getInstance(document.getElementById("delete-job-modal")).hide();
+                    
+                    loadJobPosts();
+                    loadStats();
+                })
+                .catch((error) => {
+                    const errorMsg = document.getElementById("content-area");
+                    if (errorMsg) {
+                        errorMsg.innerHTML = '<div class="alert alert-danger mb-0">' + (error.message || "Unable to delete job") + '</div>';
+                    }
+                })
+                .finally(() => {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fa-solid fa-trash me-1"></i> Delete';
+                });
+        };
+    }
 }
 
 function getContractProfessionalName(contract) {
