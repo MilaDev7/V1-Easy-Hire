@@ -32,7 +32,7 @@ Route::get('/professionals', [ProfessionalController::class, 'index']);
 Route::get('/professionals/{id}', [ProfessionalController::class, 'show']);
 
 // Professional Setup
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'check_status', 'role:professional'])->group(function () {
     Route::get('/pro/profile', [ProfileController::class, 'getProProfile']);
     Route::post('/pro/profile-update', [ProfileController::class, 'updateProProfile']);
     Route::post('/pro/profile-update-simple', [ProfileController::class, 'updateProProfileSimple']);
@@ -40,7 +40,7 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 // Client Setup
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'check_status', 'role:client'])->group(function () {
     Route::post('/client/update-photo', [ProfileController::class, 'updateClientPhoto']);
     Route::get('/client/profile', [ProfileController::class, 'getClientProfile']);
     Route::post('/client/profile', [ProfileController::class, 'updateClientProfile']);
@@ -82,8 +82,7 @@ Route::middleware(['auth:sanctum', 'check_status'])->group(function () {
         // Chapa Payment
         Route::post('/chapa/initialize-payment', [ChapaController::class, 'initializePayment']);
 
-        Route::middleware(['auth:sanctum', 'role:client'])
-            ->get('client/my-subscription', [SubscriptionController::class, 'mySubscription']);
+        Route::get('client/my-subscription', [SubscriptionController::class, 'mySubscription']);
 
         // Job Posts list
         Route::get('/client/job-posts', [ClientController::class, 'jobPosts']);
@@ -126,10 +125,8 @@ Route::middleware(['auth:sanctum', 'check_status'])->group(function () {
         Route::post('/pro/requests/{id}/reject', [DirectRequestController::class, 'rejectRequest']);
     });
 
-    // Route for frontend
-
-    Route::middleware('auth:sanctum')->group(function () {
-
+    // Professional routes used by frontend
+    Route::middleware('role:professional')->group(function () {
         Route::get('/jobs', [ProfessionalController::class, 'jobs']);
 
         Route::post('/pro/apply', [ProfessionalController::class, 'apply']);
@@ -143,9 +140,10 @@ Route::middleware(['auth:sanctum', 'check_status'])->group(function () {
         Route::post('/pro/complete-contract', [ProfessionalController::class, 'completeContract']);
 
         Route::get('/pro/stats', [ProfessionalController::class, 'stats']);
+    });
 
-        // admin routes for frontend
-
+    // Admin routes used by frontend
+    Route::middleware('role:admin')->group(function () {
         // 🔥 PROFESSIONALS
         Route::get('/admin/professionals', [AdminController::class, 'allProfessionals']);
         Route::get('/admin/professionals/pending', [AdminController::class, 'pendingProfessionals']);
@@ -179,46 +177,5 @@ Route::middleware(['auth:sanctum', 'check_status'])->group(function () {
 
         // 🔥 STATS
         Route::get('/admin/stats', [AdminController::class, 'stats']);
-    });
-
-    /*
-    |--------------------------------------------------------------------------
-    | Admin Routes
-    |--------------------------------------------------------------------------
-    */
-    Route::middleware('role:admin')->prefix('admin')->group(function () {
-        // Professional Approval
-        Route::post('/approve/{id}', [AdminController::class, 'approveProfessional']);
-        Route::post('/reject/{id}', [AdminController::class, 'rejectProfessional']);
-
-        // User Management
-        Route::post('/suspend-user/{id}', [AdminController::class, 'suspendUser']);
-        Route::post('/unsuspend-user/{id}', [AdminController::class, 'unsuspendUser']);
-
-        // Report Management
-        Route::get('/reports', [AdminController::class, 'reports']);
-        Route::post('/reports/{id}/resolve', [AdminController::class, 'resolveReport']);
-
-        // User Management
-        Route::get('/users', [AdminController::class, 'users']);
-
-        // jobs Management
-        Route::get('/jobs', [AdminController::class, 'jobs']);
-
-        // contracts Management
-        Route::get('/contracts', [AdminController::class, 'contracts']);
-
-        // forceCancelContract Management
-        Route::post('/contracts/{id}/cancel', [AdminController::class, 'forceCancelContract']);
-
-        // Plan Management (Admin CRUD)
-        Route::post('/plans', [AdminController::class, 'createPlan']);
-        Route::get('/plans', [AdminController::class, 'plans']);
-        Route::put('/plans/{id}', [AdminController::class, 'updatePlan']);
-        Route::delete('/plans/{id}', [AdminController::class, 'deletePlan']);
-
-        // user delet managemnt
-        Route::get('/deleted-users', [AdminController::class, 'deletedUsers']);
-        Route::post('/restore-user/{id}', [AdminController::class, 'restoreUser']);
     });
 });
