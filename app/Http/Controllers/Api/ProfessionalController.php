@@ -10,9 +10,15 @@ use App\Models\Professional;
 use App\Models\Report;
 use App\Models\Review;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 
 class ProfessionalController extends Controller
 {
+    /**
+     * Cached schema check for applications.source.
+     */
+    private ?bool $hasApplicationSourceColumn = null;
+
     /**
      * Prefix used to mark non-refundable professional withdrawals.
      */
@@ -24,24 +30,36 @@ class ProfessionalController extends Controller
     private const MAX_APPLY_CREDITS = 5;
 
     /**
-     * Consumed credits = pending + active contracts + withdrawn(no-refund).
+     * Consumed credits = manual-apply applications that are still pending +
+     * manual-apply withdrawals marked as non-refundable.
      */
     private function usedApplyCredits(int $professionalId): int
     {
-        $pendingApplications = Application::where('professional_id', $professionalId)
-            ->where('status', 'pending')
-            ->count();
+        $pendingQuery = Application::where('professional_id', $professionalId)
+            ->where('status', 'pending');
 
-        $activeContracts = Contract::where('professional_id', $professionalId)
-            ->where('status', 'active')
-            ->count();
-
-        $withdrawnNoRefund = Application::where('professional_id', $professionalId)
+        $withdrawnQuery = Application::where('professional_id', $professionalId)
             ->where('status', 'rejected')
-            ->where('cover_letter', 'like', self::WITHDRAWN_TAG.'%')
-            ->count();
+            ->where('cover_letter', 'like', self::WITHDRAWN_TAG.'%');
 
-        return $pendingApplications + $activeContracts + $withdrawnNoRefund;
+        if ($this->hasApplicationSourceColumn()) {
+            $pendingQuery->where('source', 'apply');
+            $withdrawnQuery->where('source', 'apply');
+        }
+
+        $pendingApplyApplications = $pendingQuery->count();
+        $withdrawnNoRefund = $withdrawnQuery->count();
+
+        return $pendingApplyApplications + $withdrawnNoRefund;
+    }
+
+    private function hasApplicationSourceColumn(): bool
+    {
+        if ($this->hasApplicationSourceColumn === null) {
+            $this->hasApplicationSourceColumn = Schema::hasColumn('applications', 'source');
+        }
+
+        return $this->hasApplicationSourceColumn;
     }
 
     public function me()
@@ -308,6 +326,7 @@ class ProfessionalController extends Controller
             'professional_id' => $userId,
             'cover_letter' => $request->cover_letter ?? 'Dashboard quick apply placeholder.',
             'status' => 'pending',
+            'source' => 'apply',
         ]);
 
         return response()->json(['message' => 'Applied successfully']);

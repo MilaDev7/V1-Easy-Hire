@@ -14,6 +14,7 @@ class Application extends Model
         'professional_id',
         'cover_letter',
         'status',
+        'source',
     ];
 
     public function job()

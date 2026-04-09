@@ -4,14 +4,19 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Application;
-use App\Models\Contract;
 use App\Models\JobPost;
 use App\Models\Professional;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 
 class ApplicationController extends Controller
 {
+    /**
+     * Cached schema check for applications.source.
+     */
+    private ?bool $hasApplicationSourceColumn = null;
+
     /**
      * Prefix used to mark professional-withdrawn applications as non-refundable.
      */
@@ -24,24 +29,36 @@ class ApplicationController extends Controller
 
     /**
      * Count consumed apply credits.
-     * Consumed = pending applications + active contracts + withdrawn(no-refund) applications.
+     * Consumed = manual-apply applications that are still pending +
+     * manual-apply withdrawals marked as non-refundable.
      */
     private function usedApplyCredits(int $professionalId): int
     {
-        $pendingApplications = Application::where('professional_id', $professionalId)
-            ->where('status', 'pending')
-            ->count();
+        $pendingQuery = Application::where('professional_id', $professionalId)
+            ->where('status', 'pending');
 
-        $activeContracts = Contract::where('professional_id', $professionalId)
-            ->where('status', 'active')
-            ->count();
-
-        $withdrawnNoRefund = Application::where('professional_id', $professionalId)
+        $withdrawnQuery = Application::where('professional_id', $professionalId)
             ->where('status', 'rejected')
-            ->where('cover_letter', 'like', self::WITHDRAWN_TAG.'%')
-            ->count();
+            ->where('cover_letter', 'like', self::WITHDRAWN_TAG.'%');
 
-        return $pendingApplications + $activeContracts + $withdrawnNoRefund;
+        if ($this->hasApplicationSourceColumn()) {
+            $pendingQuery->where('source', 'apply');
+            $withdrawnQuery->where('source', 'apply');
+        }
+
+        $pendingApplyApplications = $pendingQuery->count();
+        $withdrawnNoRefund = $withdrawnQuery->count();
+
+        return $pendingApplyApplications + $withdrawnNoRefund;
+    }
+
+    private function hasApplicationSourceColumn(): bool
+    {
+        if ($this->hasApplicationSourceColumn === null) {
+            $this->hasApplicationSourceColumn = Schema::hasColumn('applications', 'source');
+        }
+
+        return $this->hasApplicationSourceColumn;
     }
 
     /**
@@ -142,6 +159,7 @@ class ApplicationController extends Controller
             'professional_id' => auth()->id(),
             'cover_letter' => $request->cover_letter,
             'status' => 'pending',
+            'source' => 'apply',
         ]);
 
         return response()->json([
