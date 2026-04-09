@@ -114,10 +114,12 @@ class ClientController extends Controller
         return response()->json($applications);
     }
 
-    // ✅ Total Job Posts
+    // ✅ Active Job Posts (open + assigned)
     public function jobPostCount()
     {
-        $count = JobPost::where('client_id', auth()->id())->count();
+        $count = JobPost::where('client_id', auth()->id())
+            ->whereIn('status', ['open', 'assigned'])
+            ->count();
 
         return response()->json([
             'total_job_posts' => $count,

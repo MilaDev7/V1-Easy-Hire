@@ -99,15 +99,17 @@ class SubscriptionController extends Controller
             ->where('status', '!=', 'cancelled')
             ->count();
 
-        // remaining_posts is already the remaining quota value.
         $remaining = max((int) $subscription->remaining_posts, 0);
+        $jobLimit = (int) ($subscription->plan->job_posts_limit ?? 0);
 
         return response()->json([
             'has_subscription' => true,
             'plan_name' => $subscription->plan->name,
             'plan' => $subscription->plan->name,
-            'job_limit' => $remaining,
+            // Plan capacity (static for the current plan purchase).
+            'job_limit' => $jobLimit,
             'active_jobs' => $activeJobs,
+            // Runtime remaining quota tracked in subscriptions.remaining_posts.
             'remaining_jobs' => $remaining,
             'direct_requests_limit' => $subscription->plan->direct_requests_limit ?? 0,
             'direct_requests_remaining' => $subscription->direct_requests_remaining ?? 0,

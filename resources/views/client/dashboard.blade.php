@@ -135,6 +135,10 @@
                         </div>
                     </div>
                     <div class="d-flex align-items-center gap-4">
+                        <div class="text-center" style="min-width: 110px;">
+                            <p class="text-white-50 small mb-0 text-uppercase">Plan Capacity</p>
+                            <p class="text-white mb-0 fw-semibold" id="current-plan-jobs">--</p>
+                        </div>
                         <div class="text-center" style="min-width: 80px;">
                             <p class="text-white-50 small mb-0 text-uppercase">Duration</p>
                             <p class="text-white mb-0 fw-semibold" id="current-plan-duration">--</p>
