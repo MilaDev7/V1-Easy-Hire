@@ -22,7 +22,8 @@ class SubscriptionController extends Controller
 
         $user = Auth::user();
 
-        $txRef = Chapa::generateReference($user->name);
+        // Keep tx_ref alphanumeric-safe for gateway validation.
+        $txRef = Chapa::generateReference('user_'.$user->id);
         $chapa = new Chapa;
 
         $email = trim($user->email);
@@ -40,7 +41,8 @@ class SubscriptionController extends Controller
             'email' => $email,
             'first_name' => $firstName,
             'tx_ref' => $txRef,
-            'callback_url' => url('/api/chapa/payment-callback'),
+            // Must match an existing route.
+            'callback_url' => url('/api/chapa/payment-success'),
             'return_url' => url('/payment-success?tx_ref='.$txRef),
             'meta' => [
                 'plan_id' => $plan->id,

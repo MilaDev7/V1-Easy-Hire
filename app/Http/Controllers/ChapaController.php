@@ -34,7 +34,7 @@ class ChapaController extends Controller
             'email' => $user->email,
             'first_name' => $user->name,
             'tx_ref' => $txRef,
-            'callback_url' => url('/api/chapa/payment-callback'),
+            'callback_url' => url('/api/chapa/payment-success'),
             'return_url' => url('/payment-success?tx_ref='.$txRef),
             'meta' => [
                 'plan_id' => $plan->id,
