@@ -1197,7 +1197,7 @@ function handleSubscriptionAction() {
             return;
         }
 
-        fetchJson(`/api/buy-plan/${planId}`).catch(() => null);
+        buyPlan(planId);
     });
 }
 
@@ -1212,24 +1212,35 @@ function buyPlan(planId) {
     fetch(`/api/buy-plan/${planId}`, {
         method: 'POST',
         headers: {
+            'Accept': 'application/json',
             'Authorization': 'Bearer ' + token,
             'Content-Type': 'application/json'
         }
     })
-    .then(res => res.json())
-    .then(data => {
+    .then(async (res) => {
+        let data = {};
+        try {
+            data = await res.json();
+        } catch (error) {
+            data = {};
+        }
+
+        if (!res.ok) {
+            throw new Error(data.message || 'Failed to purchase plan.');
+        }
+
+        return data;
+    })
+    .then((data) => {
         if (data.redirect_url) {
             window.location.href = data.redirect_url;
-        } else if (data.message || data.success) {
-            alert('Plan purchased successfully!');
-            if (typeof loadSubscription === 'function') loadSubscription();
-            if (typeof loadClientPlans === 'function') loadClientPlans();
-        } else if (data.error || data.message) {
-            alert(data.error || data.message);
+            return;
         }
+
+        alert(data.message || 'Plan purchase initialized.');
     })
-    .catch(err => {
-        alert('Failed to purchase plan. Please try again.');
+    .catch((err) => {
+        alert(err.message || 'Failed to purchase plan. Please try again.');
     });
 }
 
@@ -1546,6 +1557,11 @@ function bindContractConfirmForm() {
 
 function showProProfile(proId) {
     try {
+        // Keep selected pro id available for direct-request flow.
+        if (typeof window.currentProIdForRequest !== "undefined") {
+            window.currentProIdForRequest = proId;
+        }
+
         let token = localStorage.getItem("token");
         let headers = {"Accept": "application/json"};
         if (token) headers["Authorization"] = "Bearer " + token;
@@ -1559,6 +1575,12 @@ function showProProfile(proId) {
         if (modalEl) {
             let modal = new bootstrap.Modal(modalEl);
             modal.show();
+        }
+
+        const hireBtn = document.getElementById("hire-pro-btn");
+        if (hireBtn) {
+            // Client dashboard is client-only, keep CTA visible in modal footer.
+            hireBtn.classList.remove("d-none");
         }
 
         fetch("/api/professionals/" + proId, {method: "GET", headers: headers})
@@ -1979,27 +2001,62 @@ function bindDashboardTools() {
 function loadClientIdentity() {
     const clientNameElement = document.getElementById("client-name");
     const sidebarPhotoElement = document.getElementById("client-sidebar-photo");
+    const topbarPhotoElement = document.getElementById("client-topbar-photo");
 
-    if (!clientNameElement && !sidebarPhotoElement) {
-        return;
+    if (!clientNameElement && !sidebarPhotoElement && !topbarPhotoElement) {
+        return Promise.resolve();
     }
 
-    fetchJson("/api/client/me")
+    function showProfileImageWhenReady(imageElement, rawUrl) {
+        if (!imageElement) {
+            return;
+        }
+
+        imageElement.style.display = "none";
+        const fallbackUrl = "/images/user1.jpg";
+        const sourceUrl = rawUrl || fallbackUrl;
+        const withTimestamp =
+            sourceUrl + (sourceUrl.includes("?") ? "&" : "?") + "t=" + Date.now();
+        const loader = new Image();
+
+        loader.onload = function () {
+            imageElement.src = withTimestamp;
+            imageElement.style.display = "block";
+        };
+
+        loader.onerror = function () {
+            imageElement.src = fallbackUrl;
+            imageElement.style.display = "block";
+        };
+
+        loader.src = withTimestamp;
+    }
+
+    return fetchJson("/api/client/me")
         .then((client) => {
             if (clientNameElement) {
-                clientNameElement.textContent = client.name || "Client Name";
+                clientNameElement.textContent = client.name || "Loading...";
             }
 
-            if (sidebarPhotoElement && client.profile_photo) {
-                const timestamp = new Date().getTime();
-                sidebarPhotoElement.src = client.profile_photo + (client.profile_photo.includes('?') ? '&' : '?') + 't=' + timestamp;
-            }
+            showProfileImageWhenReady(sidebarPhotoElement, client.profile_photo);
+            showProfileImageWhenReady(topbarPhotoElement, client.profile_photo);
         })
         .catch(() => {
             if (clientNameElement) {
-                clientNameElement.textContent = "Client Name";
+                clientNameElement.textContent = "Unavailable";
             }
+
+            showProfileImageWhenReady(sidebarPhotoElement, null);
+            showProfileImageWhenReady(topbarPhotoElement, null);
         });
+}
+
+function setClientDashboardLoading(isLoading) {
+    const loader = document.getElementById("client-dashboard-loader");
+
+    if (loader) {
+        loader.classList.toggle("d-none", !isLoading);
+    }
 }
 
 function loadStats() {
@@ -2132,15 +2189,20 @@ window.viewProReports = viewProReports;
 
     // Client dashboard entrypoint (called after DOM is ready).
     function init() {
+        setClientDashboardLoading(true);
+        // Fail-safe: never keep a blocking loader forever.
+        window.setTimeout(() => setClientDashboardLoading(false), 3000);
         bindSidebarNavigation();
         bindJobPostsReload();
         bindDashboardTools();
         bindClientProfileForm();
-        loadClientIdentity();
         handleSubscriptionAction();
         loadStats();
         loadJobPosts();
         loadSubscription();
+        loadClientIdentity().finally(() => {
+            setClientDashboardLoading(false);
+        });
     }
 
     window.EasyHireClient = { init };

@@ -230,9 +230,28 @@
             background: rgba(146, 64, 14, 0.3);
             color: #fcd34d;
         }
+
+        .dashboard-loader {
+            position: fixed;
+            inset: 0;
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 32px 16px;
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(2px);
+        }
     </style>
 </head>
-<body class="bg-light">
+<body class="bg-light" style="background-color: #eef2f7;">
+    <div id="professional-dashboard-loader" class="dashboard-loader">
+        <div class="text-center">
+            <div class="spinner-border text-success mb-3" role="status"></div>
+            <p class="text-muted mb-0">Loading dashboard...</p>
+        </div>
+    </div>
+
     <main class="professional-dashboard-shell" id="professional-dashboard">
         <div class="card border-0 shadow-sm mb-4" style="background: #e6fffa; border-top: 4px solid #20c997 !important;">
             <div class="card-body py-4">
@@ -243,7 +262,7 @@
                     </div>
                     <div class="dropdown">
                         <button class="btn p-0 border-0 bg-transparent" data-bs-toggle="dropdown" aria-expanded="false">
-                            <img src="{{ asset('images/user1.jpg') }}" id="professional-topbar-photo" alt="Profile" class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover; border: 2px solid rgba(0,0,0,0.1);">
+                            <img src="{{ asset('images/user1.jpg') }}" id="professional-topbar-photo" alt="Profile" class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover; border: 2px solid rgba(0,0,0,0.1); display: none;">
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end shadow">
                             <li><a class="dropdown-item" href="/professional/dashboard"><i class="fa-solid fa-user me-2"></i>Account</a></li>
@@ -270,11 +289,12 @@
                             alt="Professional Photo"
                             id="professional-dashboard-photo"
                             class="professional-sidebar-photo rounded border mb-3"
+                            style="display: none;"
                         >
-                        <h1 class="h4 mb-1" id="professional-dashboard-name">Professional</h1>
-                        <p class="text-muted mb-2" id="professional-sidebar-skill">Skill</p>
+                        <h1 class="h4 mb-1" id="professional-dashboard-name">Loading...</h1>
+                        <p class="text-muted mb-2" id="professional-sidebar-skill">Loading...</p>
                         <span class="badge rounded-pill text-bg-warning" id="professional-approval-status">
-                            Pending
+                            Loading...
                         </span>
                     </div>
 
@@ -285,7 +305,7 @@
                             </div>
                             <div>
                                 <p class="small text-uppercase text-muted mb-0">Location</p>
-                                <p class="fw-semibold mb-0" id="professional-sidebar-location">Not set</p>
+                                <p class="fw-semibold mb-0" id="professional-sidebar-location">Loading...</p>
                             </div>
                         </div>
                         <div class="d-flex align-items-center">
@@ -295,7 +315,7 @@
                             <div>
                                 <p class="small text-uppercase text-muted mb-0">Rate</p>
                                 <div id="professional-sidebar-rate" class="d-flex align-items-center">
-                                    <span class="text-muted small">No rating</span>
+                                    <span class="text-muted small">Loading...</span>
                                 </div>
                             </div>
                         </div>

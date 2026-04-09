@@ -275,11 +275,39 @@ function bindProfessionalApplyButtons() {
 }
 
 function loadProfessionalIdentity() {
-    fetchJson("/api/pro/me")
+    const dashboardPhotoElement = document.getElementById("professional-dashboard-photo");
+    const topbarPhotoElement = document.getElementById("professional-topbar-photo");
+
+    function showProfileImageWhenReady(imageElement, rawUrl) {
+        if (!imageElement) {
+            return;
+        }
+
+        imageElement.style.display = "none";
+        const fallbackUrl = "/images/user1.jpg";
+        const sourceUrl = rawUrl || fallbackUrl;
+        const withTimestamp =
+            sourceUrl + (sourceUrl.includes("?") ? "&" : "?") + "t=" + Date.now();
+        const loader = new Image();
+
+        loader.onload = function () {
+            imageElement.src = withTimestamp;
+            imageElement.style.display = "block";
+        };
+
+        loader.onerror = function () {
+            imageElement.src = fallbackUrl;
+            imageElement.style.display = "block";
+        };
+
+        loader.src = withTimestamp;
+    }
+
+    return fetchJson("/api/pro/me")
         .then((profile) => {
-            setText("professional-dashboard-name", profile.name || "Professional");
-            setText("professional-sidebar-skill", profile.skill || "Skill");
-            setText("professional-sidebar-location", profile.location || "Not set");
+            setText("professional-dashboard-name", profile.name || "Unavailable");
+            setText("professional-sidebar-skill", profile.skill || "Unavailable");
+            setText("professional-sidebar-location", profile.location || "Unavailable");
             
             const rate = Number(profile.rate ?? 0);
             const rateElement = document.getElementById("professional-sidebar-rate");
@@ -292,35 +320,34 @@ function loadProfessionalIdentity() {
                     starsHtml += `<span class="ms-1 text-muted small">${rate.toFixed(1)}</span>`;
                     rateElement.innerHTML = starsHtml;
                 } else {
-                    rateElement.innerHTML = '<span class="text-muted">No rating</span>';
+                    rateElement.innerHTML = '<span class="text-muted">Unavailable</span>';
                 }
             }
             
             setProfessionalStatus(profile.approval_status);
-
-            const dashboardPhoto = document.getElementById("professional-dashboard-photo");
-            const topbarPhoto = document.getElementById("professional-topbar-photo");
-
-            if (dashboardPhoto && profile.profile_photo) {
-                const timestamp = new Date().getTime();
-                dashboardPhoto.src = profile.profile_photo + (profile.profile_photo.includes('?') ? '&' : '?') + 't=' + timestamp;
-            }
-            
-            if (topbarPhoto && profile.profile_photo) {
-                const timestamp = new Date().getTime();
-                topbarPhoto.src = profile.profile_photo + (profile.profile_photo.includes('?') ? '&' : '?') + 't=' + timestamp;
-            }
+            showProfileImageWhenReady(dashboardPhotoElement, profile.profile_photo);
+            showProfileImageWhenReady(topbarPhotoElement, profile.profile_photo);
         })
         .catch(() => {
-            setText("professional-dashboard-name", "Professional");
-            setText("professional-sidebar-skill", "Skill");
-            setText("professional-sidebar-location", "Not set");
+            setText("professional-dashboard-name", "Unavailable");
+            setText("professional-sidebar-skill", "Unavailable");
+            setText("professional-sidebar-location", "Unavailable");
             const rateElement = document.getElementById("professional-sidebar-rate");
             if (rateElement) {
-                rateElement.innerHTML = '<span class="text-muted">No rating</span>';
+                rateElement.innerHTML = '<span class="text-muted">Unavailable</span>';
             }
             setProfessionalStatus("pending");
+            showProfileImageWhenReady(dashboardPhotoElement, null);
+            showProfileImageWhenReady(topbarPhotoElement, null);
         });
+}
+
+function setProfessionalDashboardLoading(isLoading) {
+    const loader = document.getElementById("professional-dashboard-loader");
+
+    if (loader) {
+        loader.classList.toggle("d-none", !isLoading);
+    }
 }
 
 function loadProfessionalStats() {
@@ -1175,11 +1202,16 @@ function loadProfessionalJobsView() {
 }
 
 function initializeProfessionalDashboard() {
+    setProfessionalDashboardLoading(true);
+    // Fail-safe: never keep a blocking loader forever.
+    window.setTimeout(() => setProfessionalDashboardLoading(false), 3000);
     bindProfessionalSidebarNavigation();
     bindProfessionalSettings();
-    loadProfessionalIdentity();
     loadProfessionalStats();
     loadProfessionalJobsView();
+    loadProfessionalIdentity().finally(() => {
+        setProfessionalDashboardLoading(false);
+    });
 }
 
 

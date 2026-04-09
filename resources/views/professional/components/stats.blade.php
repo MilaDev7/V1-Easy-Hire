@@ -6,7 +6,7 @@
                     <i class="fa-solid fa-briefcase fa-2x text-primary mb-2 d-block"></i>
                     <p class="text-muted text-uppercase small mb-2 fw-bold">Active Contracts</p>
                     <div class="d-flex align-items-end justify-content-center">
-                        <h2 class="mb-0 fw-bold" id="pro-active-contracts-count">0</h2>
+                        <h2 class="mb-0 fw-bold" id="pro-active-contracts-count">Loading...</h2>
                         <span class="badge text-bg-light border ms-2">Max 3</span>
                     </div>
                 </div>
@@ -17,7 +17,7 @@
                 <div class="card-body text-center">
                     <i class="fa-solid fa-check-circle fa-2x text-success mb-2 d-block"></i>
                     <p class="text-muted text-uppercase small mb-2 fw-bold">Total Completed Jobs</p>
-                    <h2 class="mb-0 fw-bold" id="pro-completed-jobs-count">0</h2>
+                    <h2 class="mb-0 fw-bold" id="pro-completed-jobs-count">Loading...</h2>
                 </div>
             </div>
         </div>
@@ -27,7 +27,7 @@
                     <i class="fa-solid fa-paper-plane fa-2x text-info mb-2 d-block"></i>
                     <p class="text-muted text-uppercase small mb-2 fw-bold">Remaining Applies</p>
                     <div class="d-flex align-items-end justify-content-center">
-                        <h2 class="mb-0 fw-bold" id="pro-remaining-applies-count">0</h2>
+                        <h2 class="mb-0 fw-bold" id="pro-remaining-applies-count">Loading...</h2>
                         <span class="badge text-bg-light border ms-2">Max 5</span>
                     </div>
                 </div>

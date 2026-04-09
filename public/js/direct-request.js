@@ -102,12 +102,11 @@ function showProProfile(proId) {
         modal.show();
     }
 
-    // Show/hide hire button based on login and role
+    // Client dashboard is client-only, keep hire CTA visible.
     var hireBtn = document.getElementById("hire-pro-btn");
     var token = localStorage.getItem("token");
-    var role = localStorage.getItem("role");
     if (hireBtn) {
-        if (token && role === "client") {
+        if (token) {
             hireBtn.classList.remove("d-none");
         } else {
             hireBtn.classList.add("d-none");

@@ -17,11 +17,11 @@
             alt="Client Profile Photo"
             id="client-sidebar-photo"
             class="rounded border object-fit-cover"
-            style="width: 96px; height: 96px;"
+            style="width: 96px; height: 96px; display: none;"
         >
     </div>
 
-    <h2 class="h5 fw-bold mb-4" id="client-name">Client Name</h2>
+    <h2 class="h5 fw-bold mb-4" id="client-name">Loading...</h2>
 
     <div class="d-grid gap-2 w-100">
         <button

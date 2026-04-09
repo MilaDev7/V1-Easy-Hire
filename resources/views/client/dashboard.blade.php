@@ -75,9 +75,29 @@
         body.client-dashboard-dark .btn-close {
             filter: invert(1) grayscale(100%);
         }
+
+        .dashboard-loader {
+            position: fixed;
+            inset: 0;
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 32px 16px;
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(2px);
+        }
     </style>
 </head>
-<body class="bg-light">
+<body class="bg-light" style="background-color: #f8fafc;">
+    <div id="client-dashboard-loader" class="dashboard-loader">
+        <div class="text-center">
+            <div class="spinner-border text-primary mb-3" role="status"></div>
+            <p class="text-muted mb-0">Loading dashboard...</p>
+        </div>
+    </div>
+
+    <div id="client-dashboard-shell">
     @include('client.components.leftnav')
 
     <div class="client-dashboard-main" style="margin-left: 280px; min-height: 100vh; padding: 24px 24px 140px;">
@@ -90,7 +110,7 @@
                     </div>
                     <div class="dropdown">
                         <button class="btn p-0 border-0 bg-transparent" data-bs-toggle="dropdown" aria-expanded="false">
-                            <img src="{{ asset('images/user1.jpg') }}" id="client-topbar-photo" alt="Profile" class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover; border: 2px solid rgba(0,0,0,0.1);">
+                            <img src="{{ asset('images/user1.jpg') }}" id="client-topbar-photo" alt="Profile" class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover; border: 2px solid rgba(0,0,0,0.1); display: none;">
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end shadow">
                             <li><a class="dropdown-item" href="/client/dashboard"><i class="fa-solid fa-user me-2"></i>Account</a></li>
@@ -158,6 +178,7 @@
                 </div>
             </div>
         </div>
+    </div>
     </div>
 
     <!-- Direct Request Modal -->
@@ -238,6 +259,7 @@
             </div>
         </div>
     </div>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{{ asset('js/api.js') }}"></script>
@@ -284,11 +306,10 @@
             var modal = new bootstrap.Modal(document.getElementById("pro-profile-modal"));
             modal.show();
 
-            // Show/hide hire button based on login and role
+            // Client dashboard is client-only, keep hire CTA visible.
             var hireBtn = document.getElementById("hire-pro-btn");
-            var role = localStorage.getItem("role");
             if (hireBtn) {
-                if (token && role === "client") {
+                if (token) {
                     hireBtn.classList.remove("d-none");
                 } else {
                     hireBtn.classList.add("d-none");
