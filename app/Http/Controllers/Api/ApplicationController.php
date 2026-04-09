@@ -7,59 +7,12 @@ use App\Models\Application;
 use App\Models\JobPost;
 use App\Models\Professional;
 use App\Models\User;
+use App\Services\ApplyCreditService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Schema;
 
 class ApplicationController extends Controller
 {
-    /**
-     * Cached schema check for applications.source.
-     */
-    private ?bool $hasApplicationSourceColumn = null;
-
-    /**
-     * Prefix used to mark professional-withdrawn applications as non-refundable.
-     */
-    private const WITHDRAWN_TAG = '[WITHDRAWN_NO_REFUND]';
-
-    /**
-     * Maximum application credits for professionals.
-     */
-    private const MAX_APPLY_CREDITS = 5;
-
-    /**
-     * Count consumed apply credits.
-     * Consumed = manual-apply applications that are still pending +
-     * manual-apply withdrawals marked as non-refundable.
-     */
-    private function usedApplyCredits(int $professionalId): int
-    {
-        $pendingQuery = Application::where('professional_id', $professionalId)
-            ->where('status', 'pending');
-
-        $withdrawnQuery = Application::where('professional_id', $professionalId)
-            ->where('status', 'rejected')
-            ->where('cover_letter', 'like', self::WITHDRAWN_TAG.'%');
-
-        if ($this->hasApplicationSourceColumn()) {
-            $pendingQuery->where('source', 'apply');
-            $withdrawnQuery->where('source', 'apply');
-        }
-
-        $pendingApplyApplications = $pendingQuery->count();
-        $withdrawnNoRefund = $withdrawnQuery->count();
-
-        return $pendingApplyApplications + $withdrawnNoRefund;
-    }
-
-    private function hasApplicationSourceColumn(): bool
-    {
-        if ($this->hasApplicationSourceColumn === null) {
-            $this->hasApplicationSourceColumn = Schema::hasColumn('applications', 'source');
-        }
-
-        return $this->hasApplicationSourceColumn;
-    }
+    public function __construct(private ApplyCreditService $applyCreditService) {}
 
     /**
      * Professional applies for a job
@@ -73,7 +26,7 @@ class ApplicationController extends Controller
         // ✅ 1. check approval (you already have probably)
 
         // Enforce fixed apply-credit budget.
-        if ($this->usedApplyCredits($user->id) >= self::MAX_APPLY_CREDITS) {
+        if ($this->applyCreditService->usedApplyCredits($user->id) >= ApplyCreditService::MAX_APPLY_CREDITS) {
             return response()->json([
                 'message' => 'Apply credit limit reached',
             ], 403);
@@ -144,15 +97,6 @@ class ApplicationController extends Controller
             'cover_letter' => 'required|string|min:20',
         ]);
 
-        // 7. Prevent applying twice to the same job
-        $exists = Application::where('job_id', $job->id)
-            ->where('professional_id', auth()->id())
-            ->exists();
-
-        if ($exists) {
-            return response()->json(['message' => 'You have already applied for this job'], 400);
-        }
-
         // 8. Create the Application
         $application = Application::create([
             'job_id' => $job->id,
@@ -198,7 +142,7 @@ class ApplicationController extends Controller
             ->where(function ($query) {
                 // Hidden withdrawn applications should not appear to clients.
                 $query->whereNull('cover_letter')
-                    ->orWhere('cover_letter', 'not like', self::WITHDRAWN_TAG.'%');
+                    ->orWhere('cover_letter', 'not like', ApplyCreditService::WITHDRAWN_TAG.'%');
             })
             ->get();
 
@@ -327,8 +271,8 @@ class ApplicationController extends Controller
         // No refund on professional withdraw:
         // convert to rejected and tag it as consumed forever for MVP abuse protection.
         $application->status = 'rejected';
-        if (! str_starts_with((string) $application->cover_letter, self::WITHDRAWN_TAG)) {
-            $application->cover_letter = self::WITHDRAWN_TAG.' '.$application->cover_letter;
+        if (! str_starts_with((string) $application->cover_letter, ApplyCreditService::WITHDRAWN_TAG)) {
+            $application->cover_letter = ApplyCreditService::WITHDRAWN_TAG.' '.$application->cover_letter;
         }
         $application->save();
 

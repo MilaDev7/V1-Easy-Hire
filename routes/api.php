@@ -129,8 +129,6 @@ Route::middleware(['auth:sanctum', 'check_status'])->group(function () {
     Route::middleware('role:professional')->group(function () {
         Route::get('/jobs', [ProfessionalController::class, 'jobs']);
 
-        Route::post('/pro/apply', [ProfessionalController::class, 'apply']);
-
         Route::get('/pro/applications', [ProfessionalController::class, 'myApplications']);
         Route::post('/pro/withdraw', [ProfessionalController::class, 'withdraw']);
         Route::post('/pro/withdraw-application', [ProfessionalController::class, 'withdraw']);

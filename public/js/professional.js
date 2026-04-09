@@ -1236,16 +1236,15 @@ if (coverLetterForm && submitBtn) {
         const button = window.pendingApplyButton;
         const coverLetter = coverLetterInput.value.trim();
         
-        if (!coverLetter || coverLetter.length < 10) {
-            alert("Please write a cover letter (at least 10 characters).");
+        if (!coverLetter || coverLetter.length < 20) {
+            alert("Please write a cover letter (at least 20 characters).");
             return;
         }
         
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Submitting...';
         
-        postJson("/api/pro/apply", {
-            job_id: Number(jobId),
+        postJson(`/api/jobs/${Number(jobId)}/apply`, {
             cover_letter: coverLetter,
         })
             .then(() => {

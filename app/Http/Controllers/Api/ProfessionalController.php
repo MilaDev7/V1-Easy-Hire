@@ -9,58 +9,12 @@ use App\Models\JobPost;
 use App\Models\Professional;
 use App\Models\Report;
 use App\Models\Review;
+use App\Services\ApplyCreditService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Schema;
 
 class ProfessionalController extends Controller
 {
-    /**
-     * Cached schema check for applications.source.
-     */
-    private ?bool $hasApplicationSourceColumn = null;
-
-    /**
-     * Prefix used to mark non-refundable professional withdrawals.
-     */
-    private const WITHDRAWN_TAG = '[WITHDRAWN_NO_REFUND]';
-
-    /**
-     * Maximum application credits.
-     */
-    private const MAX_APPLY_CREDITS = 5;
-
-    /**
-     * Consumed credits = manual-apply applications that are still pending +
-     * manual-apply withdrawals marked as non-refundable.
-     */
-    private function usedApplyCredits(int $professionalId): int
-    {
-        $pendingQuery = Application::where('professional_id', $professionalId)
-            ->where('status', 'pending');
-
-        $withdrawnQuery = Application::where('professional_id', $professionalId)
-            ->where('status', 'rejected')
-            ->where('cover_letter', 'like', self::WITHDRAWN_TAG.'%');
-
-        if ($this->hasApplicationSourceColumn()) {
-            $pendingQuery->where('source', 'apply');
-            $withdrawnQuery->where('source', 'apply');
-        }
-
-        $pendingApplyApplications = $pendingQuery->count();
-        $withdrawnNoRefund = $withdrawnQuery->count();
-
-        return $pendingApplyApplications + $withdrawnNoRefund;
-    }
-
-    private function hasApplicationSourceColumn(): bool
-    {
-        if ($this->hasApplicationSourceColumn === null) {
-            $this->hasApplicationSourceColumn = Schema::hasColumn('applications', 'source');
-        }
-
-        return $this->hasApplicationSourceColumn;
-    }
+    public function __construct(private ApplyCreditService $applyCreditService) {}
 
     public function me()
     {
@@ -299,7 +253,7 @@ class ProfessionalController extends Controller
             return response()->json(['message' => 'Already applied'], 400);
         }
 
-        if ($this->usedApplyCredits($userId) >= self::MAX_APPLY_CREDITS) {
+        if ($this->applyCreditService->usedApplyCredits($userId) >= ApplyCreditService::MAX_APPLY_CREDITS) {
             return response()->json(['message' => 'Apply limit reached'], 400);
         }
 
@@ -339,7 +293,7 @@ class ProfessionalController extends Controller
             ->get()
             ->map(function ($app) {
                 $isWithdrawn = $app->status === 'rejected'
-                    && str_starts_with((string) $app->cover_letter, self::WITHDRAWN_TAG);
+                    && str_starts_with((string) $app->cover_letter, ApplyCreditService::WITHDRAWN_TAG);
 
                 return [
                     'id' => $app->id,
@@ -367,8 +321,8 @@ class ProfessionalController extends Controller
         // No refund on professional withdrawal:
         // keep a tagged rejected row so the credit stays consumed.
         $app->status = 'rejected';
-        if (! str_starts_with((string) $app->cover_letter, self::WITHDRAWN_TAG)) {
-            $app->cover_letter = self::WITHDRAWN_TAG.' '.$app->cover_letter;
+        if (! str_starts_with((string) $app->cover_letter, ApplyCreditService::WITHDRAWN_TAG)) {
+            $app->cover_letter = ApplyCreditService::WITHDRAWN_TAG.' '.$app->cover_letter;
         }
         $app->save();
 
@@ -437,7 +391,10 @@ class ProfessionalController extends Controller
             ->where('status', 'completed')
             ->count();
 
-        $remainingApply = max(self::MAX_APPLY_CREDITS - $this->usedApplyCredits($userId), 0);
+        $remainingApply = max(
+            ApplyCreditService::MAX_APPLY_CREDITS - $this->applyCreditService->usedApplyCredits($userId),
+            0
+        );
 
         return response()->json([
             'active_contracts' => $active,
