@@ -7,10 +7,58 @@ use App\Models\Subscription;
 use App\Services\Chapa;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class ChapaController extends Controller
 {
+    /**
+     * Apply subscription credit exactly once per tx_ref.
+     */
+    private function applyPaymentIfNew(string $txRef, int $planId, int $userId): array
+    {
+        return DB::transaction(function () use ($txRef, $planId, $userId) {
+            $inserted = DB::table('processed_payment_transactions')->insertOrIgnore([
+                'tx_ref' => $txRef,
+                'user_id' => $userId,
+                'plan_id' => $planId,
+                'processed_at' => now(),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            // Already processed in a previous callback/return-page attempt.
+            if ($inserted === 0) {
+                return ['already_processed' => true];
+            }
+
+            $plan = Plan::findOrFail($planId);
+            $subscription = Subscription::where('user_id', $userId)->lockForUpdate()->first();
+
+            if ($subscription) {
+                $subscription->update([
+                    'remaining_posts' => $subscription->remaining_posts + $plan->job_posts_limit,
+                    'direct_requests_remaining' => ($subscription->direct_requests_remaining ?? 0) + $plan->direct_requests_limit,
+                    'expires_at' => now()->addDays($plan->duration_days),
+                    'status' => 'active',
+                    'tx_ref' => $txRef,
+                ]);
+            } else {
+                Subscription::create([
+                    'user_id' => $userId,
+                    'plan_id' => $planId,
+                    'remaining_posts' => $plan->job_posts_limit,
+                    'direct_requests_remaining' => $plan->direct_requests_limit,
+                    'expires_at' => now()->addDays($plan->duration_days),
+                    'status' => 'active',
+                    'tx_ref' => $txRef,
+                ]);
+            }
+
+            return ['already_processed' => false];
+        });
+    }
+
     public function initializePayment(Request $request)
     {
         $request->validate([
@@ -107,36 +155,16 @@ class ChapaController extends Controller
                     'tx_ref' => $txRef,
                 ]);
 
-                return response()->json(['message' => 'Missing plan or user info', 400]);
-            }
+                    return response()->json(['message' => 'Missing plan or user info'], 400);
+                }
 
-            $plan = Plan::findOrFail($planId);
-
-            $existingSubscription = Subscription::where('user_id', $userId)->first();
-
-            if ($existingSubscription) {
-                $existingSubscription->update([
-                    'remaining_posts' => $existingSubscription->remaining_posts + $plan->job_posts_limit,
-                    'direct_requests_remaining' => ($existingSubscription->direct_requests_remaining ?? 0) + $plan->direct_requests_limit,
-                    'expires_at' => now()->addDays($plan->duration_days),
-                    'status' => 'active',
-                    'tx_ref' => $txRef,
-                ]);
-            } else {
-                Subscription::create([
-                    'user_id' => $userId,
-                    'plan_id' => $planId,
-                    'remaining_posts' => $plan->job_posts_limit,
-                    'direct_requests_remaining' => $plan->direct_requests_limit,
-                    'expires_at' => now()->addDays($plan->duration_days),
-                    'status' => 'active',
-                    'tx_ref' => $txRef,
-                ]);
-            }
+            $result = $this->applyPaymentIfNew($txRef, (int) $planId, (int) $userId);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Payment verified and subscription created successfully',
+                'message' => $result['already_processed']
+                    ? 'Payment already processed'
+                    : 'Payment verified and subscription created successfully',
             ]);
         }
 
@@ -193,37 +221,11 @@ class ChapaController extends Controller
             ]);
 
             if ($planId && $userId) {
-                $plan = Plan::findOrFail($planId);
-                $existingSubscription = Subscription::where('user_id', $userId)->first();
-
-                Log::info('Subscription check', [
-                    'existing' => $existingSubscription ? 'yes' : 'no',
-                    'plan' => $plan->name,
+                $result = $this->applyPaymentIfNew($txRef, (int) $planId, (int) $userId);
+                Log::info('Subscription processing result', [
+                    'tx_ref' => $txRef,
+                    'already_processed' => $result['already_processed'],
                 ]);
-
-                if ($existingSubscription) {
-                    $existingSubscription->update([
-                        'remaining_posts' => $existingSubscription->remaining_posts + $plan->job_posts_limit,
-                        'direct_requests_remaining' => ($existingSubscription->direct_requests_remaining ?? 0) + $plan->direct_requests_limit,
-                        'expires_at' => now()->addDays($plan->duration_days),
-                        'status' => 'active',
-                        'tx_ref' => $txRef,
-                    ]);
-
-                    Log::info('Subscription updated with tx_ref', ['tx_ref' => $txRef, 'new_remaining' => $existingSubscription->remaining_posts]);
-                } else {
-                    $subscription = Subscription::create([
-                        'user_id' => $userId,
-                        'plan_id' => $planId,
-                        'remaining_posts' => $plan->job_posts_limit,
-                        'direct_requests_remaining' => $plan->direct_requests_limit,
-                        'expires_at' => now()->addDays($plan->duration_days),
-                        'status' => 'active',
-                        'tx_ref' => $txRef,
-                    ]);
-
-                    Log::info('Subscription created with tx_ref', ['tx_ref' => $txRef, 'id' => $subscription->id]);
-                }
 
                 return view('payment.success');
             }
