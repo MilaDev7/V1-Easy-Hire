@@ -1249,7 +1249,7 @@ function buyPlan(planId) {
 }
 
 function loadSubscription() {
-    fetchJson("/api/client/my-subscription")
+    return fetchJson("/api/client/my-subscription")
         .then((payload) => {
             if (payload.has_subscription === false) {
                 renderSubscriptionError();
@@ -2064,7 +2064,7 @@ function setClientDashboardLoading(isLoading) {
 }
 
 function loadStats() {
-    Promise.all([
+    return Promise.all([
         fetchJson("/api/client/contracts/active"),
         fetchJson("/api/client/job-posts/count"),
         fetchJson("/api/client/job-posts/remaining"),
@@ -2093,7 +2093,7 @@ function loadJobPosts() {
         contentArea.innerHTML = '<div class="text-muted">Loading job posts...</div>';
     }
 
-    fetchJson("/api/client/job-posts")
+    return fetchJson("/api/client/job-posts")
         .then((payload) => {
             renderJobPosts(toArray(payload));
         })
@@ -2194,17 +2194,18 @@ window.viewProReports = viewProReports;
     // Client dashboard entrypoint (called after DOM is ready).
     function init() {
         setClientDashboardLoading(true);
-        // Fail-safe: never keep a blocking loader forever.
-        window.setTimeout(() => setClientDashboardLoading(false), 3000);
         bindSidebarNavigation();
         bindJobPostsReload();
         bindDashboardTools();
         bindClientProfileForm();
         handleSubscriptionAction();
-        loadStats();
-        loadJobPosts();
-        loadSubscription();
-        loadClientIdentity().finally(() => {
+
+        Promise.allSettled([
+            loadStats(),
+            loadJobPosts(),
+            loadSubscription(),
+            loadClientIdentity(),
+        ]).finally(() => {
             setClientDashboardLoading(false);
         });
     }

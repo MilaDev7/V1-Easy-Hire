@@ -1,4 +1,4 @@
-<section class="admin-content-section">
+<section class="admin-content-section" id="pending-professionals-section" style="display: none;">
     <div class="card border-0 shadow-sm admin-content-card" style="border-top: 4px solid #6f42c1 !important;">
         <div class="card-body p-4 p-lg-5">
             <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4">

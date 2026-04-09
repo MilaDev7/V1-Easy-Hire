@@ -61,7 +61,11 @@ class ApplicationController extends Controller
 
         // 1. Fetch the Job Post first (Fixes the "Undefined status" error)
         $job = JobPost::findOrFail($jobId);
-        if ($job->skill !== $professional->skill) {
+        $professionalSkill = strtolower(trim((string) ($professional?->skill ?? '')));
+        $jobSkill = strtolower(trim((string) $job->skill));
+        $skillMatch = $professionalSkill !== '' && str_contains($professionalSkill, $jobSkill);
+
+        if (! $skillMatch) {
             return response()->json([
                 'message' => 'You cannot apply to jobs outside your skill',
             ], 403);

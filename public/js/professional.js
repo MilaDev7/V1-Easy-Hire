@@ -260,7 +260,7 @@ function bindProfessionalApplyButtons() {
             }
 
             // Show cover letter modal instead of direct apply
-            window.pendingApplyJobId = jobId;
+            window.pendingApplyJobId = Number(jobId);
             window.pendingApplyButton = button;
             const modal = document.getElementById("apply-cover-letter-modal");
             const textarea = document.getElementById("cover-letter-input");
@@ -351,7 +351,7 @@ function setProfessionalDashboardLoading(isLoading) {
 }
 
 function loadProfessionalStats() {
-    fetchJson("/api/pro/stats")
+    return fetchJson("/api/pro/stats")
         .then((payload) => {
             setText("pro-active-contracts-count", payload.active_contracts ?? 0);
             setText("pro-completed-jobs-count", payload.completed_jobs ?? 0);
@@ -384,7 +384,7 @@ function loadProfessionalJobs() {
         results.innerHTML = '<div class="text-muted">Loading jobs...</div>';
     }
 
-    fetchJson(`/api/jobs${params.toString() ? `?${params.toString()}` : ""}`)
+    return fetchJson(`/api/jobs${params.toString() ? `?${params.toString()}` : ""}`)
         .then((payload) => {
             renderProfessionalJobs(toArray(payload));
         })
@@ -1198,18 +1198,19 @@ function loadProfessionalJobsView() {
     setActiveProfessionalNav("browse-jobs");
     clearProfessionalFeedback();
     renderProfessionalJobsSection();
-    loadProfessionalJobs();
+    return loadProfessionalJobs();
 }
 
 function initializeProfessionalDashboard() {
     setProfessionalDashboardLoading(true);
-    // Fail-safe: never keep a blocking loader forever.
-    window.setTimeout(() => setProfessionalDashboardLoading(false), 3000);
     bindProfessionalSidebarNavigation();
     bindProfessionalSettings();
-    loadProfessionalStats();
-    loadProfessionalJobsView();
-    loadProfessionalIdentity().finally(() => {
+
+    Promise.allSettled([
+        loadProfessionalStats(),
+        loadProfessionalJobsView(),
+        loadProfessionalIdentity(),
+    ]).finally(() => {
         setProfessionalDashboardLoading(false);
     });
 }
@@ -1232,9 +1233,14 @@ if (coverLetterForm && submitBtn) {
     coverLetterForm.addEventListener("submit", function(e) {
         e.preventDefault();
         
-        const jobId = window.pendingApplyJobId;
+        const jobId = Number(window.pendingApplyJobId);
         const button = window.pendingApplyButton;
         const coverLetter = coverLetterInput.value.trim();
+
+        if (!Number.isInteger(jobId) || jobId <= 0) {
+            showProfessionalApplyInvalidModal("Invalid job selection. Please reopen the job and try again.");
+            return;
+        }
         
         if (!coverLetter || coverLetter.length < 20) {
             alert("Please write a cover letter (at least 20 characters).");
@@ -1244,11 +1250,11 @@ if (coverLetterForm && submitBtn) {
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Submitting...';
         
-        postJson(`/api/jobs/${Number(jobId)}/apply`, {
+        postJson(`/api/jobs/${jobId}/apply`, {
             cover_letter: coverLetter,
         })
             .then(() => {
-                bootstrap.Modal.getInstance(document.getElementById("apply-cover-letter-modal")).hide();
+                bootstrap.Modal.getOrCreateInstance(document.getElementById("apply-cover-letter-modal")).hide();
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane me-1"></i>Submit Application';
                 
@@ -1261,6 +1267,8 @@ if (coverLetterForm && submitBtn) {
                 
                 showProfessionalFeedback("success", "Application submitted successfully.");
                 loadProfessionalStats();
+                window.pendingApplyJobId = null;
+                window.pendingApplyButton = null;
             })
             .catch((error) => {
                 submitBtn.disabled = false;

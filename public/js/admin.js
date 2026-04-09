@@ -7,7 +7,7 @@ document.addEventListener("DOMContentLoaded", function () {
     // Admin UI rendering and actions.
 function loadAdminStats() {
     console.log("Loading admin stats...");
-    fetchJson("/api/admin/stats")
+    return fetchJson("/api/admin/stats")
         .then((payload) => {
             console.log("Stats payload:", payload);
             setText("admin-pending-approvals-count", payload.pending_professionals ?? 0);
@@ -25,7 +25,7 @@ function loadAdminStats() {
 }
 
 function loadPendingProfessionals() {
-    fetchJson("/api/admin/professionals/pending")
+    return fetchJson("/api/admin/professionals/pending")
         .then((payload) => {
             renderPendingProfessionals(toArray(payload));
         })
@@ -297,7 +297,7 @@ function loadAdminSection(view) {
     if (item) item.classList.add('active');
     if (child) child.classList.add('active');
 
-    const pendingSection = document.querySelector('.admin-content-section:not(#users-section):not(#jobs-section):not(#contracts-section):not(#reports-section):not(#plans-section)');
+    const pendingSection = document.getElementById('pending-professionals-section');
     const usersSection = document.getElementById('users-section');
     const jobsSection = document.getElementById('jobs-section');
     const contractsSection = document.getElementById('contracts-section');
@@ -343,9 +343,10 @@ function loadAdminSection(view) {
         } else if (['plans'].includes(view) && plansSection) {
             plansSection.style.display = 'block';
         }
-        sections[view].fetch();
+        return sections[view].fetch();
     } else {
         hideAllAdminSections();
+        return Promise.resolve();
     }
 }
 
@@ -424,6 +425,32 @@ function loadAdminDarkModePreference() {
 
 function hideAllAdminSections() {
     document.querySelectorAll('.admin-content-section').forEach(el => el.style.display = 'none');
+}
+
+function setDefaultAdminSection() {
+    const defaultMenu = document.getElementById('professionals-menu');
+    const defaultToggle = document.querySelector('.admin-sidebar-item[data-toggle="professionals-menu"]');
+
+    if (defaultMenu) {
+        defaultMenu.classList.add('show');
+    }
+
+    if (defaultToggle) {
+        const icon = defaultToggle.querySelector('.admin-collapse-icon');
+        if (icon) {
+            icon.classList.add('rotated');
+        }
+    }
+
+    return loadAdminSection('pending-professionals');
+}
+
+function setAdminDashboardLoading(isLoading) {
+    const loader = document.getElementById("admin-dashboard-loader");
+
+    if (loader) {
+        loader.classList.toggle("d-none", !isLoading);
+    }
 }
 
 function loadUsers() {
@@ -1382,10 +1409,15 @@ function confirmDeletePlan() {
 
     // Admin dashboard entrypoint (called after DOM is ready).
     function init() {
+        setAdminDashboardLoading(true);
         initializeAdminSidebar();
         loadAdminDarkModePreference();
-        loadAdminStats();
-        loadPendingProfessionals();
+        Promise.allSettled([
+            loadAdminStats(),
+            setDefaultAdminSection(),
+        ]).finally(() => {
+            setAdminDashboardLoading(false);
+        });
     }
 
     window.EasyHireAdmin = { init };

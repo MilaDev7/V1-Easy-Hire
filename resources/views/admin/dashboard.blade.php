@@ -195,9 +195,28 @@
         .table tbody tr {
             transition: background-color 0.15s ease;
         }
+
+        .dashboard-loader {
+            position: fixed;
+            inset: 0;
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 32px 16px;
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(2px);
+        }
     </style>
 </head>
 <body class="bg-light">
+    <div id="admin-dashboard-loader" class="dashboard-loader">
+        <div class="text-center">
+            <div class="spinner-border text-primary mb-3" role="status"></div>
+            <p class="text-muted mb-0">Loading dashboard...</p>
+        </div>
+    </div>
+
     <aside class="admin-sidebar shadow-sm p-4 d-flex flex-column">
         <div class="text-center mb-4">
             <a href="/" class="navbar-brand d-flex align-items-center justify-content-center gap-2 text-decoration-none mb-3 mx-auto" style="width: fit-content;">
