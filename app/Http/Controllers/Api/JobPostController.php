@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\JobPost;
 use App\Models\Subscription;
 use Illuminate\Http\Request;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 
 class JobPostController extends Controller
@@ -36,6 +37,16 @@ class JobPostController extends Controller
         if (! $subscription) {
             return response()->json([
                 'message' => 'You need an active subscription',
+            ], 403);
+        }
+
+        // Enforce expiry even when stale records are still marked as active.
+        if ($subscription->expires_at && Carbon::parse($subscription->expires_at)->isPast()) {
+            $subscription->status = 'expired';
+            $subscription->save();
+
+            return response()->json([
+                'message' => 'Your subscription has expired. Please renew your plan.',
             ], 403);
         }
 

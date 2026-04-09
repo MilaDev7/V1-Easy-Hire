@@ -8,6 +8,7 @@ use App\Models\DirectRequest;
 use App\Models\Subscription;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Carbon\Carbon;
 
 class DirectRequestController extends Controller
 {
@@ -29,6 +30,16 @@ class DirectRequestController extends Controller
 
         if (! $subscription) {
             return response()->json(['message' => 'No active subscription'], 403);
+        }
+
+        // Enforce expiry even when stale records are still marked as active.
+        if ($subscription->expires_at && Carbon::parse($subscription->expires_at)->isPast()) {
+            $subscription->status = 'expired';
+            $subscription->save();
+
+            return response()->json([
+                'message' => 'Your subscription has expired. Please renew your plan.',
+            ], 403);
         }
 
         $remaining = $subscription->direct_requests_remaining ?? 0;
