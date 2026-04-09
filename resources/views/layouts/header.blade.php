@@ -50,7 +50,7 @@
           // Logged in - show profile photo + name + dropdown
           const dashboardUrl = user.role === 'admin' 
               ? '/admin/dashboard' 
-              : (user.role === 'professional' ? '/professional/dashboard' : '/client/dashboard');
+              : (user.role === 'professional' ? '/pro/dashboard' : '/client/dashboard');
 
           authSection.innerHTML = `
               <div class="d-flex ms-auto align-items-center gap-2">

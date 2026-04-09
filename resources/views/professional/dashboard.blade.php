@@ -265,7 +265,7 @@
                             <img src="{{ asset('images/user1.jpg') }}" id="professional-topbar-photo" alt="Profile" class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover; border: 2px solid rgba(0,0,0,0.1); display: none;">
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end shadow">
-                            <li><a class="dropdown-item" href="/professional/dashboard"><i class="fa-solid fa-user me-2"></i>Account</a></li>
+                            <li><a class="dropdown-item" href="/pro/dashboard"><i class="fa-solid fa-user me-2"></i>Account</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item text-danger" href="#" onclick="logout(); return false;"><i class="fa-solid fa-right-from-bracket me-2"></i>Logout</a></li>
                         </ul>

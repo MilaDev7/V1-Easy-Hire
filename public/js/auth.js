@@ -65,7 +65,7 @@ function getDashboardUrl() {
     
     const role = currentUser.role;
     if (role === 'admin') return "/admin/dashboard";
-    if (role === 'professional') return "/professional/dashboard";
+    if (role === 'professional') return "/pro/dashboard";
     return "/client/dashboard";
 }
 
