@@ -24,24 +24,30 @@ class ApplyCreditService
 
     /**
      * Count consumed apply credits.
-     * Consumed = manual-apply applications that are still pending +
-     * manual-apply withdrawals marked as non-refundable.
+     * Consumed = manual-apply applications that are:
+     * - pending, or
+     * - accepted, or
+     * - withdrawn by professional (tagged as non-refundable).
+     *
+     * Rejected applications are refundable unless they were withdrawn by
+     * professional (tagged with WITHDRAWN_TAG).
      */
     public function usedApplyCredits(int $professionalId): int
     {
-        $pendingQuery = Application::where('professional_id', $professionalId)
-            ->where('status', 'pending');
-
-        $withdrawnQuery = Application::where('professional_id', $professionalId)
-            ->where('status', 'rejected')
-            ->where('cover_letter', 'like', self::WITHDRAWN_TAG.'%');
+        $query = Application::where('professional_id', $professionalId)
+            ->where(function ($q) {
+                $q->whereIn('status', ['pending', 'accepted'])
+                    ->orWhere(function ($withdrawn) {
+                        $withdrawn->where('status', 'rejected')
+                            ->where('cover_letter', 'like', self::WITHDRAWN_TAG.'%');
+                    });
+            });
 
         if ($this->hasApplicationSourceColumn()) {
-            $pendingQuery->where('source', 'apply');
-            $withdrawnQuery->where('source', 'apply');
+            $query->where('source', 'apply');
         }
 
-        return $pendingQuery->count() + $withdrawnQuery->count();
+        return $query->count();
     }
 
     private function hasApplicationSourceColumn(): bool

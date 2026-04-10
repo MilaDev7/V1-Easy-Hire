@@ -51,6 +51,12 @@ class ApplicationController extends Controller
 
         $alreadyApplied = \App\Models\Application::where('job_id', $jobId)
             ->where('professional_id', $user->id)
+            // Allow re-apply only when previous row was professional-withdrawn.
+            ->where(function ($query) {
+                $query->where('status', '!=', 'rejected')
+                    ->orWhereNull('cover_letter')
+                    ->orWhere('cover_letter', 'not like', ApplyCreditService::WITHDRAWN_TAG.'%');
+            })
             ->exists();
 
         if ($alreadyApplied) {
@@ -281,7 +287,7 @@ class ApplicationController extends Controller
         $application->save();
 
         return response()->json([
-            'message' => 'Application withdrawn successfully',
+            'message' => 'Application withdrawn successfully. Apply credit remains consumed.',
         ]);
 
     }

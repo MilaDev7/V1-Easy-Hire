@@ -203,7 +203,13 @@ class ProfessionalController extends Controller
             $query->where('location', 'LIKE', '%'.$request->location.'%');
         }
 
+        // Exclude professional-withdrawn rows so withdrawn jobs can be applied again.
         $appliedJobIds = Application::where('professional_id', $userId)
+            ->where(function ($query) {
+                $query->where('status', '!=', 'rejected')
+                    ->orWhereNull('cover_letter')
+                    ->orWhere('cover_letter', 'not like', ApplyCreditService::WITHDRAWN_TAG.'%');
+            })
             ->pluck('job_id')
             ->all();
 
@@ -245,8 +251,14 @@ class ProfessionalController extends Controller
 
         $job = JobPost::findOrFail($request->job_id);
 
+        // Allow re-apply only when previous row was professional-withdrawn.
         $exists = Application::where('job_id', $job->id)
             ->where('professional_id', $userId)
+            ->where(function ($query) {
+                $query->where('status', '!=', 'rejected')
+                    ->orWhereNull('cover_letter')
+                    ->orWhere('cover_letter', 'not like', ApplyCreditService::WITHDRAWN_TAG.'%');
+            })
             ->exists();
 
         if ($exists) {
@@ -326,7 +338,7 @@ class ProfessionalController extends Controller
         }
         $app->save();
 
-        return response()->json(['message' => 'Withdrawn']);
+        return response()->json(['message' => 'Withdrawn. Apply credit remains consumed.']);
     }
 
     public function myContracts()

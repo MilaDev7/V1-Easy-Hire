@@ -191,11 +191,12 @@ class ClientController extends Controller
             ], 400);
         }
 
-        $applicationsQuery = Application::where('job_id', $job->id);
-        $applicationCount = (clone $applicationsQuery)->count();
+        // Refund only when the job has never had any application records at all
+        // (including withdrawn ones).
+        $hasAnyApplications = Application::where('job_id', $job->id)->exists();
 
-        // Refund professionals fairly on client-side job cancellation:
-        // convert pending applications to rejected (except withdrawn-tagged rows).
+        // Convert still-pending applications to rejected while preserving historical rows.
+        // Withdrawn-tagged rows remain untouched.
         Application::where('job_id', $job->id)
             ->where('status', 'pending')
             ->where(function ($query) {
@@ -208,8 +209,8 @@ class ClientController extends Controller
         $job->status = 'cancelled';
         $job->save();
 
-        // Refund if no applications
-        if ($applicationCount === 0) {
+        // Refund only when no applications exist (never applied).
+        if (! $hasAnyApplications) {
             $subscription = Subscription::where('user_id', auth()->id())
                 ->where('status', 'active')
                 ->first();
@@ -224,7 +225,9 @@ class ClientController extends Controller
         }
 
         return response()->json([
-            'message' => 'Job cancelled successfully.',
+            'message' => $hasAnyApplications
+                ? 'Job cancelled successfully. No refund because applications exist.'
+                : 'Job cancelled successfully.',
         ]);
     }
 }

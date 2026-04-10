@@ -2,121 +2,111 @@
 
 @section('content')
 <div class="container py-5">
-    <div class="card border-0 shadow-sm rounded-4" style="border-top: 5px solid #6f42c1 !important;">
-        <div class="row g-0">
-            <div class="col-md-4 text-center p-4" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
-                <img
-                    src="{{ $professional->profile_photo ? asset('storage/' . $professional->profile_photo) : asset('images/user1.jpg') }}"
-                    class="rounded-circle border border-3 mb-3"
-                    alt="{{ $professional->user->name ?? 'Professional' }}"
-                    style="width: 150px; height: 150px; object-fit: cover; border-color: #6f42c1 !important;"
-                >
-                <h3 class="fw-bold text-dark">{{ $professional->user->name ?? 'Professional' }}</h3>
-                <span class="badge bg-primary mb-2">{{ $professional->skill ?: 'Professional' }}</span>
-                <p class="text-muted mb-1">
-                    <i class="fa-solid fa-location-dot text-danger me-1"></i>
-                    {{ $professional->location ?: 'N/A' }}
-                </p>
-                <div class="mb-2">
-                    @for($i = 1; $i <= 5; $i++)
-                        <i class="fa-star {{ $i <= round($professional->average_rating ?? 0) ? 'fas text-warning' : 'far text-secondary' }}"></i>
-                    @endfor
-                    @if(($professional->average_rating ?? 0) > 0)
-                        <span class="text-muted small">({{ number_format($professional->average_rating ?? 0, 1) }})</span>
-                    @else
-                        <span class="text-muted small">(No ratings)</span>
-                    @endif
-                </div>
-                
-                @if($reportsCount > 0)
-                    <div class="alert alert-danger py-1 px-2 mb-2 small">
-                        <i class="fa-solid fa-flag me-1"></i><strong>{{ $reportsCount }}</strong> report(s)
-                    </div>
-                @else
-                    <div class="alert alert-success py-1 px-2 mb-2 small">
-                        <i class="fa-solid fa-check-circle me-1"></i>No reports
-                    </div>
-                @endif
-                
-                <div class="d-flex justify-content-center gap-3 mt-2">
-                    <div class="text-center">
-                        <strong class="text-success fs-5">{{ $completedJobs->count() }}</strong>
-                        <small class="d-block text-muted">Jobs</small>
-                    </div>
-                    <div class="text-center">
-                        <strong class="text-warning fs-5">{{ $reviews->count() }}</strong>
-                        <small class="d-block text-muted">Reviews</small>
-                    </div>
-                </div>
+    @include('professional.partials.profile-content')
+
+    <div class="mt-3 d-flex flex-wrap gap-2 justify-content-center">
+        <a href="/" class="btn btn-outline-primary">
+            <i class="fa-solid fa-arrow-left me-1"></i> Back to Home
+        </a>
+        <a href="/search" class="btn btn-outline-secondary">
+            <i class="fa-solid fa-magnifying-glass me-1"></i> Back to Search
+        </a>
+    </div>
+</div>
+
+<div class="modal fade" id="direct-request-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-success text-white border-0">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-paper-plane me-2"></i>Send Request</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <div class="col-md-8 p-4">
-                <h4 class="fw-bold text-primary mb-3">
-                    <i class="fa-solid fa-user me-2"></i>About
-                </h4>
-                <p class="text-dark mb-4 bg-light p-3 rounded">{{ $professional->bio ?: 'No bio available.' }}</p>
-                
-                <h4 class="fw-bold text-success mb-3">
-                    <i class="fa-solid fa-briefcase me-2"></i>Experience
-                </h4>
-                <div class="alert alert-success mb-4">
-                    <strong>{{ $professional->experience ?? 0 }} years</strong> of professional experience
+            <div class="modal-body p-4">
+                <input type="hidden" id="direct-request-pro-id">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Title</label>
+                    <input type="text" class="form-control" id="direct-request-title" placeholder="e.g., Need web developer">
                 </div>
-                
-                <h4 class="fw-bold text-warning mb-3">
-                    <i class="fa-solid fa-check-circle me-2"></i>Completed Jobs
-                </h4>
-                @if($completedJobs->isEmpty())
-                    <div class="alert alert-secondary">No completed jobs yet.</div>
-                @else
-                    <div class="list-group">
-                        @foreach($completedJobs as $application)
-                            <div class="list-group-item border-success mb-2 rounded">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <strong class="text-success">{{ $application->job->title ?? 'Job' }}</strong>
-                                        <span class="badge bg-success ms-2">Completed</span>
-                                    </div>
-                                    <small class="text-muted">{{ $application->job->created_at ?? '' }}</small>
-                                </div>
-                            </div>
-                        @endforeach
-                    </div>
-                @endif
-                
-                <h4 class="fw-bold text-info mb-3 mt-4">
-                    <i class="fa-solid fa-star me-2"></i>Reviews ({{ $reviews->count() }})
-                </h4>
-                @if($reviews->isEmpty())
-                    <div class="alert alert-secondary">No reviews yet.</div>
-                @else
-                    <div class="list-group">
-                        @foreach($reviews as $review)
-                            <div class="list-group-item mb-2 rounded">
-                                <div class="d-flex justify-content-between align-items-start mb-2">
-                                    <div>
-                                        <i class="fa-solid fa-user me-1 text-primary"></i>
-                                        <strong>{{ $review->reviewer->name ?? 'Anonymous' }}</strong>
-                                    </div>
-                                    <div>
-                                        @for($i = 1; $i <= 5; $i++)
-                                            <i class="fa-star {{ $i <= $review->rating ? 'fas text-warning' : 'far text-secondary' }}" style="font-size: 12px;"></i>
-                                        @endfor
-                                    </div>
-                                </div>
-                                <p class="mb-1 text-muted small">{{ $review->comment ?: 'No comment' }}</p>
-                                <small class="text-muted">{{ $review->created_at->format('M d, Y') }}</small>
-                            </div>
-                        @endforeach
-                    </div>
-                @endif
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Description</label>
+                    <textarea class="form-control" id="direct-request-desc" rows="4" placeholder="Describe your project..."></textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Budget (Optional)</label>
+                    <input type="number" class="form-control" id="direct-request-budget" placeholder="e.g., 500">
+                </div>
+                <div id="direct-request-feedback"></div>
             </div>
-        </div>
-        
-        <div class="p-4 text-center bg-light rounded-bottom">
-            <a href="/" class="btn btn-outline-primary">
-                <i class="fa-solid fa-arrow-left me-1"></i> Back to Home
-            </a>
+            <div class="modal-footer border-top">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" id="send-direct-request-btn" onclick="sendDirectRequest()">
+                    <i class="fa-solid fa-paper-plane me-1"></i> Send Request
+                </button>
+            </div>
         </div>
     </div>
 </div>
+@endsection
+
+@section('scripts')
+<script>
+    (function () {
+        const professionalId = {{ (int) $professional->id }};
+        const professionalName = @json($professional->user->name ?? 'Professional');
+        const role = localStorage.getItem("role");
+
+        const clientActions = document.getElementById("profile-actions-client");
+        const guestActions = document.getElementById("profile-actions-guest");
+        const adminActions = document.getElementById("profile-actions-admin");
+        const hireButton = document.getElementById("action-hire-btn");
+        const reviewButton = document.getElementById("action-review-btn");
+        const reportButton = document.getElementById("action-report-btn");
+        const reviewsSection = document.getElementById("profile-reviews-section");
+        const reportsSection = document.getElementById("profile-reports-section");
+
+        if (role === "client") {
+            if (clientActions) clientActions.classList.remove("d-none");
+            if (typeof window.currentProIdForRequest !== "undefined") {
+                window.currentProIdForRequest = professionalId;
+            } else {
+                window.currentProIdForRequest = professionalId;
+            }
+        } else if (role === "admin") {
+            if (adminActions) adminActions.classList.remove("d-none");
+        } else {
+            if (guestActions) guestActions.classList.remove("d-none");
+        }
+
+        if (hireButton) {
+            hireButton.addEventListener("click", function () {
+                window.currentProIdForRequest = professionalId;
+                if (typeof window.showDirectRequestModal === "function") {
+                    window.showDirectRequestModal();
+                    setTimeout(function () {
+                        const titleInput = document.getElementById("direct-request-title");
+                        if (titleInput && !titleInput.value.trim()) {
+                            titleInput.value = "Hiring request for " + professionalName;
+                        }
+                    }, 0);
+                }
+            });
+        }
+
+        if (reviewButton) {
+            reviewButton.addEventListener("click", function () {
+                if (reviewsSection) {
+                    reviewsSection.scrollIntoView({ behavior: "smooth", block: "start" });
+                }
+            });
+        }
+
+        if (reportButton) {
+            reportButton.addEventListener("click", function () {
+                if (reportsSection) {
+                    reportsSection.scrollIntoView({ behavior: "smooth", block: "start" });
+                }
+            });
+        }
+    })();
+</script>
 @endsection

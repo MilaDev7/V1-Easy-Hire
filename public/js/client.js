@@ -362,7 +362,7 @@ function renderProfessionalsSection() {
                     reportsSection = '<div class="mt-2 pt-2 border-top small"><span class="text-success"><i class="fa-solid fa-check-circle me-1"></i>No reports</span></div>';
                 }
                 
-                return '<div class="col-md-6 col-xl-4" onclick="window.showProProfile(' + proId + ')" style="cursor:pointer;">' +
+                return '<div class="col-md-6 col-xl-4" onclick="window.openProfessionalProfilePage(' + proId + ')" style="cursor:pointer;">' +
                     '<div class="card border-0 shadow-sm h-100" style="border-left: 4px solid #0d6efd !important; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform=\'translateY(-5px)\';this.style.boxShadow=\'0 8px 25px rgba(0,0,0,0.15)\';" onmouseout="this.style.transform=\'\';this.style.boxShadow=\'\';">' +
                     '<div class="card-body p-4">' +
                     '<div class="d-flex align-items-center mb-3">' +
@@ -417,10 +417,11 @@ function renderProfessionals(professionals) {
     const cards = professionals
         .map((professional) => {
             const rating = professional.rating ?? professional.average_rating ?? 0;
+            const profileId = professional.id ?? professional.professional_id ?? professional.profile_id ?? "";
 
             return `
                 <div class="col-md-6 col-xl-4">
-                    <div class="card border-0 shadow-sm h-100" style="border-left: 4px solid #0d6efd !important;">
+                    <div class="card border-0 shadow-sm h-100 ${profileId ? "cursor-pointer" : ""}" style="border-left: 4px solid #0d6efd !important;" ${profileId ? `onclick="window.openProfessionalProfilePage('${profileId}')"` : ""}>
                         <div class="card-body p-4">
                             <div class="d-flex align-items-center mb-3">
                                 <img
@@ -469,112 +470,200 @@ function getContractClientName(contract) {
     );
 }
 
-function renderProfessionalProfile(profilePayload) {
+function openProfessionalProfilePage(profileId) {
+    if (!profileId) {
+        return;
+    }
+
+    const contentArea = document.getElementById("content-area");
+    const isClientDashboard = window.location.pathname.includes("/client/dashboard") && !!contentArea;
+
+    if (isClientDashboard) {
+        loadProfessionalProfileInDashboard(profileId);
+        return;
+    }
+
+    window.location.href = "/professional/" + encodeURIComponent(profileId);
+}
+
+function loadProfessionalProfileInDashboard(profileId) {
+    const contentArea = document.getElementById("content-area");
+
+    if (!contentArea) {
+        window.location.href = "/professional/" + encodeURIComponent(profileId);
+        return;
+    }
+
+    setContentHeader("Professional Profile", "Loading professional details...", false);
+    contentArea.innerHTML = '<div class="text-muted">Loading professional profile...</div>';
+
+    fetchJson(`/api/professionals/${profileId}`)
+        .then((payload) => {
+            renderProfessionalProfileInDashboard(payload);
+        })
+        .catch(() => {
+            contentArea.innerHTML =
+                '<div class="alert alert-danger mb-0">Unable to load professional profile.</div>';
+        });
+}
+
+function renderProfessionalProfileInDashboard(payload) {
     const contentArea = document.getElementById("content-area");
 
     if (!contentArea) {
         return;
     }
 
-    const professional = profilePayload?.professional || {};
-    const completedJobs = Array.isArray(profilePayload?.completed_jobs)
-        ? profilePayload.completed_jobs
-        : [];
+    const pro = payload?.professional || {};
+    const reviews = Array.isArray(payload?.reviews) ? payload.reviews : [];
+    const reports = Array.isArray(payload?.reports) ? payload.reports : [];
+    const completedJobs = Array.isArray(payload?.completed_jobs) ? payload.completed_jobs : [];
+    const averageRating = Number(payload?.average_rating || 0);
+    const proId = pro.id;
+    const name = pro.user?.name || pro.name || "N/A";
+    const photo = pro.profile_photo ? "/storage/" + pro.profile_photo : "/images/user1.jpg";
 
-    setContentHeader(
-        getProfessionalName(professional),
-        "Professional profile",
-        false
-    );
+    const stars = renderStars(averageRating);
+    const reviewsHtml = reviews.length
+        ? reviews.map((review) => `
+            <div class="list-group-item mb-2 rounded">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                        <i class="fa-solid fa-user me-1 text-primary"></i>
+                        <strong>${review.reviewer_name || "Anonymous"}</strong>
+                    </div>
+                    <div>${renderStars(Number(review.rating || 0))}</div>
+                </div>
+                <p class="mb-1 text-muted small">${review.comment || "No comment"}</p>
+                <small class="text-muted">${formatDate(review.created_at)}</small>
+            </div>
+        `).join("")
+        : '<div class="alert alert-secondary mb-0">No reviews yet.</div>';
 
-    const completedJobsMarkup = completedJobs.length
-        ? completedJobs
-              .map((job) => {
-                  const title =
-                      job.job?.title || job.job_title || "Completed Job";
-                  const status = job.job?.status || job.status || "completed";
+    const reportsHtml = reports.length
+        ? reports.map((report) => `
+            <div class="list-group-item mb-2 rounded border-danger-subtle">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                        <i class="fa-solid fa-user me-1 text-danger"></i>
+                        <strong>${report.reporter_name || "Anonymous"}</strong>
+                    </div>
+                    <small class="text-muted">${formatDate(report.created_at)}</small>
+                </div>
+                <p class="mb-0 text-muted small">${report.reason || "No reason provided"}</p>
+            </div>
+        `).join("")
+        : '<div class="alert alert-secondary mb-0">No reports found.</div>';
 
-                  return `
-                      <li class="list-group-item d-flex justify-content-between align-items-center">
-                          <span>${title}</span>
-                          <span class="badge text-bg-light border">${status}</span>
-                      </li>
-                  `;
-              })
-              .join("")
-        : '<li class="list-group-item">No completed jobs found.</li>';
+    const completedJobsHtml = completedJobs.length
+        ? completedJobs.map((application) => `
+            <div class="list-group-item border-success mb-2 rounded">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong class="text-success">${application.job?.title || "Job"}</strong>
+                        <span class="badge bg-success ms-2">Completed</span>
+                    </div>
+                    <small class="text-muted">${formatDate(application.job?.created_at)}</small>
+                </div>
+            </div>
+        `).join("")
+        : '<div class="alert alert-secondary mb-0">No completed jobs yet.</div>';
+
+    setContentHeader(name, "Professional profile", false);
 
     contentArea.innerHTML = `
-        <section class="professional-profile-section">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body p-4">
-                    <div class="d-flex flex-column flex-md-row gap-4 align-items-md-start">
-                        <img
-                            src="${getProfessionalPhoto(professional)}"
-                            alt="${getProfessionalName(professional)}"
-                            class="rounded-circle object-fit-cover border"
-                            style="width: 96px; height: 96px;"
-                        >
-                        <div class="flex-grow-1">
-                            <div class="d-flex flex-column flex-md-row justify-content-between gap-3 mb-3">
-                                <div>
-                                    <h3 class="h4 mb-1">${getProfessionalName(professional)}</h3>
-                                    <p class="text-muted mb-0">${getProfessionalSkills(professional)}</p>
-                                </div>
-                                <button type="button" id="back-to-applications-button" class="btn btn-outline-dark btn-sm rounded-pill">
-                                    Back to Applications
-                                </button>
-                            </div>
-                            <div class="row g-3 mb-3">
-                                <div class="col-md-4">
-                                    <div class="border rounded-3 p-3 h-100">
-                                        <p class="text-muted small mb-1">Location</p>
-                                        <p class="mb-0 fw-semibold">${getProfessionalLocation(professional)}</p>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="border rounded-3 p-3 h-100">
-                                        <p class="text-muted small mb-1">Experience</p>
-                                        <p class="mb-0 fw-semibold">${getProfessionalExperience(professional)} years</p>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="border rounded-3 p-3 h-100">
-                                        <p class="text-muted small mb-1">Rating</p>
-                                        <p class="mb-0 text-warning">${renderStars(professional.average_rating ?? professional.rating ?? 0)}</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="mb-3">
-                                <p class="text-muted small mb-1">Bio</p>
-                                <p class="mb-0">${professional.bio || "No bio provided."}</p>
-                            </div>
-                            <div>
-                                <p class="text-muted small mb-2">Completed Jobs</p>
-                                <ul class="list-group list-group-flush border rounded-3">${completedJobsMarkup}</ul>
-                            </div>
+        <div class="card border-0 shadow-sm rounded-4" style="border-top: 5px solid #198754 !important;">
+            <div class="row g-0">
+                <div class="col-md-4 text-center p-4 bg-light">
+                    <img src="${photo}" class="rounded-circle border border-3 mb-3" alt="${name}" style="width: 150px; height: 150px; object-fit: cover;">
+                    <h3 class="fw-bold text-dark">${name}</h3>
+                    <span class="badge bg-success mb-2">${pro.skill || "Professional"}</span>
+                    <p class="text-muted mb-1"><i class="fa-solid fa-location-dot text-danger me-1"></i>${pro.location || "N/A"}</p>
+                    <div class="mb-2">${stars} <span class="text-muted small">(${averageRating.toFixed(1)})</span></div>
+                    <div class="d-flex justify-content-center gap-3 mt-2">
+                        <div class="text-center">
+                            <strong class="text-success fs-5">${completedJobs.length}</strong>
+                            <small class="d-block text-muted">Completed Jobs</small>
+                        </div>
+                        <div class="text-center">
+                            <strong class="text-warning fs-5">${reviews.length}</strong>
+                            <small class="d-block text-muted">Reviews</small>
                         </div>
                     </div>
                 </div>
+                <div class="col-md-8 p-4">
+                    <div class="mb-3">
+                        <div class="d-flex flex-wrap gap-2">
+                            <button type="button" class="btn btn-success" id="dashboard-profile-hire-btn">
+                                <i class="fa-solid fa-briefcase me-1"></i> Hire
+                            </button>
+                            <button type="button" class="btn btn-outline-primary" id="dashboard-profile-review-btn">
+                                <i class="fa-solid fa-star me-1"></i> Review
+                            </button>
+                            <button type="button" class="btn btn-outline-danger" id="dashboard-profile-report-btn">
+                                <i class="fa-solid fa-flag me-1"></i> Report
+                            </button>
+                        </div>
+                    </div>
+
+                    <h4 class="fw-bold text-primary mb-3"><i class="fa-solid fa-user me-2"></i>About</h4>
+                    <p class="text-dark mb-4 bg-light p-3 rounded">${pro.bio || "No bio available."}</p>
+
+                    <h4 class="fw-bold text-success mb-3"><i class="fa-solid fa-briefcase me-2"></i>Experience</h4>
+                    <div class="alert alert-success mb-4"><strong>${pro.experience || 0} years</strong> of professional experience</div>
+
+                    <h4 class="fw-bold text-warning mb-3"><i class="fa-solid fa-check-circle me-2"></i>Completed Jobs</h4>
+                    <div class="list-group mb-4">${completedJobsHtml}</div>
+
+                    <div id="dashboard-profile-reviews-section">
+                        <h4 class="fw-bold text-info mb-3"><i class="fa-solid fa-star me-2"></i>Reviews (${reviews.length})</h4>
+                        <div class="list-group mb-4">${reviewsHtml}</div>
+                    </div>
+
+                    <div id="dashboard-profile-reports-section">
+                        <h4 class="fw-bold text-danger mb-3"><i class="fa-solid fa-flag me-2"></i>Reports (${reports.length})</h4>
+                        <div class="list-group">${reportsHtml}</div>
+                    </div>
+                </div>
             </div>
-        </section>
+        </div>
     `;
 
-    const backButton = document.getElementById("back-to-applications-button");
+    const hireBtn = document.getElementById("dashboard-profile-hire-btn");
+    const reviewBtn = document.getElementById("dashboard-profile-review-btn");
+    const reportBtn = document.getElementById("dashboard-profile-report-btn");
+    const reviewsSection = document.getElementById("dashboard-profile-reviews-section");
+    const reportsSection = document.getElementById("dashboard-profile-reports-section");
 
-    if (backButton) {
-        backButton.addEventListener("click", function () {
-            loadApplications();
+    if (hireBtn) {
+        hireBtn.addEventListener("click", function () {
+            window.currentProIdForRequest = proId;
+            if (typeof window.showDirectRequestModal === "function") {
+                window.showDirectRequestModal();
+                setTimeout(function () {
+                    const titleInput = document.getElementById("direct-request-title");
+                    if (titleInput && !titleInput.value.trim()) {
+                        titleInput.value = "Hiring request for " + name;
+                    }
+                }, 0);
+            }
         });
     }
-}
 
-function renderProfessionalProfileError() {
-    const contentArea = document.getElementById("content-area");
+    if (reviewBtn) {
+        reviewBtn.addEventListener("click", function () {
+            if (reviewsSection) {
+                reviewsSection.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+        });
+    }
 
-    if (contentArea) {
-        contentArea.innerHTML =
-            '<div class="alert alert-danger mb-0">Unable to load professional profile.</div>';
+    if (reportBtn) {
+        reportBtn.addEventListener("click", function () {
+            if (reportsSection) {
+                reportsSection.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+        });
     }
 }
 
@@ -1320,31 +1409,13 @@ function loadProfessionalsResults(skill = "", location = "") {
         });
 }
 
-function loadProfessionalProfile(profileId) {
-    setActiveSidebarButton("applications");
-    setContentHeader("Professional Profile", "Loading professional details...", false);
-    const contentArea = document.getElementById("content-area");
-
-    if (contentArea) {
-        contentArea.innerHTML = '<div class="text-muted">Loading professional profile...</div>';
-    }
-
-    fetchJson(`/api/professionals/${profileId}`)
-        .then((payload) => {
-            renderProfessionalProfile(payload);
-        })
-        .catch(() => {
-            renderProfessionalProfileError();
-        });
-}
-
 function bindProfessionalProfileLinks() {
     document.querySelectorAll(".professional-profile-link").forEach((link) => {
         link.addEventListener("click", function () {
             const profileId = link.dataset.profileId;
 
             if (profileId) {
-                loadProfessionalProfile(profileId);
+                openProfessionalProfilePage(profileId);
             }
         });
     });
@@ -1560,169 +1631,7 @@ function bindContractConfirmForm() {
 }
 
 function showProProfile(proId) {
-    try {
-        // Keep selected pro id available for direct-request flow.
-        if (typeof window.currentProIdForRequest !== "undefined") {
-            window.currentProIdForRequest = proId;
-        }
-
-        let token = localStorage.getItem("token");
-        let headers = {"Accept": "application/json"};
-        if (token) headers["Authorization"] = "Bearer " + token;
-
-        let modalBody = document.getElementById("pro-profile-modal-body");
-        if (modalBody) {
-            modalBody.innerHTML = '<div class="text-center py-5"><span class="spinner-border spinner-border-sm me-2"></span>Loading...</div>';
-        }
-        
-        let modalEl = document.getElementById("pro-profile-modal");
-        if (modalEl) {
-            let modal = new bootstrap.Modal(modalEl);
-            modal.show();
-        }
-
-        const hireBtn = document.getElementById("hire-pro-btn");
-        if (hireBtn) {
-            // Client dashboard is client-only, keep CTA visible in modal footer.
-            hireBtn.classList.remove("d-none");
-        }
-
-        fetch("/api/professionals/" + proId, {method: "GET", headers: headers})
-        .then(function(r) { 
-            if (!r.ok) throw new Error("Request failed with status " + r.status); 
-            return r.json(); 
-        })
-        .then(function(data) {
-            let pro = data.professional || {};
-            let name = pro.user ? pro.user.name : (pro.name || "N/A");
-            let photo = pro.profile_photo ? "/storage/" + pro.profile_photo : "/images/user1.jpg";
-            let skill = pro.skill || "N/A";
-            let location = pro.location || "N/A";
-            let experience = pro.experience || "0";
-            let rating = data.average_rating || 0;
-            let bio = pro.bio || "No biography available.";
-            let completedJobs = data.completed_jobs ? data.completed_jobs.length : 0;
-            let reviews = data.reviews || [];
-            let reports = data.reports || [];
-
-            function proGenerateStars(r) {
-                let html = '';
-                let fullStars = Math.floor(r);
-                for (let i = 1; i <= 5; i++) {
-                    html += '<i class="fa-solid fa-star" style="color: ' + (i <= fullStars ? '#ffc107;' : '#e4e5e9;') + '"></i>';
-                }
-                return html;
-            }
-
-            function proFormatDate(dateStr) {
-                if (!dateStr) return 'N/A';
-                let date = new Date(dateStr);
-                return date.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'});
-            }
-
-            let reviewsHtml = '';
-            if (reviews.length > 0) {
-                reviews.forEach(function(review) {
-                    reviewsHtml += '<div class="border-bottom pb-3 mb-3">' +
-                        '<div class="d-flex justify-content-between mb-2">' +
-                        '<strong><i class="fa-solid fa-user me-1"></i>' + (review.reviewer_name || 'Anonymous') + '</strong>' +
-                        '<span>' + proGenerateStars(review.rating) + '</span>' +
-                        '</div>' +
-                        '<p class="mb-1 text-muted small">' + (review.comment || 'No comment') + '</p>' +
-                        '<small class="text-muted">' + proFormatDate(review.created_at) + '</small>' +
-                        '</div>';
-                });
-            } else {
-                reviewsHtml = '<div class="alert alert-light border mb-0"><i class="fa-solid fa-star me-2"></i>No reviews yet</div>';
-            }
-
-            if (modalBody) {
-                modalBody.innerHTML = `
-                    <div class="text-center mb-4">
-                        <img src="${photo}" alt="${name}" class="rounded-circle object-fit-cover border border-3 border-primary" style="width: 120px; height: 120px;">
-                        <h3 class="mt-3 mb-1 fw-bold">${name}</h3>
-                        <div class="mb-2">${proGenerateStars(rating)} <span class="text-muted">(${rating.toFixed(1)})</span></div>
-                        <span class="badge bg-success px-3 py-2"><i class="fa-solid fa-check-circle me-1"></i>Verified Professional</span>
-                    </div>
-                    
-                    <div class="row g-3 mb-4 mt-3">
-                        <div class="col-md-6">
-                            <div class="card bg-light border-0 h-100">
-                                <div class="card-body">
-                                    <h6 class="fw-bold mb-3"><i class="fa-solid fa-info-circle me-2 text-primary"></i>Basic Info</h6>
-                                    <p class="mb-2"><i class="fa-solid fa-code me-2 text-secondary"></i><strong>Skill:</strong> ${skill}</p>
-                                    <p class="mb-2"><i class="fa-solid fa-location-dot me-2 text-secondary"></i><strong>Location:</strong> ${location}</p>
-                                    <p class="mb-0"><i class="fa-solid fa-briefcase me-2 text-secondary"></i><strong>Experience:</strong> ${experience} years</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="card bg-light border-0 h-100">
-                                <div class="card-body">
-                                    <h6 class="fw-bold mb-3"><i class="fa-solid fa-chart-line me-2 text-success"></i>Statistics</h6>
-                                    <div class="text-center">
-                                        <div class="row g-3">
-                                            <div class="col-6">
-                                                <h2 class="fw-bold text-success mb-0">${completedJobs}</h2>
-                                                <small class="text-muted">Completed Jobs</small>
-                                            </div>
-                                            <div class="col-6">
-                                                <h2 class="fw-bold text-warning mb-0">${data.reviews_count || 0}</h2>
-                                                <small class="text-muted">Reviews</small>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="card bg-light border-0 mb-3">
-                        <div class="card-body">
-                            <h6 class="fw-bold mb-3"><i class="fa-solid fa-user me-2 text-info"></i>About</h6>
-                            <p class="mb-0" style="white-space: pre-wrap;">${bio}</p>
-                        </div>
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="card border-0">
-                                <div class="card-body">
-                                    <h6 class="fw-bold mb-3"><i class="fa-solid fa-star me-2 text-warning"></i>Reviews (${reviews.length})</h6>
-                                    <div style="max-height: 300px; overflow-y: auto;">
-                                        ${reviewsHtml}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="card border-0">
-                                <div class="card-body">
-                                    <h6 class="fw-bold mb-3"><i class="fa-solid fa-flag me-2 text-danger"></i>Reports (${reports.length})</h6>
-                                    <div style="max-height: 300px; overflow-y: auto;">
-                                        ${reports.length > 0 ? reports.map(function(r) {
-                                            return '<div class="border-bottom py-2">' +
-                                                '<strong class="text-danger"><i class="fa-solid fa-user me-1"></i>' + r.reporter_name + '</strong>' +
-                                                '<div class="small">' + r.reason + '</div>' +
-                                                '<div class="text-muted small"><i class="fa-solid fa-calendar me-1"></i>' + r.created_at + '</div></div>';
-                                        }).join('') : '<div class="alert alert-success py-2 mb-0"><i class="fa-solid fa-check-circle me-2"></i>No reports</div>'}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
-        })
-        .catch(function(err) {
-            console.error("Error loading professional profile:", err);
-            if (modalBody) {
-                modalBody.innerHTML = '<div class="alert alert-danger mb-0">Failed to load profile. Error: ' + err.message + '</div>';
-            }
-        });
-    } catch(e) {
-        console.error("Unexpected error in showProProfile:", e);
-    }
+    openProfessionalProfilePage(proId);
 }
 
 function setActiveSidebarButton(view) {
@@ -2124,73 +2033,6 @@ function loadAllContracts() {
     loadContractsResults();
 }
 
-    // Professional report viewer modal used from client dashboard.
-// View Reports Modal - opens modal and shows reports only
-function viewProReports(proId) {
-    try {
-        let token = localStorage.getItem("token");
-        let headers = {"Accept": "application/json"};
-        if (token) headers["Authorization"] = "Bearer " + token;
-
-        let modalBody = document.getElementById("pro-profile-modal-body");
-        if (modalBody) {
-            modalBody.innerHTML = '<div class="text-center py-5"><span class="spinner-border spinner-border-sm me-2"></span>Loading reports...</div>';
-        }
-        
-        let modalEl = document.getElementById("pro-profile-modal");
-        if (modalEl) {
-            let modal = new bootstrap.Modal(modalEl);
-            modal.show();
-        }
-
-        fetch("/api/professionals/" + proId, {method: "GET", headers: headers})
-        .then(function(r) { 
-            if (!r.ok) throw new Error("Request failed with status " + r.status); 
-            return r.json(); 
-        })
-        .then(function(data) {
-            let pro = data.professional || {};
-            let name = pro.user ? pro.user.name : (pro.name || "N/A");
-            let photo = pro.profile_photo ? "/storage/" + pro.profile_photo : "/images/user1.jpg";
-            let reports = data.reports || [];
-
-            if (modalBody) {
-                modalBody.innerHTML = `
-                    <div class="text-center mb-3">
-                        <img src="${photo}" alt="${name}" class="rounded-circle object-fit-cover border border-3 border-primary" style="width: 80px; height: 80px;">
-                        <h4 class="mt-2 mb-0 fw-bold">${name}</h4>
-                        <span class="badge bg-danger"><i class="fa-solid fa-flag me-1"></i>Reports</span>
-                    </div>
-                    
-                    <div class="card border-0 bg-light">
-                        <div class="card-body">
-                            <h6 class="fw-bold mb-3"><i class="fa-solid fa-flag text-danger me-2"></i>Reports (${reports.length})</h6>
-                            <div style="max-height: 400px; overflow-y: auto;">
-                                ${reports.length > 0 ? reports.map(function(r) {
-                                    return '<div class="border-bottom py-2">' +
-                                        '<strong class="text-danger"><i class="fa-solid fa-user me-1"></i>' + r.reporter_name + '</strong>' +
-                                        '<div class="small mt-1">' + r.reason + '</div>' +
-                                        '<div class="text-muted small"><i class="fa-solid fa-calendar me-1"></i>' + r.created_at + '</div></div>';
-                                }).join('') : '<div class="alert alert-success py-2 mb-0"><i class="fa-solid fa-check-circle me-2"></i>No reports</div>'}
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
-        })
-        .catch(function(err) {
-            console.error("Error loading reports:", err);
-            if (modalBody) {
-                modalBody.innerHTML = '<div class="alert alert-danger mb-0">Failed to load reports. Error: ' + err.message + '</div>';
-            }
-        });
-    } catch(e) {
-        console.error("Unexpected error in viewProReports:", e);
-    }
-}
-
-window.viewProReports = viewProReports;
-
     // Client dashboard entrypoint (called after DOM is ready).
     function init() {
         setClientDashboardLoading(true);
@@ -2221,6 +2063,6 @@ window.viewProReports = viewProReports;
     window.loadProfessionalsResults = loadProfessionalsResults;
     window.buyPlan = buyPlan;
     window.showProProfile = showProProfile;
-    window.viewProReports = viewProReports;
+    window.openProfessionalProfilePage = openProfessionalProfilePage;
 })();
 });

@@ -48,8 +48,12 @@ Route::get('/payment-success', [ChapaController::class, 'handlePaymentSuccess'])
 
 Route::get('/payment-failed', [ChapaController::class, 'paymentFailed']);
 
-Route::get('/professionals/{id}', function ($id) {
+Route::get('/professional/{id}', function ($id) {
     $professional = Professional::with('user')->findOrFail($id);
+    $reviewTargetIds = array_values(array_unique([
+        (int) $professional->user_id,
+        (int) $professional->id,
+    ]));
 
     $completedJobs = Application::where('professional_id', $professional->user_id)
         ->where('status', 'accepted')
@@ -59,19 +63,31 @@ Route::get('/professionals/{id}', function ($id) {
         ->with('job')
         ->get();
 
-    $reviews = Review::where('reviewed_id', $professional->user_id)
+    $reviews = Review::whereIn('reviewed_id', $reviewTargetIds)
         ->with('reviewer:id,name')
         ->orderBy('created_at', 'desc')
         ->get();
 
-    $reportsCount = Report::where('reported_id', $professional->user_id)->count();
+    $reports = Report::whereIn('reported_id', $reviewTargetIds)
+        ->with('reporter:id,name')
+        ->orderBy('created_at', 'desc')
+        ->get();
+
+    $reportsCount = $reports->count();
+    $averageRating = $reviews->count() > 0 ? round((float) $reviews->avg('rating'), 1) : 0;
 
     return view('professional.show', [
         'professional' => $professional,
         'completedJobs' => $completedJobs,
         'reviews' => $reviews,
+        'averageRating' => $averageRating,
+        'reports' => $reports,
         'reportsCount' => $reportsCount,
     ]);
+})->name('professional.show');
+
+Route::get('/professionals/{id}', function ($id) {
+    return redirect()->route('professional.show', ['id' => $id]);
 });
 
 // Step 2: Role-Specific Setup Forms

@@ -166,24 +166,6 @@
 
     @include('client.components.subscription')
 
-    <!-- Professional Profile Modal -->
-    <div class="modal fade" id="pro-profile-modal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-            <div class="modal-content border-0 shadow-lg">
-                <div class="modal-header bg-primary text-white border-0">
-                    <h5 class="modal-title fw-bold"><i class="fa-solid fa-user-tie me-2"></i>Professional Profile</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body p-4" id="pro-profile-modal-body"></div>
-                <div class="modal-footer border-top">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-success d-none" id="hire-pro-btn" onclick="showDirectRequestModal()">
-                        <i class="fa-solid fa-paper-plane me-1"></i> Hire / Send Request
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
     </div>
 
     <!-- Direct Request Modal -->
@@ -269,7 +251,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{{ asset('js/api.js') }}"></script>
     <script src="{{ asset('js/utils.js') }}"></script>
-    <script src="{{ asset('js/client.js') }}"></script>
+    <script src="{{ asset('js/client.js') }}?v={{ filemtime(public_path('js/client.js')) }}"></script>
     <script src="{{ asset('js/auth.js') }}"></script>
     <script src="{{ asset('js/direct-request.js') }}"></script>
     <script src="{{ asset('app.js') }}"></script>
