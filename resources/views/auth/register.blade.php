@@ -117,9 +117,30 @@
                 // ✅ Save token
                 localStorage.setItem("token", data.access_token);
 
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || "";
+
+                // Create web session too, so protected dashboard routes do not bounce to /login.
+                const loginRes = await fetch("/login", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Accept": "application/json",
+                        "X-CSRF-TOKEN": csrfToken
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        password: password
+                    })
+                });
+
+                const loginData = await loginRes.json().catch(() => ({}));
+
+                if (loginRes.ok && loginData.token) {
+                    localStorage.setItem("token", loginData.token);
+                }
+
                 alert("Account Created Successfully!");
 
-                // ✅ CORRECT REDIRECT
                 if (role === "professional") {
                     window.location.href = "/professional-setup";
                 } else {

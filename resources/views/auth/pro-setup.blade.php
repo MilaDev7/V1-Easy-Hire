@@ -150,8 +150,8 @@
                 }
 
                 localStorage.setItem("approval_status", "pending");
-                alert("Profile submitted for review! You will be notified once approved.");
-                window.location.href = "/";
+                alert("Admin is under review.");
+                window.location.href = "/pro/dashboard";
             })
             .catch(err => {
                 console.error("ERROR:", err);

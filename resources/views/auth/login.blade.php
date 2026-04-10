@@ -68,13 +68,10 @@
                     if (role === 'admin') {
                         window.location.href = "/admin/dashboard";
                     } else if (role === 'professional') {
-                        // If they are not approved yet, send them to a "Pending" page
                         if (status === 'pending') {
                             alert("Your account is still under review by Admin.");
-                            window.location.href = "/pro/pending";
-                        } else {
-                            window.location.href = "/pro/dashboard";
                         }
+                        window.location.href = "/pro/dashboard";
                     } else if (role === 'client') {
                         // If there's a redirect URL (e.g., from search page), go there
                         // Otherwise go to dashboard
