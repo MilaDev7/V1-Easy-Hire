@@ -160,7 +160,7 @@
                 <p class="mb-0">Are you sure?</p>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">No</button>
                 <button type="button" id="confirm-delete-account-button" class="btn btn-danger">Yes</button>
             </div>
         </div>

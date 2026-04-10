@@ -819,11 +819,16 @@ function loadProfessionalProfileForSettings() {
 function bindProfessionalSettings() {
     const settingsButton = document.getElementById("professional-settings-button");
     const settingsModalElement = document.getElementById("professional-settings-modal");
+    const deleteAccountModalElement = document.getElementById("professional-delete-account-modal");
     const darkModeToggle = document.getElementById("professional-dark-mode-toggle");
     const darkModeLabel = document.getElementById("professional-dark-mode-label");
     const deleteAccountButton = document.getElementById("professional-delete-account-button");
+    const confirmDeleteAccountButton = document.getElementById("professional-confirm-delete-account-button");
     const settingsModal = settingsModalElement
         ? bootstrap.Modal.getOrCreateInstance(settingsModalElement)
+        : null;
+    const deleteAccountModal = deleteAccountModalElement
+        ? bootstrap.Modal.getOrCreateInstance(deleteAccountModalElement)
         : null;
 
     // Load profile when modal is shown
@@ -967,8 +972,20 @@ function bindProfessionalSettings() {
 
     if (deleteAccountButton) {
         deleteAccountButton.addEventListener("click", function () {
-            deleteAccountButton.disabled = true;
-            deleteAccountButton.textContent = "Deleting...";
+            if (settingsModal) {
+                settingsModal.hide();
+            }
+
+            if (deleteAccountModal) {
+                deleteAccountModal.show();
+            }
+        });
+    }
+
+    if (confirmDeleteAccountButton) {
+        confirmDeleteAccountButton.addEventListener("click", function () {
+            confirmDeleteAccountButton.disabled = true;
+            confirmDeleteAccountButton.textContent = "Deleting...";
 
             deleteJson("/api/account")
                 .then(() => {
@@ -981,9 +998,11 @@ function bindProfessionalSettings() {
                     window.alert(error.message || "Failed to delete account.");
                 })
                 .finally(() => {
-                    deleteAccountButton.disabled = false;
-                    deleteAccountButton.innerHTML =
-                        '<i class="fa-solid fa-trash me-1"></i> Delete Account';
+                    confirmDeleteAccountButton.disabled = false;
+                    confirmDeleteAccountButton.textContent = "Yes";
+                    if (deleteAccountModal) {
+                        deleteAccountModal.hide();
+                    }
                 });
         });
     }
