@@ -59,6 +59,13 @@
         >
             <i class="fa-solid fa-file-contract text-secondary me-2"></i> All Contracts
         </button>
+        <button
+            type="button"
+            class="btn btn-outline-dark text-start sidebar-nav-button"
+            data-view="requests"
+        >
+            <i class="fa-solid fa-paper-plane text-success me-2"></i> Requests
+        </button>
     </div>
 
     <div class="mt-auto pt-4 w-100">

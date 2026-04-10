@@ -9,9 +9,57 @@ use App\Models\Subscription;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class DirectRequestController extends Controller
 {
+    private const REQUEST_EXPIRY_HOURS = 48;
+
+    private function expirePendingRequestsForProfessional(int $professionalId): void
+    {
+        DirectRequest::where('professional_id', $professionalId)
+            ->where('status', 'pending')
+            ->whereNotNull('expires_at')
+            ->where('expires_at', '<', now())
+            ->update(['status' => 'expired']);
+    }
+
+    private function expirePendingRequestsForClient(int $clientId): void
+    {
+        DirectRequest::where('client_id', $clientId)
+            ->where('status', 'pending')
+            ->whereNotNull('expires_at')
+            ->where('expires_at', '<', now())
+            ->update(['status' => 'expired']);
+    }
+
+    private function formatRequest(DirectRequest $req): array
+    {
+        $secondsRemaining = null;
+        if ($req->status === 'pending' && $req->expires_at) {
+            $secondsRemaining = max(0, now()->diffInSeconds($req->expires_at, false));
+        }
+
+        return [
+            'id' => $req->id,
+            'title' => $req->title,
+            'description' => $req->description,
+            'budget' => $req->budget,
+            'status' => $req->status,
+            'created_at' => $req->created_at,
+            'expires_at' => $req->expires_at,
+            'seconds_remaining' => $secondsRemaining,
+            'client' => $req->client ? [
+                'id' => $req->client->id,
+                'name' => $req->client->name,
+            ] : null,
+            'professional' => $req->professional ? [
+                'id' => $req->professional->id,
+                'name' => $req->professional->name,
+            ] : null,
+        ];
+    }
+
     // Client sends direct request to professional
     public function sendRequest(Request $request, $proId)
     {
@@ -22,8 +70,9 @@ class DirectRequestController extends Controller
         ]);
 
         $clientId = auth()->id();
+        $this->expirePendingRequestsForClient($clientId);
 
-        // Check subscription has direct requests remaining
+        // Keep subscription validation, but do not deduct on send.
         $subscription = Subscription::where('user_id', $clientId)
             ->where('status', 'active')
             ->first();
@@ -40,11 +89,6 @@ class DirectRequestController extends Controller
             return response()->json([
                 'message' => 'Your subscription has expired. Please renew your plan.',
             ], 403);
-        }
-
-        $remaining = $subscription->direct_requests_remaining ?? 0;
-        if ($remaining < 1) {
-            return response()->json(['message' => 'No direct requests remaining. Upgrade your plan. Current: '.$remaining], 403);
         }
 
         // Check if professional exists
@@ -68,7 +112,7 @@ class DirectRequestController extends Controller
             return response()->json(['message' => 'Request already sent'], 400);
         }
 
-        // Create request and decrement direct requests
+        // Create request; direct request credits are deducted only when accepted.
         $directRequest = DirectRequest::create([
             'client_id' => $clientId,
             'professional_id' => $proUserId,
@@ -76,17 +120,13 @@ class DirectRequestController extends Controller
             'description' => $request->description,
             'budget' => $request->budget,
             'status' => 'pending',
+            'expires_at' => now()->addHours(self::REQUEST_EXPIRY_HOURS),
         ]);
-
-        // Decrement remaining direct requests when client sends request
-        if ($subscription && $subscription->direct_requests_remaining > 0) {
-            $subscription->decrement('direct_requests_remaining');
-        }
 
         return response()->json([
             'success' => true,
             'message' => 'Request sent successfully',
-            'request' => $directRequest,
+            'request' => $this->formatRequest($directRequest->load(['client:id,name', 'professional:id,name'])),
         ], 201);
     }
 
@@ -94,33 +134,125 @@ class DirectRequestController extends Controller
     public function myRequests()
     {
         $userId = auth()->id();
+        $this->expirePendingRequestsForProfessional($userId);
 
         $requests = DirectRequest::where('professional_id', $userId)
-            ->with('client')
+            ->with(['client:id,name', 'professional:id,name'])
             ->orderBy('created_at', 'desc')
             ->get()
-            ->map(function ($req) {
-                return [
-                    'id' => $req->id,
-                    'title' => $req->title,
-                    'description' => $req->description,
-                    'budget' => $req->budget,
-                    'status' => $req->status,
-                    'created_at' => $req->created_at,
-                    'client' => $req->client ? [
-                        'id' => $req->client->id,
-                        'name' => $req->client->name,
-                    ] : null,
-                ];
-            });
+            ->map(fn (DirectRequest $req) => $this->formatRequest($req));
 
         return response()->json($requests);
+    }
+
+    // Client views own requests grouped by status
+    public function clientRequests()
+    {
+        $clientId = auth()->id();
+        $this->expirePendingRequestsForClient($clientId);
+
+        $requests = DirectRequest::where('client_id', $clientId)
+            ->with(['professional:id,name', 'client:id,name'])
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(fn (DirectRequest $req) => $this->formatRequest($req));
+
+        $grouped = [
+            'pending' => [],
+            'accepted' => [],
+            'rejected' => [],
+            'expired' => [],
+        ];
+
+        foreach ($requests as $request) {
+            $status = $request['status'];
+            if (array_key_exists($status, $grouped)) {
+                $grouped[$status][] = $request;
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $grouped,
+            'counts' => [
+                'pending' => count($grouped['pending']),
+                'accepted' => count($grouped['accepted']),
+                'rejected' => count($grouped['rejected']),
+                'expired' => count($grouped['expired']),
+            ],
+        ]);
+    }
+
+    // Client cancels pending request (moves to rejected)
+    public function cancelClientRequest($id)
+    {
+        $clientId = auth()->id();
+        $this->expirePendingRequestsForClient($clientId);
+
+        $directRequest = DirectRequest::where('id', $id)
+            ->where('client_id', $clientId)
+            ->where('status', 'pending')
+            ->first();
+
+        if (! $directRequest) {
+            return response()->json(['message' => 'Pending request not found'], 404);
+        }
+
+        $directRequest->status = 'rejected';
+        $directRequest->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Request cancelled successfully',
+        ]);
+    }
+
+    // Client resends an expired request
+    public function resendClientRequest($id)
+    {
+        $clientId = auth()->id();
+        $this->expirePendingRequestsForClient($clientId);
+
+        $expiredRequest = DirectRequest::where('id', $id)
+            ->where('client_id', $clientId)
+            ->where('status', 'expired')
+            ->first();
+
+        if (! $expiredRequest) {
+            return response()->json(['message' => 'Expired request not found'], 404);
+        }
+
+        $hasPending = DirectRequest::where('client_id', $clientId)
+            ->where('professional_id', $expiredRequest->professional_id)
+            ->where('status', 'pending')
+            ->exists();
+
+        if ($hasPending) {
+            return response()->json(['message' => 'You already have a pending request for this professional'], 400);
+        }
+
+        $newRequest = DirectRequest::create([
+            'client_id' => $clientId,
+            'professional_id' => $expiredRequest->professional_id,
+            'title' => $expiredRequest->title,
+            'description' => $expiredRequest->description,
+            'budget' => $expiredRequest->budget,
+            'status' => 'pending',
+            'expires_at' => now()->addHours(self::REQUEST_EXPIRY_HOURS),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Request resent successfully',
+            'request' => $this->formatRequest($newRequest->load(['client:id,name', 'professional:id,name'])),
+        ], 201);
     }
 
     // Professional accepts request - creates contract
     public function acceptRequest($id)
     {
         $userId = auth()->id();
+        $this->expirePendingRequestsForProfessional($userId);
 
         $directRequest = DirectRequest::where('id', $id)
             ->where('professional_id', $userId)
@@ -140,37 +272,56 @@ class DirectRequestController extends Controller
             return response()->json(['message' => 'You have 3 active contracts. Complete them before accepting more.'], 400);
         }
 
-        $directRequest->status = 'accepted';
-        $directRequest->save();
+        // Deduct direct-request credit only when request is accepted.
+        $clientSubscription = Subscription::where('user_id', $directRequest->client_id)
+            ->where('status', 'active')
+            ->first();
 
-        \Log::info('Creating contract for direct request', [
-            'direct_request_id' => $directRequest->id,
-            'client_id' => $directRequest->client_id,
-            'professional_id' => $userId,
-            'budget' => $directRequest->budget,
-        ]);
+        if (! $clientSubscription) {
+            return response()->json(['message' => 'Client has no active subscription.'], 400);
+        }
+
+        $remaining = (int) ($clientSubscription->direct_requests_remaining ?? 0);
+        if ($remaining < 1) {
+            return response()->json(['message' => 'Client has no direct request credits remaining.'], 400);
+        }
 
         try {
-            // Create contract with direct request reference
-            $client = User::find($directRequest->client_id);
-            $professional = User::find($userId);
+            $contractId = DB::transaction(function () use ($directRequest, $clientSubscription, $userId) {
+                $directRequest->status = 'accepted';
+                $directRequest->save();
+                $clientSubscription->decrement('direct_requests_remaining');
 
-            $contract = Contract::create([
-                'direct_request_id' => $directRequest->id,
-                'client_id' => $directRequest->client_id,
-                'client_phone' => $client?->phone,
-                'professional_id' => $userId,
-                'professional_phone' => $professional?->phone,
-                'agreed_price' => $directRequest->budget,
-                'status' => 'active',
-            ]);
+                \Log::info('Creating contract for direct request', [
+                    'direct_request_id' => $directRequest->id,
+                    'client_id' => $directRequest->client_id,
+                    'professional_id' => $userId,
+                    'budget' => $directRequest->budget,
+                ]);
 
-            \Log::info('Contract created successfully', ['contract_id' => $contract->id]);
+                // Create contract with direct request reference
+                $client = User::find($directRequest->client_id);
+                $professional = User::find($userId);
+
+                $contract = Contract::create([
+                    'direct_request_id' => $directRequest->id,
+                    'client_id' => $directRequest->client_id,
+                    'client_phone' => $client?->phone,
+                    'professional_id' => $userId,
+                    'professional_phone' => $professional?->phone,
+                    'agreed_price' => $directRequest->budget,
+                    'status' => 'active',
+                ]);
+
+                return $contract->id;
+            });
+
+            \Log::info('Contract created successfully', ['contract_id' => $contractId]);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Request accepted! Contract created.',
-                'contract_id' => $contract->id,
+                'contract_id' => $contractId,
             ]);
         } catch (\Exception $e) {
             \Log::error('Failed to create contract', ['error' => $e->getMessage()]);
@@ -186,6 +337,7 @@ class DirectRequestController extends Controller
     public function rejectRequest($id)
     {
         $userId = auth()->id();
+        $this->expirePendingRequestsForProfessional($userId);
 
         $directRequest = DirectRequest::where('id', $id)
             ->where('professional_id', $userId)

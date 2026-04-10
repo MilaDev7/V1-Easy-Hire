@@ -1056,7 +1056,9 @@ function renderDirectRequests(requests) {
             ? '<span class="badge bg-warning text-dark">Pending</span>'
             : req.status === 'accepted'
                 ? '<span class="badge bg-success">Accepted</span>'
-                : '<span class="badge bg-danger">Rejected</span>';
+                : req.status === 'expired'
+                    ? '<span class="badge bg-secondary">Expired</span>'
+                    : '<span class="badge bg-danger">Rejected</span>';
         
         const actionButtons = req.status === 'pending' 
             ? `<div class="d-flex gap-2">
@@ -1179,7 +1181,7 @@ window.rejectDirectRequest = function(id, title, clientName, budget) {
         clientNameEl.textContent = 'From: ' + (clientName || 'Unknown Client');
         budgetEl.textContent = budget ? 'Br ' + budget : '';
         budgetEl.style.display = budget ? 'inline-block' : 'none';
-        messageEl.textContent = 'The client will be refunded. Are you sure?';
+        messageEl.textContent = 'This request will be rejected. Are you sure?';
 
         confirmBtn.className = 'btn btn-danger px-4';
         confirmBtn.innerHTML = '<i class="fa-solid fa-times me-1"></i>Reject';
@@ -1200,7 +1202,7 @@ window.rejectDirectRequest = function(id, title, clientName, budget) {
                 bootstrap.Modal.getInstance(modal).hide();
                 const contentArea = document.getElementById("professional-content-area") || document.getElementById("content-area");
                 if (contentArea) {
-                    contentArea.innerHTML = '<div class="alert alert-success mb-3"><i class="fa-solid fa-check-circle me-2"></i>Request rejected successfully. Client has been refunded.</div>' + contentArea.innerHTML;
+                    contentArea.innerHTML = '<div class="alert alert-success mb-3"><i class="fa-solid fa-check-circle me-2"></i>Request rejected successfully.</div>' + contentArea.innerHTML;
                 }
                 loadDirectRequests();
             })

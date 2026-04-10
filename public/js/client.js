@@ -9,6 +9,7 @@ document.addEventListener("DOMContentLoaded", function () {
         extractCount,
         setText,
     } = window.EasyHireUtils;
+    let requestCountdownInterval = null;
 
     // Client UI rendering and actions.
 function setContentHeader(title, subtitle, showReloadButton) {
@@ -1153,6 +1154,194 @@ function renderApplicationsError() {
     }
 }
 
+function clearRequestCountdownTicker() {
+    if (requestCountdownInterval) {
+        clearInterval(requestCountdownInterval);
+        requestCountdownInterval = null;
+    }
+}
+
+function formatDuration(seconds) {
+    const safeSeconds = Math.max(0, Number(seconds) || 0);
+    const hrs = Math.floor(safeSeconds / 3600);
+    const mins = Math.floor((safeSeconds % 3600) / 60);
+    const secs = safeSeconds % 60;
+    return `${String(hrs).padStart(2, "0")}:${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+}
+
+function tickRequestCountdowns() {
+    const nowMs = Date.now();
+    document.querySelectorAll("[data-request-expires-at]").forEach((el) => {
+        const expiresAt = el.getAttribute("data-request-expires-at");
+        const expiresMs = Date.parse(expiresAt || "");
+        if (!Number.isFinite(expiresMs)) {
+            el.textContent = "N/A";
+            return;
+        }
+        const remaining = Math.floor((expiresMs - nowMs) / 1000);
+        el.textContent = remaining > 0 ? formatDuration(remaining) : "Expired";
+    });
+}
+
+function renderRequestsSection() {
+    const contentArea = document.getElementById("content-area");
+    if (!contentArea) {
+        return;
+    }
+
+    setContentHeader("Requests", "Manage your direct requests", false);
+    contentArea.innerHTML = `
+        <section class="client-requests-section">
+            <div id="client-requests-results">
+                <div class="text-muted">Loading requests...</div>
+            </div>
+        </section>
+    `;
+}
+
+function renderRequestCards(requests, type) {
+    if (!requests || !requests.length) {
+        return '<div class="alert alert-light border mb-0">No requests.</div>';
+    }
+
+    return requests.map((req) => {
+        const professionalName = req.professional?.name || "Unknown";
+        const budget = req.budget ? `<span class="badge bg-success">Br${req.budget}</span>` : "";
+        const createdAt = formatDate(req.created_at);
+        const pendingCountdown = type === "pending"
+            ? `<div class="small text-warning"><i class="fa-regular fa-clock me-1"></i>Expires in <strong data-request-expires-at="${req.expires_at || ""}">${formatDuration(req.seconds_remaining || 0)}</strong></div>`
+            : "";
+
+        const expiredBadge = type === "expired"
+            ? '<span class="badge bg-secondary">Expired</span>'
+            : "";
+
+        const actions = type === "pending"
+            ? `<button type="button" class="btn btn-sm btn-outline-danger client-request-cancel-btn" data-request-id="${req.id}">Cancel</button>`
+            : type === "expired"
+                ? `<button type="button" class="btn btn-sm btn-outline-primary client-request-resend-btn" data-request-id="${req.id}">Resend</button>`
+                : '<span class="text-muted small">No action</span>';
+
+        return `
+            <div class="card mb-3">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h6 class="fw-bold mb-0">${req.title || "Untitled"}</h6>
+                        ${expiredBadge}
+                    </div>
+                    <p class="text-muted mb-2">${req.description || "No description"}</p>
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <div>
+                            <div class="small text-muted">Professional: <span class="fw-semibold text-dark">${professionalName}</span></div>
+                            <div class="small text-muted">Created: ${createdAt}</div>
+                            ${pendingCountdown}
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            ${budget}
+                            ${actions}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join("");
+}
+
+function bindClientRequestActions() {
+    document.querySelectorAll(".client-request-cancel-btn").forEach((button) => {
+        button.addEventListener("click", function () {
+            const requestId = button.dataset.requestId;
+            if (!requestId) {
+                return;
+            }
+            button.disabled = true;
+            button.textContent = "Cancelling...";
+            postJson(`/api/client/requests/${requestId}/cancel`)
+                .then(() => loadClientRequests())
+                .catch((error) => {
+                    button.disabled = false;
+                    button.textContent = "Cancel";
+                    window.alert(error.message || "Unable to cancel request.");
+                });
+        });
+    });
+
+    document.querySelectorAll(".client-request-resend-btn").forEach((button) => {
+        button.addEventListener("click", function () {
+            const requestId = button.dataset.requestId;
+            if (!requestId) {
+                return;
+            }
+            button.disabled = true;
+            button.textContent = "Resending...";
+            postJson(`/api/client/requests/${requestId}/resend`)
+                .then(() => loadClientRequests())
+                .catch((error) => {
+                    button.disabled = false;
+                    button.textContent = "Resend";
+                    window.alert(error.message || "Unable to resend request.");
+                });
+        });
+    });
+}
+
+function renderClientRequests(payload) {
+    const area = document.getElementById("client-requests-results");
+    if (!area) {
+        return;
+    }
+
+    clearRequestCountdownTicker();
+
+    const grouped = payload?.data || {};
+    const pending = grouped.pending || [];
+    const accepted = grouped.accepted || [];
+    const rejected = grouped.rejected || [];
+    const expired = grouped.expired || [];
+
+    area.innerHTML = `
+        <div class="row g-3">
+            <div class="col-12 col-lg-6">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-warning-subtle fw-bold">Pending (${pending.length})</div>
+                    <div class="card-body">${renderRequestCards(pending, "pending")}</div>
+                </div>
+            </div>
+            <div class="col-12 col-lg-6">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-success-subtle fw-bold">Accepted (${accepted.length})</div>
+                    <div class="card-body">${renderRequestCards(accepted, "accepted")}</div>
+                </div>
+            </div>
+            <div class="col-12 col-lg-6">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-danger-subtle fw-bold">Rejected (${rejected.length})</div>
+                    <div class="card-body">${renderRequestCards(rejected, "rejected")}</div>
+                </div>
+            </div>
+            <div class="col-12 col-lg-6">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-secondary-subtle fw-bold">Expired (${expired.length})</div>
+                    <div class="card-body">${renderRequestCards(expired, "expired")}</div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    bindClientRequestActions();
+    tickRequestCountdowns();
+    if (pending.length > 0) {
+        requestCountdownInterval = setInterval(tickRequestCountdowns, 1000);
+    }
+}
+
+function renderClientRequestsError() {
+    const area = document.getElementById("client-requests-results");
+    if (area) {
+        area.innerHTML = '<div class="alert alert-danger mb-0">Unable to load requests.</div>';
+    }
+}
+
 function showApplicationErrorModal(message) {
     const modalElement = document.getElementById("application-error-modal");
     const messageElement = document.getElementById("application-error-message");
@@ -1635,6 +1824,7 @@ function showProProfile(proId) {
 }
 
 function setActiveSidebarButton(view) {
+    clearRequestCountdownTicker();
     document.querySelectorAll(".sidebar-nav-button").forEach((button) => {
         const isActive = button.dataset.view === view;
 
@@ -1671,6 +1861,11 @@ function bindSidebarNavigation() {
 
             if (view === "contracts") {
                 loadAllContracts();
+                return;
+            }
+
+            if (view === "requests") {
+                loadClientRequests();
             }
         });
     });
@@ -2033,6 +2228,18 @@ function loadAllContracts() {
     loadContractsResults();
 }
 
+function loadClientRequests() {
+    setActiveSidebarButton("requests");
+    renderRequestsSection();
+    fetchJson("/api/client/requests")
+        .then((payload) => {
+            renderClientRequests(payload);
+        })
+        .catch(() => {
+            renderClientRequestsError();
+        });
+}
+
     // Client dashboard entrypoint (called after DOM is ready).
     function init() {
         setClientDashboardLoading(true);
@@ -2060,6 +2267,7 @@ function loadAllContracts() {
     window.loadProfessionals = loadProfessionals;
     window.loadApplications = loadApplications;
     window.loadAllContracts = loadAllContracts;
+    window.loadClientRequests = loadClientRequests;
     window.loadProfessionalsResults = loadProfessionalsResults;
     window.buyPlan = buyPlan;
     window.showProProfile = showProProfile;

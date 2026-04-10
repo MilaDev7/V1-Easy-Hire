@@ -75,6 +75,9 @@ Route::middleware(['auth:sanctum', 'check_status'])->group(function () {
 
         // Direct Requests
         Route::post('/send-request/{proId}', [DirectRequestController::class, 'sendRequest']);
+        Route::get('/client/requests', [DirectRequestController::class, 'clientRequests']);
+        Route::post('/client/requests/{id}/cancel', [DirectRequestController::class, 'cancelClientRequest']);
+        Route::post('/client/requests/{id}/resend', [DirectRequestController::class, 'resendClientRequest']);
 
         // Subscriptions
         Route::post('/buy-plan/{id}', [SubscriptionController::class, 'buy']);
