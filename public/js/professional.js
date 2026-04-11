@@ -214,6 +214,25 @@ function renderProfessionalJobs(jobs) {
 }
 
 function showProfessionalApplyInvalidModal(message) {
+    const pendingApprovalMessage = "You are not approved yet. The admin is reviewing your info.";
+    const normalizedMessage = (message || "").toLowerCase();
+    const isPendingApproval =
+        normalizedMessage.includes("not approved yet") ||
+        normalizedMessage.includes("admin is reviewing");
+
+    const coverLetterModalElement = document.getElementById("apply-cover-letter-modal");
+    if (coverLetterModalElement) {
+        const coverModalInstance = bootstrap.Modal.getInstance(coverLetterModalElement);
+        if (coverModalInstance) {
+            coverModalInstance.hide();
+        }
+    }
+
+    if (isPendingApproval) {
+        window.alert(pendingApprovalMessage);
+        return;
+    }
+
     const modalElement = document.getElementById("professional-apply-invalid-modal");
     const messageElement = document.getElementById("professional-apply-invalid-message");
 

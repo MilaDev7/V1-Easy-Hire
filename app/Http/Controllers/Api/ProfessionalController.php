@@ -276,7 +276,7 @@ class ProfessionalController extends Controller
         }
 
         if ($professional->status !== 'approved') {
-            return response()->json(['message' => 'Account not approved'], 403);
+            return response()->json(['message' => 'You are not approved yet. The admin is reviewing your info.'], 403);
         }
 
         if ($job->status !== 'open') {

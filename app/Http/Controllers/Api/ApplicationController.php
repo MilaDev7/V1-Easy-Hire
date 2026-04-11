@@ -88,7 +88,7 @@ class ApplicationController extends Controller
         // 4. Security Check: Is the professional approved by Admin?
         if ($professionalProfile->status !== 'approved') {
             return response()->json([
-                'message' => 'Your account is not approved yet. Only approved professionals can apply.',
+                'message' => 'You are not approved yet. The admin is reviewing your info.',
             ], 403);
         }
 
