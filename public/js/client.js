@@ -519,14 +519,25 @@ function renderProfessionalProfileInDashboard(payload) {
     const reportWarning = Boolean(payload?.report_warning);
     const completedJobs = Array.isArray(payload?.completed_jobs) ? payload.completed_jobs : [];
     const averageRating = Number(payload?.average_rating || 0);
+    const status = String(pro.status || "pending").toLowerCase();
+    const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
+    const statusClass = status === "approved"
+        ? "bg-success-subtle text-success"
+        : status === "rejected"
+            ? "bg-danger-subtle text-danger"
+            : "bg-warning-subtle text-warning";
     const proId = pro.id;
     const name = pro.user?.name || pro.name || "N/A";
     const photo = pro.profile_photo ? "/storage/" + pro.profile_photo : "/images/user1.jpg";
+    const skills = String(pro.skill || "")
+        .split(/[,/|]+/)
+        .map((item) => item.trim())
+        .filter(Boolean);
 
     const stars = renderStars(averageRating);
     const reviewsHtml = reviews.length
-        ? reviews.map((review) => `
-            <div class="list-group-item mb-2 rounded">
+        ? reviews.map((review, index) => `
+            <div class="list-group-item mb-2 rounded ${index >= 3 ? "d-none dashboard-review-extra" : ""}">
                 <div class="d-flex justify-content-between align-items-start mb-2">
                     <div>
                         <i class="fa-solid fa-user me-1 text-primary"></i>
@@ -537,7 +548,13 @@ function renderProfessionalProfileInDashboard(payload) {
                 <p class="mb-1 text-muted small">${review.comment || "No comment"}</p>
                 <small class="text-muted">${formatDate(review.created_at)}</small>
             </div>
-        `).join("")
+        `).join("") + (reviews.length > 3 ? `
+            <div class="text-center mt-3">
+                <button type="button" id="dashboard-show-more-reviews-btn" class="btn btn-outline-info btn-sm">
+                    <i class="fa-solid fa-angles-down me-1"></i>See more reviews
+                </button>
+            </div>
+        ` : "")
         : '<div class="alert alert-secondary mb-0">No reviews yet.</div>';
 
     const reportsHtml = reportCount > 0
@@ -551,71 +568,104 @@ function renderProfessionalProfileInDashboard(payload) {
 
     const completedJobsHtml = completedJobs.length
         ? completedJobs.map((application) => `
-            <div class="list-group-item border-success mb-2 rounded">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <strong class="text-success">${application.job?.title || "Job"}</strong>
-                        <span class="badge bg-success ms-2">Completed</span>
+            <div class="col-12 col-md-6 col-xl-4">
+                <div class="card border h-100 rounded-3">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                            <h6 class="fw-bold mb-0 text-success">${application.job?.title || "Project"}</h6>
+                            <span class="badge bg-success">Completed</span>
+                        </div>
+                        <p class="text-muted small mb-2">${(application.job?.description || "No description available.").toString().slice(0, 110)}</p>
+                        <div class="small text-muted d-flex justify-content-between">
+                            <span><i class="fa-solid fa-location-dot me-1"></i>${application.job?.location || "N/A"}</span>
+                            <span>${formatDate(application.job?.created_at)}</span>
+                        </div>
                     </div>
-                    <small class="text-muted">${formatDate(application.job?.created_at)}</small>
                 </div>
             </div>
         `).join("")
-        : '<div class="alert alert-secondary mb-0">No completed jobs yet.</div>';
+        : '<div class="alert alert-secondary mb-0">No project portfolio available yet.</div>';
 
     setContentHeader(name, "Professional profile", false);
 
     contentArea.innerHTML = `
-        <div class="card border-0 shadow-sm rounded-4" style="border-top: 5px solid #198754 !important;">
-            <div class="row g-0">
-                <div class="col-md-4 text-center p-4 bg-light">
-                    <img src="${photo}" class="rounded-circle border border-3 mb-3" alt="${name}" style="width: 150px; height: 150px; object-fit: cover;">
-                    <h3 class="fw-bold text-dark">${name}</h3>
-                    <span class="badge bg-success mb-2">${pro.skill || "Professional"}</span>
-                    <p class="text-muted mb-1"><i class="fa-solid fa-location-dot text-danger me-1"></i>${pro.location || "N/A"}</p>
-                    <div class="mb-2">${stars} <span class="text-muted small">(${averageRating.toFixed(1)})</span></div>
-                    <div class="d-flex justify-content-center gap-3 mt-2">
-                        <div class="text-center">
-                            <strong class="text-success fs-5">${completedJobs.length}</strong>
-                            <small class="d-block text-muted">Completed Jobs</small>
-                        </div>
-                        <div class="text-center">
-                            <strong class="text-warning fs-5">${reviews.length}</strong>
-                            <small class="d-block text-muted">Reviews</small>
+        <div class="row g-4">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm rounded-4 overflow-hidden" style="border-top: 5px solid #198754 !important;">
+                    <div class="card-body p-4 p-lg-5">
+                        <div class="row g-4 align-items-center">
+                            <div class="col-12 col-md-auto text-center">
+                                <img src="${photo}" class="rounded-circle border border-3 shadow-sm" alt="${name}" style="width: 130px; height: 130px; object-fit: cover;">
+                            </div>
+                            <div class="col">
+                                <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+                                    <h2 class="h3 fw-bold mb-0 text-dark">${name}</h2>
+                                    <span class="badge rounded-pill ${statusClass}">${statusLabel}</span>
+                                    ${reportWarning ? '<span class="badge rounded-pill text-bg-danger"><i class="fa-solid fa-triangle-exclamation me-1"></i>This professional has received multiple reports</span>' : ""}
+                                </div>
+                                <p class="text-muted mb-2">${pro.skill || "Professional"}</p>
+                                <div class="d-flex flex-wrap align-items-center gap-3 small mb-3">
+                                    <span class="d-inline-flex align-items-center">
+                                        ${stars}
+                                        <span class="ms-2 text-muted">${averageRating.toFixed(1)} (${reviews.length} reviews)</span>
+                                    </span>
+                                    <span class="text-muted"><i class="fa-solid fa-location-dot text-danger me-1"></i>${pro.location || "N/A"}</span>
+                                </div>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <button type="button" class="btn btn-success" id="dashboard-profile-hire-btn">
+                                        <i class="fa-solid fa-paper-plane me-1"></i> Send Request
+                                    </button>
+                                    <button type="button" class="btn btn-outline-danger" id="dashboard-profile-report-btn">
+                                        <i class="fa-solid fa-flag me-1"></i> Report
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-8 p-4">
-                    <div class="mb-3">
-                        <div class="d-flex flex-wrap gap-2">
-                            <button type="button" class="btn btn-success" id="dashboard-profile-hire-btn">
-                                <i class="fa-solid fa-briefcase me-1"></i> Hire
-                            </button>
-                            <button type="button" class="btn btn-outline-primary" id="dashboard-profile-review-btn">
-                                <i class="fa-solid fa-star me-1"></i> Review
-                            </button>
-                            <button type="button" class="btn btn-outline-danger" id="dashboard-profile-report-btn">
-                                <i class="fa-solid fa-flag me-1"></i> Report
-                            </button>
-                        </div>
+            </div>
+
+            <div class="col-12 col-lg-6">
+                <div class="card border-0 shadow-sm rounded-4 h-100">
+                    <div class="card-body p-4">
+                        <h4 class="fw-bold text-primary mb-3"><i class="fa-solid fa-user me-2"></i>About</h4>
+                        <p class="text-dark bg-light rounded-3 p-3 mb-3">${pro.bio || "No bio available."}</p>
+                        <div class="alert alert-success mb-0"><i class="fa-solid fa-briefcase me-2"></i><strong>${pro.experience || 0} years</strong> experience</div>
                     </div>
+                </div>
+            </div>
 
-                    <h4 class="fw-bold text-primary mb-3"><i class="fa-solid fa-user me-2"></i>About</h4>
-                    <p class="text-dark mb-4 bg-light p-3 rounded">${pro.bio || "No bio available."}</p>
+            <div class="col-12 col-lg-6">
+                <div class="card border-0 shadow-sm rounded-4 h-100">
+                    <div class="card-body p-4">
+                        <h4 class="fw-bold text-dark mb-3"><i class="fa-solid fa-tags me-2"></i>Skills</h4>
+                        ${skills.length ? `<div class="d-flex flex-wrap gap-2">${skills.map((skill) => `<span class="badge rounded-pill text-bg-light border px-3 py-2">${skill}</span>`).join("")}</div>` : '<div class="alert alert-secondary mb-0">No skills listed.</div>'}
+                    </div>
+                </div>
+            </div>
 
-                    <h4 class="fw-bold text-success mb-3"><i class="fa-solid fa-briefcase me-2"></i>Experience</h4>
-                    <div class="alert alert-success mb-4"><strong>${pro.experience || 0} years</strong> of professional experience</div>
+            <div class="col-12">
+                <div class="card border-0 shadow-sm rounded-4">
+                    <div class="card-body p-4">
+                        <h4 class="fw-bold text-success mb-3"><i class="fa-solid fa-layer-group me-2"></i>Portfolio</h4>
+                        ${completedJobs.length ? `<div class="row g-3">${completedJobsHtml}</div>` : completedJobsHtml}
+                    </div>
+                </div>
+            </div>
 
-                    <h4 class="fw-bold text-warning mb-3"><i class="fa-solid fa-check-circle me-2"></i>Completed Jobs</h4>
-                    <div class="list-group mb-4">${completedJobsHtml}</div>
-
-                    <div id="dashboard-profile-reviews-section">
+            <div class="col-12" id="dashboard-profile-reviews-section">
+                <div class="card border-0 shadow-sm rounded-4">
+                    <div class="card-body p-4">
                         <h4 class="fw-bold text-info mb-3"><i class="fa-solid fa-star me-2"></i>Reviews (${reviews.length})</h4>
-                        <div class="list-group mb-4">${reviewsHtml}</div>
+                        <div class="list-group mb-0">${reviewsHtml}</div>
                     </div>
+                </div>
+            </div>
 
-                    <div id="dashboard-profile-reports-section">
-                        <h4 class="fw-bold text-danger mb-3"><i class="fa-solid fa-flag me-2"></i>Reports (${reportCount})</h4>
+            <div class="col-12" id="dashboard-profile-reports-section">
+                <div class="card border-0 shadow-sm rounded-4">
+                    <div class="card-body p-4">
+                        <h4 class="fw-bold text-danger mb-3"><i class="fa-solid fa-shield-halved me-2"></i>System Signal</h4>
                         ${reportsHtml}
                     </div>
                 </div>
@@ -628,6 +678,7 @@ function renderProfessionalProfileInDashboard(payload) {
     const reportBtn = document.getElementById("dashboard-profile-report-btn");
     const reviewsSection = document.getElementById("dashboard-profile-reviews-section");
     const reportsSection = document.getElementById("dashboard-profile-reports-section");
+    const showMoreReviewsButton = document.getElementById("dashboard-show-more-reviews-btn");
 
     if (hireBtn) {
         hireBtn.addEventListener("click", function () {
@@ -657,6 +708,15 @@ function renderProfessionalProfileInDashboard(payload) {
             if (reportsSection) {
                 reportsSection.scrollIntoView({ behavior: "smooth", block: "start" });
             }
+        });
+    }
+
+    if (showMoreReviewsButton) {
+        showMoreReviewsButton.addEventListener("click", function () {
+            document.querySelectorAll(".dashboard-review-extra").forEach(function (item) {
+                item.classList.remove("d-none");
+            });
+            showMoreReviewsButton.classList.add("d-none");
         });
     }
 }

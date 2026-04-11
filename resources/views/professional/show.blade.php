@@ -63,6 +63,7 @@
         const reportButton = document.getElementById("action-report-btn");
         const reviewsSection = document.getElementById("profile-reviews-section");
         const reportsSection = document.getElementById("profile-reports-section");
+        const showMoreReviewsButton = document.getElementById("profile-show-more-reviews-btn");
 
         if (role === "client") {
             if (clientActions) clientActions.classList.remove("d-none");
@@ -105,6 +106,15 @@
                 if (reportsSection) {
                     reportsSection.scrollIntoView({ behavior: "smooth", block: "start" });
                 }
+            });
+        }
+
+        if (showMoreReviewsButton) {
+            showMoreReviewsButton.addEventListener("click", function () {
+                document.querySelectorAll(".profile-review-extra").forEach(function (item) {
+                    item.classList.remove("d-none");
+                });
+                showMoreReviewsButton.classList.add("d-none");
             });
         }
     })();

@@ -1,129 +1,178 @@
-<div class="card border-0 shadow-sm rounded-4" style="border-top: 5px solid #198754 !important;">
-    <div class="row g-0">
-        <div class="col-md-4 text-center p-4 bg-light">
-            <img
-                src="{{ $professional->profile_photo ? asset('storage/' . $professional->profile_photo) : asset('images/user1.jpg') }}"
-                class="rounded-circle border border-3 mb-3"
-                alt="{{ $professional->user->name ?? 'Professional' }}"
-                style="width: 150px; height: 150px; object-fit: cover;"
-            >
-            <h3 class="fw-bold text-dark">{{ $professional->user->name ?? 'Professional' }}</h3>
-            <span class="badge bg-success mb-2">{{ $professional->skill ?: 'Professional' }}</span>
-            <p class="text-muted mb-1">
-                <i class="fa-solid fa-location-dot text-danger me-1"></i>
-                {{ $professional->location ?: 'N/A' }}
-            </p>
-            <div class="mb-2">
-                @for($i = 1; $i <= 5; $i++)
-                    <i class="fa-star {{ $i <= round($averageRating ?? 0) ? 'fas text-warning' : 'far text-secondary' }}"></i>
-                @endfor
-                @if(($averageRating ?? 0) > 0)
-                    <span class="text-muted small">({{ number_format($averageRating ?? 0, 1) }})</span>
-                @else
-                    <span class="text-muted small">(No ratings)</span>
-                @endif
-            </div>
+@php
+    $skillParts = collect(preg_split('/[,\/|]+/', (string) ($professional->skill ?? '')))
+        ->map(fn ($item) => trim($item))
+        ->filter()
+        ->values();
 
-            @if($reportsCount > 0)
-                <div class="alert alert-danger py-1 px-2 mb-2 small">
-                    <i class="fa-solid fa-flag me-1"></i><strong>{{ $reportsCount }}</strong> report(s)
-                </div>
-            @else
-                <div class="alert alert-success py-1 px-2 mb-2 small">
-                    <i class="fa-solid fa-check-circle me-1"></i>No reports
-                </div>
-            @endif
+    if ($skillParts->isEmpty() && !empty($professional->skill)) {
+        $skillParts = collect([trim((string) $professional->skill)]);
+    }
 
-            <div class="d-flex justify-content-center gap-3 mt-2">
-                <div class="text-center">
-                    <strong class="text-success fs-5">{{ $completedJobs->count() }}</strong>
-                    <small class="d-block text-muted">Completed Jobs</small>
-                </div>
-                <div class="text-center">
-                    <strong class="text-warning fs-5">{{ $reviews->count() }}</strong>
-                    <small class="d-block text-muted">Reviews</small>
+    $status = strtolower((string) ($professional->status ?? 'pending'));
+    $statusLabel = ucfirst($status);
+    $statusClass = $status === 'approved'
+        ? 'bg-success-subtle text-success'
+        : ($status === 'rejected' ? 'bg-danger-subtle text-danger' : 'bg-warning-subtle text-warning');
+@endphp
+
+<div class="row g-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm rounded-4 overflow-hidden" style="border-top: 5px solid #198754 !important;">
+            <div class="card-body p-4 p-lg-5">
+                <div class="row g-4 align-items-center">
+                    <div class="col-12 col-md-auto text-center">
+                        <img
+                            src="{{ $professional->profile_photo ? asset('storage/' . $professional->profile_photo) : asset('images/user1.jpg') }}"
+                            class="rounded-circle border border-3 shadow-sm"
+                            alt="{{ $professional->user->name ?? 'Professional' }}"
+                            style="width: 130px; height: 130px; object-fit: cover;"
+                        >
+                    </div>
+                    <div class="col">
+                        <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+                            <h2 class="h3 fw-bold mb-0 text-dark">{{ $professional->user->name ?? 'Professional' }}</h2>
+                            <span class="badge rounded-pill {{ $statusClass }}">{{ $statusLabel }}</span>
+                            @if(($reportsCount ?? 0) > 3)
+                                <span class="badge rounded-pill text-bg-danger">
+                                    <i class="fa-solid fa-triangle-exclamation me-1"></i>
+                                    This professional has received multiple reports
+                                </span>
+                            @endif
+                        </div>
+
+                        <p class="text-muted mb-2">{{ $professional->skill ?: 'Professional' }}</p>
+
+                        <div class="d-flex flex-wrap align-items-center gap-3 small mb-3">
+                            <span class="d-inline-flex align-items-center">
+                                @for($i = 1; $i <= 5; $i++)
+                                    <i class="fa-star {{ $i <= round($averageRating ?? 0) ? 'fas text-warning' : 'far text-secondary' }}"></i>
+                                @endfor
+                                <span class="ms-2 text-muted">
+                                    {{ number_format((float) ($averageRating ?? 0), 1) }} ({{ ($reviews ?? collect())->count() }} reviews)
+                                </span>
+                            </span>
+                            <span class="text-muted">
+                                <i class="fa-solid fa-location-dot text-danger me-1"></i>{{ $professional->location ?: 'N/A' }}
+                            </span>
+                        </div>
+
+                        <div id="profile-actions-client" class="d-none">
+                            <div class="d-flex flex-wrap gap-2">
+                                <button type="button" class="btn btn-success" id="action-hire-btn">
+                                    <i class="fa-solid fa-paper-plane me-1"></i> Send Request
+                                </button>
+                                <button type="button" class="btn btn-outline-danger" id="action-report-btn">
+                                    <i class="fa-solid fa-flag me-1"></i> Report
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="profile-actions-guest" class="alert alert-info d-none py-2 px-3 mb-0 mt-2">
+                            <i class="fa-solid fa-circle-info me-1"></i>
+                            Login as a client to send a request or report.
+                            <a href="/login" class="alert-link ms-1">Login</a>
+                        </div>
+
+                        <div id="profile-actions-admin" class="alert alert-warning d-none py-2 px-3 mb-0 mt-2">
+                            <i class="fa-solid fa-shield-halved me-1"></i>
+                            Admin view: moderation mode enabled.
+                            <a href="/admin/dashboard" class="alert-link ms-1">Open Dashboard</a>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
+    </div>
 
-        <div class="col-md-8 p-4">
-            <div id="profile-actions-client" class="d-none mb-3">
-                <div class="d-flex flex-wrap gap-2">
-                    <button type="button" class="btn btn-success" id="action-hire-btn">
-                        <i class="fa-solid fa-briefcase me-1"></i> Hire
-                    </button>
-                    <button type="button" class="btn btn-outline-primary" id="action-review-btn">
-                        <i class="fa-solid fa-star me-1"></i> Review
-                    </button>
-                    <button type="button" class="btn btn-outline-danger" id="action-report-btn">
-                        <i class="fa-solid fa-flag me-1"></i> Report
-                    </button>
-                </div>
-            </div>
-
-            <div id="profile-actions-guest" class="alert alert-info d-none">
-                <i class="fa-solid fa-circle-info me-1"></i>
-                Login as a client to hire or send a direct request.
-                <a href="/login" class="alert-link ms-1">Login</a>
-            </div>
-
-            <div id="profile-actions-admin" class="alert alert-warning d-none">
-                <i class="fa-solid fa-shield-halved me-1"></i>
-                Admin view: moderation mode enabled.
-                <a href="/admin/dashboard" class="alert-link ms-1">Open Dashboard</a>
-            </div>
-
-            <h4 class="fw-bold text-primary mb-3">
-                <i class="fa-solid fa-user me-2"></i>About
-            </h4>
-            <p class="text-dark mb-4 bg-light p-3 rounded">{{ $professional->bio ?: 'No bio available.' }}</p>
-
-            <h4 class="fw-bold text-success mb-3">
-                <i class="fa-solid fa-briefcase me-2"></i>Experience
-            </h4>
-            <div class="alert alert-success mb-4">
-                <strong>{{ $professional->experience ?? 0 }} years</strong> of professional experience
-            </div>
-
-            <h4 class="fw-bold text-warning mb-3">
-                <i class="fa-solid fa-check-circle me-2"></i>Completed Jobs
-            </h4>
-            @if($completedJobs->isEmpty())
-                <div class="alert alert-secondary">No completed jobs yet.</div>
-            @else
-                <div class="list-group">
-                    @foreach($completedJobs as $application)
-                        <div class="list-group-item border-success mb-2 rounded">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <strong class="text-success">{{ $application->job->title ?? 'Job' }}</strong>
-                                    <span class="badge bg-success ms-2">Completed</span>
-                                </div>
-                                <small class="text-muted">{{ optional($application->job->created_at)->format('M d, Y') }}</small>
-                            </div>
-                        </div>
-                    @endforeach
-                </div>
-            @endif
-
-            <div id="profile-reviews-section">
-                <h4 class="fw-bold text-info mb-3 mt-4">
-                    <i class="fa-solid fa-star me-2"></i>Reviews ({{ $reviews->count() }})
+    <div class="col-12 col-lg-6">
+        <div class="card border-0 shadow-sm rounded-4 h-100">
+            <div class="card-body p-4">
+                <h4 class="fw-bold text-primary mb-3">
+                    <i class="fa-solid fa-user me-2"></i>About
                 </h4>
-                @if($reviews->isEmpty())
-                    <div class="alert alert-secondary">No reviews yet.</div>
+                <p class="text-dark bg-light rounded-3 p-3 mb-3">{{ $professional->bio ?: 'No bio available.' }}</p>
+                <div class="alert alert-success mb-0">
+                    <i class="fa-solid fa-briefcase me-2"></i>
+                    <strong>{{ $professional->experience ?? 0 }} years</strong> experience
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-lg-6">
+        <div class="card border-0 shadow-sm rounded-4 h-100">
+            <div class="card-body p-4">
+                <h4 class="fw-bold text-dark mb-3">
+                    <i class="fa-solid fa-tags me-2"></i>Skills
+                </h4>
+                @if($skillParts->isEmpty())
+                    <div class="alert alert-secondary mb-0">No skills listed.</div>
+                @else
+                    <div class="d-flex flex-wrap gap-2">
+                        @foreach($skillParts as $skill)
+                            <span class="badge rounded-pill text-bg-light border px-3 py-2">{{ $skill }}</span>
+                        @endforeach
+                    </div>
+                @endif
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12">
+        <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-body p-4">
+                <h4 class="fw-bold text-success mb-3">
+                    <i class="fa-solid fa-layer-group me-2"></i>Portfolio
+                </h4>
+                @if(($completedJobs ?? collect())->isEmpty())
+                    <div class="alert alert-secondary mb-0">No project portfolio available yet.</div>
+                @else
+                    <div class="row g-3">
+                        @foreach($completedJobs as $application)
+                            <div class="col-12 col-md-6 col-xl-4">
+                                <div class="card border h-100 rounded-3">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                                            <h6 class="fw-bold mb-0 text-success">{{ $application->job->title ?? 'Project' }}</h6>
+                                            <span class="badge bg-success">Completed</span>
+                                        </div>
+                                        <p class="text-muted small mb-2">
+                                            {{ \Illuminate\Support\Str::limit((string) ($application->job->description ?? 'No description available.'), 100) }}
+                                        </p>
+                                        <div class="small text-muted d-flex justify-content-between">
+                                            <span><i class="fa-solid fa-location-dot me-1"></i>{{ $application->job->location ?? 'N/A' }}</span>
+                                            <span>{{ optional($application->job->created_at)->format('M d, Y') }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12" id="profile-reviews-section">
+        <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-body p-4">
+                <h4 class="fw-bold text-info mb-3">
+                    <i class="fa-solid fa-star me-2"></i>Reviews ({{ ($reviews ?? collect())->count() }})
+                </h4>
+                @if(($reviews ?? collect())->isEmpty())
+                    <div class="alert alert-secondary mb-0">No reviews yet.</div>
                 @else
                     <div class="list-group">
                         @foreach($reviews as $review)
-                            <div class="list-group-item mb-2 rounded">
+                            <div class="list-group-item border-0 rounded-3 mb-2 bg-light {{ $loop->index >= 3 ? 'd-none profile-review-extra' : '' }}">
                                 <div class="d-flex justify-content-between align-items-start mb-2">
                                     <div>
                                         <i class="fa-solid fa-user me-1 text-primary"></i>
-                                        <strong>{{ $review->reviewer->name ?? 'Anonymous' }}</strong>
+                                        <strong>{{ $review->reviewer->name ?? $review->reviewer_name ?? 'Anonymous' }}</strong>
                                     </div>
                                     <div>
                                         @for($i = 1; $i <= 5; $i++)
-                                            <i class="fa-star {{ $i <= $review->rating ? 'fas text-warning' : 'far text-secondary' }}" style="font-size: 12px;"></i>
+                                            <i class="fa-star {{ $i <= (int) ($review->rating ?? 0) ? 'fas text-warning' : 'far text-secondary' }}" style="font-size: 12px;"></i>
                                         @endfor
                                     </div>
                                 </div>
@@ -132,30 +181,33 @@
                             </div>
                         @endforeach
                     </div>
+                    @if(($reviews ?? collect())->count() > 3)
+                        <div class="text-center mt-3">
+                            <button type="button" id="profile-show-more-reviews-btn" class="btn btn-outline-info btn-sm">
+                                <i class="fa-solid fa-angles-down me-1"></i>See more reviews
+                            </button>
+                        </div>
+                    @endif
                 @endif
             </div>
+        </div>
+    </div>
 
-            <div id="profile-reports-section">
-                <h4 class="fw-bold text-danger mb-3 mt-4">
-                    <i class="fa-solid fa-flag me-2"></i>Reports ({{ $reportsCount ?? 0 }})
+    <div class="col-12" id="profile-reports-section">
+        <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-body p-4">
+                <h4 class="fw-bold text-danger mb-3">
+                    <i class="fa-solid fa-shield-halved me-2"></i>System Signal
                 </h4>
-                @if(($reportsCount ?? 0) > 0)
-                    <div class="alert alert-danger d-flex justify-content-between align-items-center mb-0">
-                        <span>
-                            <i class="fa-solid fa-flag me-2"></i>
-                            Total reports: <strong>{{ (int) ($reportsCount ?? 0) }}</strong>
-                        </span>
-                        @if(($reportsCount ?? 0) > 3)
-                            <span class="badge text-bg-danger">
-                                <i class="fa-solid fa-triangle-exclamation me-1"></i>Warning
-                            </span>
-                        @endif
-                    </div>
-                @else
-                    <div class="alert alert-success mb-0">
-                        <i class="fa-solid fa-check-circle me-2"></i>No reports
-                    </div>
-                @endif
+                <div class="alert {{ ($reportsCount ?? 0) > 3 ? 'alert-danger' : 'alert-success' }} mb-0 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <span>
+                        <i class="fa-solid fa-flag me-2"></i>
+                        Report Count: <strong>{{ (int) ($reportsCount ?? 0) }}</strong>
+                    </span>
+                    @if(($reportsCount ?? 0) > 3)
+                        <span class="badge text-bg-danger">This professional has received multiple reports</span>
+                    @endif
+                </div>
             </div>
         </div>
     </div>
