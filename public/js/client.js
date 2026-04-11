@@ -1020,10 +1020,30 @@ function renderContracts(contracts) {
                     actionButtons = `
                         ${hasReview ? '<span class="badge bg-success me-1"><i class="fa-solid fa-star me-1"></i>Reviewed</span>' : ''}
                         ${hasReport ? '<span class="badge bg-danger"><i class="fa-solid fa-flag me-1"></i>Reported</span>' : ''}
+                        ${!hasReview || !hasReport ? `
+                            <button
+                                type="button"
+                                class="btn btn-sm btn-outline-primary contract-action-button ms-1"
+                                data-action="feedback"
+                                data-contract-id="${contract.id}"
+                            >
+                                Rate/Report
+                            </button>
+                        ` : ''}
                     `;
                 } else {
                     actionButtons = `
-                        <span class="badge bg-success me-1"><i class="fa-solid fa-check me-1"></i>Completed</span>
+                        <div class="d-flex justify-content-end gap-2">
+                            <span class="badge bg-success me-1"><i class="fa-solid fa-check me-1"></i>Completed</span>
+                            <button
+                                type="button"
+                                class="btn btn-sm btn-outline-primary contract-action-button"
+                                data-action="feedback"
+                                data-contract-id="${contract.id}"
+                            >
+                                Rate/Report
+                            </button>
+                        </div>
                     `;
                 }
             } else if (status === 'cancelled') {
@@ -1726,7 +1746,12 @@ function bindContractActions() {
             }
 
             if (action === "confirm") {
-                openContractConfirmModal(contractId);
+                openContractConfirmModal(contractId, "confirm");
+                return;
+            }
+
+            if (action === "feedback") {
+                openContractConfirmModal(contractId, "feedback");
                 return;
             }
 
@@ -1759,12 +1784,13 @@ function ensureContractConfirmModal() {
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title">Confirm Contract</h5>
+                        <h5 class="modal-title" id="contract-confirm-title">Confirm Contract</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <form id="contract-confirm-form">
                         <div class="modal-body">
                             <input type="hidden" id="contract-confirm-id">
+                            <input type="hidden" id="contract-confirm-mode" value="confirm">
                             <div class="mb-3">
                                 <label for="contract-rating" class="form-label fw-semibold">Rating <span class="text-muted">(Optional)</span></label>
                                 <select id="contract-rating" class="form-select">
@@ -1802,20 +1828,24 @@ function ensureContractConfirmModal() {
     return document.getElementById("contract-confirm-modal");
 }
 
-function openContractConfirmModal(contractId) {
+function openContractConfirmModal(contractId, mode = "confirm") {
     const modalElement = ensureContractConfirmModal();
     const contractIdInput = document.getElementById("contract-confirm-id");
+    const modeInput = document.getElementById("contract-confirm-mode");
+    const titleElement = document.getElementById("contract-confirm-title");
     const ratingInput = document.getElementById("contract-rating");
     const reviewInput = document.getElementById("contract-review-comment");
     const reportInput = document.getElementById("contract-report-reason");
     const feedback = document.getElementById("contract-confirm-feedback");
     const submitButton = document.getElementById("contract-confirm-submit");
 
-    if (!modalElement || !contractIdInput || !ratingInput || !reviewInput || !reportInput || !feedback) {
+    if (!modalElement || !contractIdInput || !modeInput || !titleElement || !ratingInput || !reviewInput || !reportInput || !feedback) {
         return;
     }
 
     contractIdInput.value = contractId;
+    modeInput.value = mode;
+    titleElement.textContent = mode === "feedback" ? "Rate / Review / Report" : "Confirm Contract";
     ratingInput.value = "";
     reviewInput.value = "";
     reportInput.value = "";
@@ -1840,6 +1870,7 @@ function bindContractConfirmForm() {
         event.preventDefault();
 
         const contractId = document.getElementById("contract-confirm-id")?.value;
+        const mode = document.getElementById("contract-confirm-mode")?.value || "confirm";
         const rating = document.getElementById("contract-rating")?.value;
         const comment = document.getElementById("contract-review-comment")?.value || "";
         const reportReason = document.getElementById("contract-report-reason")?.value || "";
@@ -1851,44 +1882,85 @@ function bindContractConfirmForm() {
             return;
         }
 
-        submitButton.disabled = true;
-        feedback.innerHTML = '<div class="text-muted">Submitting confirmation...</div>';
+        const shouldSendReview = Boolean(rating);
+        const shouldSendReport = Boolean(reportReason.trim());
 
-        postJson(`/api/contracts/${contractId}/confirm`)
+        if (!shouldSendReview && !shouldSendReport && mode === "feedback") {
+            feedback.innerHTML =
+                '<div class="alert alert-warning mb-0">Add a rating or report reason before submitting.</div>';
+            return;
+        }
+
+        submitButton.disabled = true;
+        feedback.innerHTML = mode === "feedback"
+            ? '<div class="text-muted">Submitting feedback...</div>'
+            : '<div class="text-muted">Submitting confirmation...</div>';
+
+        const confirmPromise = mode === "confirm"
+            ? postJson(`/api/contracts/${contractId}/confirm`)
+            : Promise.resolve(null);
+
+        confirmPromise
             .then(() => {
-                if (!rating) {
-                    return null;
+                if (!shouldSendReview) {
+                    return { reviewOk: true, reviewSkipped: true };
                 }
 
                 return postJson(`/api/contracts/${contractId}/review`, {
                     rating: Number(rating),
                     comment,
-                });
+                }).then(() => ({ reviewOk: true }))
+                    .catch((error) => ({ reviewOk: false, reviewError: error?.message || "Unable to submit review." }));
             })
-            .then(() => {
-                if (!reportReason.trim()) {
-                    return null;
+            .then((reviewResult) => {
+                if (!shouldSendReport) {
+                    return { ...reviewResult, reportOk: true, reportSkipped: true };
                 }
 
                 return postJson(`/api/contracts/${contractId}/report`, {
                     reason: reportReason.trim(),
-                });
+                })
+                    .then(() => ({ ...reviewResult, reportOk: true }))
+                    .catch((error) => ({ ...reviewResult, reportOk: false, reportError: error?.message || "Unable to submit report." }));
             })
-            .then(() => {
-                feedback.innerHTML =
-                    '<div class="alert alert-success mb-0">Contract confirmed successfully.</div>';
+            .then((result) => {
+                const reviewOk = result?.reviewOk !== false;
+                const reportOk = result?.reportOk !== false;
+                const messages = [];
+
+                if (mode === "confirm") {
+                    messages.push("Contract confirmed successfully.");
+                }
+
+                if (shouldSendReview) {
+                    messages.push(reviewOk ? "Review submitted." : `Review failed: ${result.reviewError || "Unable to submit review."}`);
+                }
+
+                if (shouldSendReport) {
+                    messages.push(reportOk ? "Report submitted." : `Report failed: ${result.reportError || "Unable to submit report."}`);
+                }
+
+                const hasFailure = (shouldSendReview && !reviewOk) || (shouldSendReport && !reportOk);
+                const alertType = hasFailure ? "warning" : "success";
+
+                feedback.innerHTML = `<div class="alert alert-${alertType} mb-0">${messages.join("<br>")}</div>`;
+
                 loadAllContracts();
                 loadStats();
 
-                setTimeout(() => {
-                    const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
-                    modal.hide();
-                }, 700);
+                if (!hasFailure) {
+                    setTimeout(() => {
+                        const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
+                        modal.hide();
+                    }, 800);
+                } else {
+                    submitButton.disabled = false;
+                }
             })
             .catch((error) => {
                 submitButton.disabled = false;
                 feedback.innerHTML =
-                    `<div class="alert alert-danger mb-0">${error?.message || "Unable to confirm contract, review, or report."}</div>`;
+                    `<div class="alert alert-danger mb-0">${error?.message || "Unable to submit request."}</div>`;
             });
     });
 }
