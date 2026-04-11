@@ -273,7 +273,7 @@ class DirectRequestController extends Controller
 
         // Check if professional has 3 active contracts
         $activeContracts = Contract::where('professional_id', $userId)
-            ->where('status', 'active')
+            ->whereIn('status', ['active', 'pending_completion'])
             ->count();
 
         if ($activeContracts >= 3) {

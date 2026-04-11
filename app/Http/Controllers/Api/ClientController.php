@@ -33,6 +33,8 @@ class ClientController extends Controller
     // ✅ Active Contracts
     public function activeContracts()
     {
+        Contract::autoCompleteExpiredPendingCompletions();
+
         $contracts = Contract::where('client_id', auth()->id())
             ->where('status', 'active')
             ->get();
@@ -46,6 +48,8 @@ class ClientController extends Controller
     // ✅ All Contracts
     public function allContracts()
     {
+        Contract::autoCompleteExpiredPendingCompletions();
+
         $userId = auth()->id();
 
         $contracts = Contract::where('client_id', $userId)
@@ -76,8 +80,6 @@ class ClientController extends Controller
                     'professional_phone' => $contract->professional_phone ?? $contract->professional->phone ?? 'N/A',
                     'professional_profile_id' => optional($contract->professional->professional)->id,
                     'status' => $contract->status ?? 'N/A',
-                    'client_confirmed' => ! empty($contract->client_confirmed_at)
-                        || (($contract->status ?? null) === 'completed' && ($contract->job->status ?? null) === 'completed'),
                     'created_at' => optional($contract->created_at)->format('Y-m-d') ?? 'N/A',
                     'has_review' => $hasReview,
                     'has_report' => $hasReport,

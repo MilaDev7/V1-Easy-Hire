@@ -74,6 +74,7 @@ Route::middleware(['auth:sanctum', 'check_status'])->group(function () {
 
         // Contract Management
         Route::post('/contracts/{id}/confirm', [ContractController::class, 'confirm']);
+        Route::post('/contracts/{id}/reject', [ContractController::class, 'reject']);
         Route::post('/contracts/{id}/cancel', [ContractController::class, 'cancel']);
 
         // Direct Requests

@@ -983,7 +983,6 @@ function renderContracts(contracts) {
     const rows = contracts
         .map((contract) => {
             const status = contract.status || "N/A";
-            const isClientConfirmed = Boolean(contract.client_confirmed);
             const createdDate = formatDate(
                 contract.created_at || contract.createdAt
             );
@@ -992,31 +991,39 @@ function renderContracts(contracts) {
             const hasReview = contract.has_review || false;
             const hasReport = contract.has_report || false;
             
-            // Only show confirm button for completed contracts that haven't been reviewed
+            // Only show completion decision buttons when waiting for client confirmation.
             let actionButtons = '';
             
-            if (status === 'completed') {
+            if (status === 'pending_completion') {
+                actionButtons = `
+                    <div class="d-flex justify-content-end gap-2">
+                        <button
+                            type="button"
+                            class="btn btn-sm btn-outline-success contract-action-button"
+                            data-action="confirm"
+                            data-contract-id="${contract.id}"
+                        >
+                            Confirm
+                        </button>
+                        <button
+                            type="button"
+                            class="btn btn-sm btn-outline-warning contract-action-button"
+                            data-action="reject"
+                            data-contract-id="${contract.id}"
+                        >
+                            Reject
+                        </button>
+                    </div>
+                `;
+            } else if (status === 'completed') {
                 if (hasReview || hasReport) {
                     actionButtons = `
                         ${hasReview ? '<span class="badge bg-success me-1"><i class="fa-solid fa-star me-1"></i>Reviewed</span>' : ''}
                         ${hasReport ? '<span class="badge bg-danger"><i class="fa-solid fa-flag me-1"></i>Reported</span>' : ''}
                     `;
-                } else if (isClientConfirmed) {
-                    actionButtons = `
-                        <span class="badge bg-success me-1"><i class="fa-solid fa-check me-1"></i>Completed</span>
-                    `;
                 } else {
                     actionButtons = `
-                        <div class="d-flex justify-content-end gap-2">
-                            <button
-                                type="button"
-                                class="btn btn-sm btn-outline-success contract-action-button"
-                                data-action="confirm"
-                                data-contract-id="${contract.id}"
-                            >
-                                Confirm
-                            </button>
-                        </div>
+                        <span class="badge bg-success me-1"><i class="fa-solid fa-check me-1"></i>Completed</span>
                     `;
                 }
             } else if (status === 'cancelled') {

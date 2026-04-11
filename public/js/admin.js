@@ -834,6 +834,8 @@ function renderContractsTable(contracts) {
     const rows = contracts.map(contract => {
         const statusBadge = contract.status === 'active' 
             ? '<span class="badge bg-success">Active</span>'
+            : contract.status === 'pending_completion'
+                ? '<span class="badge bg-warning text-dark">Pending Completion</span>'
             : contract.status === 'completed'
                 ? '<span class="badge bg-info">Completed</span>'
                 : contract.status === 'cancelled'
@@ -850,7 +852,6 @@ function renderContractsTable(contracts) {
                 <td>${contract.professional?.name || 'N/A'}</td>
                 <td>${contract.budget ? '$' + contract.budget : 'N/A'}</td>
                 <td>${statusBadge}</td>
-                <td>${contract.client_confirmed_at ? new Date(contract.client_confirmed_at).toLocaleDateString() : 'Pending'}</td>
                 <td>${contract.created_at ? new Date(contract.created_at).toLocaleDateString() : 'N/A'}</td>
                 <td>
                     <div class="d-flex gap-2">
@@ -873,7 +874,6 @@ function renderContractsTable(contracts) {
                         <th scope="col">Professional</th>
                         <th scope="col">Budget</th>
                         <th scope="col">Status</th>
-                        <th scope="col">Client Confirm</th>
                         <th scope="col">Created</th>
                         <th scope="col">Actions</th>
                     </tr>
@@ -899,9 +899,11 @@ function viewContract(id) {
 
     const statusBadge = contract.status === 'active' 
         ? '<span class="badge bg-success px-3 py-2"><i class="fa-solid fa-check-circle me-1"></i>Active</span>'
+        : contract.status === 'pending_completion'
+            ? '<span class="badge bg-warning text-dark px-3 py-2"><i class="fa-solid fa-hourglass-half me-1"></i>Pending Completion</span>'
         : contract.status === 'completed'
             ? '<span class="badge bg-info px-3 py-2"><i class="fa-solid fa-circle-check me-1"></i>Completed</span>'
-            : '<span class="badge bg-danger px-3 py-2"><i class="fa-solid fa-ban me-1"></i>Cancelled</span>';
+        : '<span class="badge bg-danger px-3 py-2"><i class="fa-solid fa-ban me-1"></i>Cancelled</span>';
 
     document.getElementById('contract-view-modal-body').innerHTML = `
         <div class="text-center mb-4">

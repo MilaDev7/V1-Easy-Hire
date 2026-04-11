@@ -20,7 +20,7 @@ return new class extends Migration
 
         $table->decimal('agreed_price', 10, 2)->nullable();
 
-        $table->enum('status', ['active', 'completed', 'cancelled'])->default('active');
+        $table->enum('status', ['active', 'pending_completion', 'completed', 'cancelled'])->default('active');
 
         $table->timestamps();
     });

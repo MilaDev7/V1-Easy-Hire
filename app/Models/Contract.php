@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 
 class Contract extends Model
 {
@@ -35,5 +36,25 @@ class Contract extends Model
     public function professional()
     {
         return $this->belongsTo(User::class, 'professional_id');
+    }
+
+    public static function autoCompleteExpiredPendingCompletions(int $days = 3): void
+    {
+        $cutoff = Carbon::now()->subDays($days);
+
+        static::where('status', 'pending_completion')
+            ->where('updated_at', '<=', $cutoff)
+            ->with('job')
+            ->chunkById(100, function ($contracts) {
+                foreach ($contracts as $contract) {
+                    $contract->status = 'completed';
+                    $contract->save();
+
+                    if ($contract->job && $contract->job->status !== 'completed') {
+                        $contract->job->status = 'completed';
+                        $contract->job->save();
+                    }
+                }
+            });
     }
 }

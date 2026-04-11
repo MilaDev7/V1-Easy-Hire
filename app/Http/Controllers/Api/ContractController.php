@@ -6,13 +6,14 @@ use App\Http\Controllers\Controller;
 use App\Models\Contract;
 use App\Models\JobPost;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Schema;
 
 class ContractController extends Controller
 {
     // PROFESSIONAL MARKS COMPLETED
     public function markCompleted($id)
     {
+        Contract::autoCompleteExpiredPendingCompletions();
+
         $contract = \App\Models\Contract::find($id);
 
         if (! $contract) {
@@ -29,21 +30,20 @@ class ContractController extends Controller
             return response()->json(['message' => 'Already completed or cancelled'], 400);
         }
 
-        // ✅ Mark completed (waiting client confirmation)
-        $contract->status = 'completed';
-        if (Schema::hasColumn('contracts', 'client_confirmed_at')) {
-            $contract->client_confirmed_at = null;
-        }
+        // ✅ Mark pending completion (waiting client confirmation)
+        $contract->status = 'pending_completion';
         $contract->save();
 
         return response()->json([
-            'message' => 'Work marked as completed, waiting for client confirmation',
+            'message' => 'Work marked as pending completion, waiting for client confirmation',
         ]);
     }
 
     // CLIENT CONFIRMS
     public function confirm($id)
     {
+        Contract::autoCompleteExpiredPendingCompletions();
+
         $contract = Contract::find($id);
 
         if (! $contract) {
@@ -55,14 +55,11 @@ class ContractController extends Controller
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
-        if ($contract->status === 'cancelled') {
-            return response()->json(['message' => 'Cancelled contract cannot be confirmed'], 400);
+        if ($contract->status !== 'pending_completion') {
+            return response()->json(['message' => 'Only pending completion contracts can be confirmed'], 400);
         }
 
         $contract->status = 'completed';
-        if (Schema::hasColumn('contracts', 'client_confirmed_at')) {
-            $contract->client_confirmed_at = now();
-        }
         $contract->save();
 
         if ($contract->job) {
@@ -75,9 +72,38 @@ class ContractController extends Controller
         ]);
     }
 
+    // CLIENT REJECTS COMPLETION AND RETURNS CONTRACT TO ACTIVE
+    public function reject($id)
+    {
+        Contract::autoCompleteExpiredPendingCompletions();
+
+        $contract = Contract::find($id);
+
+        if (! $contract) {
+            return response()->json(['message' => 'Contract not found'], 404);
+        }
+
+        if ($contract->client_id !== auth()->id()) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        if ($contract->status !== 'pending_completion') {
+            return response()->json(['message' => 'Only pending completion contracts can be rejected'], 400);
+        }
+
+        $contract->status = 'active';
+        $contract->save();
+
+        return response()->json([
+            'message' => 'Completion rejected. Contract set back to active',
+        ]);
+    }
+
     // client cancel contract
     public function cancel($id)
     {
+        Contract::autoCompleteExpiredPendingCompletions();
+
         $contract = \App\Models\Contract::findOrFail($id);
 
         // ✅ Only client can cancel
@@ -101,9 +127,13 @@ class ContractController extends Controller
         $contract->status = 'cancelled';
         $contract->save();
 
-        $job = JobPost::findOrFail($contract->job_id);
-        $job->status = 'cancelled';
-        $job->save();
+        if ($contract->job_id) {
+            $job = JobPost::find($contract->job_id);
+            if ($job) {
+                $job->status = 'cancelled';
+                $job->save();
+            }
+        }
 
         return response()->json([
             'message' => 'Contract cancelled successfully',
@@ -113,6 +143,8 @@ class ContractController extends Controller
 
     public function myContracts(Request $request)
     {
+        Contract::autoCompleteExpiredPendingCompletions();
+
         $userId = auth()->id();
 
         $query = \App\Models\Contract::where('professional_id', $userId);

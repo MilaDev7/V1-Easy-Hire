@@ -621,7 +621,7 @@ function renderProfessionalContractsSection() {
     contentArea.innerHTML = `
         <section class="professional-contracts-section">
             <div class="alert alert-light border mb-3">
-                Active contracts show a <strong>Complete</strong> button. Completed rows become read-only.
+                Active contracts show a <strong>Complete</strong> button. Once submitted, they move to <strong>Pending Completion</strong> until the client confirms.
             </div>
             <div id="professional-contracts-results">
                 <div class="text-muted">Loading contracts...</div>
@@ -645,10 +645,13 @@ function renderProfessionalContracts(contracts) {
 
     const rows = contracts
         .map((contract) => {
-            const isActive = (contract.status || "").toLowerCase() === "active";
-            const statusLabel = (contract.status || "active").toLowerCase() === "completed"
-                ? "Complete"
-                : contract.status || "Active";
+            const status = (contract.status || "active").toLowerCase();
+            const isActive = status === "active";
+            const statusLabel = status === "completed"
+                ? "Completed"
+                : status === "pending_completion"
+                    ? "Pending Completion"
+                    : contract.status || "Active";
             const actionButton = isActive
                 ? `
                     <button
@@ -659,7 +662,11 @@ function renderProfessionalContracts(contracts) {
                         Complete
                     </button>
                 `
-                : '<span class="text-muted small">Completed</span>';
+                : status === "pending_completion"
+                    ? '<span class="text-muted small">Waiting client confirmation</span>'
+                    : status === "completed"
+                        ? '<span class="text-muted small">Completed</span>'
+                        : '<span class="text-muted small">No action</span>';
 
             return `
                 <tr>
@@ -768,15 +775,15 @@ function bindProfessionalContractActions() {
                         const actionCell = row.lastElementChild;
 
                         if (statusBadge) {
-                            statusBadge.textContent = "Complete";
+                            statusBadge.textContent = "Pending Completion";
                         }
 
                         if (actionCell) {
-                            actionCell.innerHTML = '<span class="text-muted small">Complete</span>';
+                            actionCell.innerHTML = '<span class="text-muted small">Waiting client confirmation</span>';
                         }
                     }
 
-                    showProfessionalFeedback("success", "Contract marked as completed.");
+                    showProfessionalFeedback("success", "Contract marked as pending completion.");
                     loadProfessionalStats();
                 })
                 .catch((error) => {

@@ -323,13 +323,14 @@ class AdminController extends Controller
     // View contract
     public function contracts()
     {
+        \App\Models\Contract::autoCompleteExpiredPendingCompletions();
+
         $contracts = \App\Models\Contract::with(['client', 'professional', 'job', 'directRequest'])->latest()->get()->map(function ($contract) {
             return [
                 'id' => $contract->id,
                 'status' => $contract->status,
                 'budget' => $contract->agreed_price ?? $contract->job?->budget,
                 'created_at' => $contract->created_at,
-                'client_confirmed_at' => $contract->client_confirmed_at,
                 'client' => $contract->client ? ['id' => $contract->client->id, 'name' => $contract->client->name, 'email' => $contract->client->email, 'phone' => $contract->client_phone ?? $contract->client->phone ?? 'N/A'] : null,
                 'professional' => $contract->professional ? ['id' => $contract->professional->id, 'name' => $contract->professional->name, 'email' => $contract->professional->email, 'phone' => $contract->professional_phone ?? $contract->professional->phone ?? 'N/A'] : null,
                 'job' => $contract->job ? ['id' => $contract->job->id, 'title' => $contract->job->title, 'description' => $contract->job->description] : null,
@@ -457,6 +458,8 @@ class AdminController extends Controller
 
     public function stats()
     {
+        \App\Models\Contract::autoCompleteExpiredPendingCompletions();
+
         return response()->json([
             'pending_professionals' => \App\Models\Professional::where('status', 'pending')->count(),
             'active_contracts' => \App\Models\Contract::where('status', 'active')->count(),

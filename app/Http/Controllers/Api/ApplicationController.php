@@ -179,7 +179,7 @@ class ApplicationController extends Controller
 
         // 3. Check if professional has 3 or more active contracts
         $activeContracts = \App\Models\Contract::where('professional_id', $application->professional_id)
-            ->where('status', 'active')
+            ->whereIn('status', ['active', 'pending_completion'])
             ->count();
 
         if ($activeContracts >= 3) {

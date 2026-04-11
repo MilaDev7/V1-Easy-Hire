@@ -340,6 +340,8 @@ class ProfessionalController extends Controller
 
     public function myContracts()
     {
+        Contract::autoCompleteExpiredPendingCompletions();
+
         $contracts = Contract::where('professional_id', auth()->id())
             ->with(['job', 'client', 'professional', 'directRequest'])
             ->latest()
@@ -366,6 +368,8 @@ class ProfessionalController extends Controller
 
     public function completeContract(Request $request)
     {
+        Contract::autoCompleteExpiredPendingCompletions();
+
         $request->validate([
             'id' => 'required|integer',
         ]);
@@ -382,14 +386,16 @@ class ProfessionalController extends Controller
             return response()->json(['message' => 'Only active contracts can be completed'], 400);
         }
 
-        $contract->status = 'completed';
+        $contract->status = 'pending_completion';
         $contract->save();
 
-        return response()->json(['message' => 'Completed']);
+        return response()->json(['message' => 'Marked as pending completion']);
     }
 
     public function stats()
     {
+        Contract::autoCompleteExpiredPendingCompletions();
+
         $userId = auth()->id();
 
         $active = Contract::where('professional_id', $userId)
