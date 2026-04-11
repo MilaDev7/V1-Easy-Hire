@@ -847,9 +847,7 @@ function renderContractsTable(contracts) {
                 <td class="fw-semibold">#${contract.id}</td>
                 <td>${contract.job?.title || 'N/A'}</td>
                 <td>${contract.client?.name || 'N/A'}</td>
-                <td>${contract.client?.phone || 'N/A'}</td>
                 <td>${contract.professional?.name || 'N/A'}</td>
-                <td>${contract.professional?.phone || 'N/A'}</td>
                 <td>${contract.budget ? '$' + contract.budget : 'N/A'}</td>
                 <td>${statusBadge}</td>
                 <td>${contract.client_confirmed_at ? new Date(contract.client_confirmed_at).toLocaleDateString() : 'Pending'}</td>
@@ -872,9 +870,7 @@ function renderContractsTable(contracts) {
                         <th scope="col">ID</th>
                         <th scope="col">Job Title</th>
                         <th scope="col">Client</th>
-                        <th scope="col">Client Phone</th>
                         <th scope="col">Professional</th>
-                        <th scope="col">Professional Phone</th>
                         <th scope="col">Budget</th>
                         <th scope="col">Status</th>
                         <th scope="col">Client Confirm</th>
