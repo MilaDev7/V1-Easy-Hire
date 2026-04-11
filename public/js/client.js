@@ -515,6 +515,7 @@ function renderProfessionalProfileInDashboard(payload) {
 
     const pro = payload?.professional || {};
     const reviews = Array.isArray(payload?.reviews) ? payload.reviews : [];
+    const portfolioItems = Array.isArray(payload?.portfolio_items) ? payload.portfolio_items : [];
     const reportCount = Number(payload?.report_count ?? payload?.reports_count ?? 0);
     const reportWarning = Boolean(payload?.report_warning);
     const completedJobs = Array.isArray(payload?.completed_jobs) ? payload.completed_jobs : [];
@@ -566,25 +567,47 @@ function renderProfessionalProfileInDashboard(payload) {
         `
         : '<div class="alert alert-success mb-0"><i class="fa-solid fa-check-circle me-2"></i>No reports</div>';
 
-    const completedJobsHtml = completedJobs.length
-        ? completedJobs.map((application) => `
+    const portfolioHtml = portfolioItems.length
+        ? portfolioItems.map((item) => `
             <div class="col-12 col-md-6 col-xl-4">
                 <div class="card border h-100 rounded-3">
-                    <div class="card-body">
+                    <img src="${item.image_url || "/images/user1.jpg"}" alt="Portfolio item" class="card-img-top" style="height: 180px; object-fit: cover;">
+                    <div class="card-body border-top">
                         <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
-                            <h6 class="fw-bold mb-0 text-success">${application.job?.title || "Project"}</h6>
-                            <span class="badge bg-success">Completed</span>
+                            <h6 class="fw-bold mb-0 text-success">Project Work</h6>
+                            ${item.linked_job_id ? `<span class="badge bg-light text-dark border">Job #${item.linked_job_id}</span>` : ""}
                         </div>
-                        <p class="text-muted small mb-2">${(application.job?.description || "No description available.").toString().slice(0, 110)}</p>
-                        <div class="small text-muted d-flex justify-content-between">
-                            <span><i class="fa-solid fa-location-dot me-1"></i>${application.job?.location || "N/A"}</span>
-                            <span>${formatDate(application.job?.created_at)}</span>
-                        </div>
+                        <p class="text-muted small mb-0">${(item.description || "No description").toString().slice(0, 120)}</p>
                     </div>
                 </div>
             </div>
         `).join("")
-        : '<div class="alert alert-secondary mb-0">No project portfolio available yet.</div>';
+        : '<div class="alert alert-secondary mb-0">No portfolio items uploaded yet.</div>';
+
+    const completedJobsHtml = completedJobs.length
+        ? `
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Job Title</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${completedJobs.map((application) => `
+                            <tr>
+                                <td class="fw-semibold">${application.job?.title || "Job"}</td>
+                                <td><span class="badge bg-success">Completed</span></td>
+                                <td class="text-muted">${formatDate(application.job?.created_at)}</td>
+                            </tr>
+                        `).join("")}
+                    </tbody>
+                </table>
+            </div>
+        `
+        : '<div class="alert alert-secondary mb-0">No completed jobs yet.</div>';
 
     setContentHeader(name, "Professional profile", false);
 
@@ -614,9 +637,6 @@ function renderProfessionalProfileInDashboard(payload) {
                                 <div class="d-flex flex-wrap gap-2">
                                     <button type="button" class="btn btn-success" id="dashboard-profile-hire-btn">
                                         <i class="fa-solid fa-paper-plane me-1"></i> Send Request
-                                    </button>
-                                    <button type="button" class="btn btn-outline-danger" id="dashboard-profile-report-btn">
-                                        <i class="fa-solid fa-flag me-1"></i> Report
                                     </button>
                                 </div>
                             </div>
@@ -648,7 +668,16 @@ function renderProfessionalProfileInDashboard(payload) {
                 <div class="card border-0 shadow-sm rounded-4">
                     <div class="card-body p-4">
                         <h4 class="fw-bold text-success mb-3"><i class="fa-solid fa-layer-group me-2"></i>Portfolio</h4>
-                        ${completedJobs.length ? `<div class="row g-3">${completedJobsHtml}</div>` : completedJobsHtml}
+                        ${portfolioItems.length ? `<div class="row g-3">${portfolioHtml}</div>` : portfolioHtml}
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12">
+                <div class="card border-0 shadow-sm rounded-4">
+                    <div class="card-body p-4">
+                        <h4 class="fw-bold text-success mb-3"><i class="fa-solid fa-check-circle me-2"></i>Completed Jobs</h4>
+                        ${completedJobsHtml}
                     </div>
                 </div>
             </div>
@@ -685,12 +714,6 @@ function renderProfessionalProfileInDashboard(payload) {
             window.currentProIdForRequest = proId;
             if (typeof window.showDirectRequestModal === "function") {
                 window.showDirectRequestModal();
-                setTimeout(function () {
-                    const titleInput = document.getElementById("direct-request-title");
-                    if (titleInput && !titleInput.value.trim()) {
-                        titleInput.value = "Hiring request for " + name;
-                    }
-                }, 0);
             }
         });
     }
@@ -699,14 +722,6 @@ function renderProfessionalProfileInDashboard(payload) {
         reviewBtn.addEventListener("click", function () {
             if (reviewsSection) {
                 reviewsSection.scrollIntoView({ behavior: "smooth", block: "start" });
-            }
-        });
-    }
-
-    if (reportBtn) {
-        reportBtn.addEventListener("click", function () {
-            if (reportsSection) {
-                reportsSection.scrollIntoView({ behavior: "smooth", block: "start" });
             }
         });
     }
@@ -968,6 +983,7 @@ function renderContracts(contracts) {
     const rows = contracts
         .map((contract) => {
             const status = contract.status || "N/A";
+            const isClientConfirmed = Boolean(contract.client_confirmed);
             const createdDate = formatDate(
                 contract.created_at || contract.createdAt
             );
@@ -980,24 +996,18 @@ function renderContracts(contracts) {
             let actionButtons = '';
             
             if (status === 'completed') {
-                if (hasReview) {
-                    // Already reviewed - show badges
+                if (hasReview || hasReport) {
                     actionButtons = `
-                        <span class="badge bg-success me-1"><i class="fa-solid fa-star me-1"></i>Reviewed</span>
+                        ${hasReview ? '<span class="badge bg-success me-1"><i class="fa-solid fa-star me-1"></i>Reviewed</span>' : ''}
                         ${hasReport ? '<span class="badge bg-danger"><i class="fa-solid fa-flag me-1"></i>Reported</span>' : ''}
                     `;
+                } else if (isClientConfirmed) {
+                    actionButtons = `
+                        <span class="badge bg-success me-1"><i class="fa-solid fa-check me-1"></i>Completed</span>
+                    `;
                 } else {
-                    // Can still confirm/review
                     actionButtons = `
                         <div class="d-flex justify-content-end gap-2">
-                            <button
-                                type="button"
-                                class="btn btn-sm btn-outline-danger contract-action-button"
-                                data-action="cancel"
-                                data-contract-id="${contract.id}"
-                            >
-                                Cancel
-                            </button>
                             <button
                                 type="button"
                                 class="btn btn-sm btn-outline-success contract-action-button"
@@ -1749,8 +1759,8 @@ function ensureContractConfirmModal() {
                         <div class="modal-body">
                             <input type="hidden" id="contract-confirm-id">
                             <div class="mb-3">
-                                <label for="contract-rating" class="form-label fw-semibold">Rating</label>
-                                <select id="contract-rating" class="form-select" required>
+                                <label for="contract-rating" class="form-label fw-semibold">Rating <span class="text-muted">(Optional)</span></label>
+                                <select id="contract-rating" class="form-select">
                                     <option value="">Select rating</option>
                                     <option value="5">5</option>
                                     <option value="4">4</option>
@@ -1830,7 +1840,7 @@ function bindContractConfirmForm() {
         const submitButton = document.getElementById("contract-confirm-submit");
         const modalElement = document.getElementById("contract-confirm-modal");
 
-        if (!contractId || !rating || !feedback || !submitButton || !modalElement) {
+        if (!contractId || !feedback || !submitButton || !modalElement) {
             return;
         }
 
@@ -1838,12 +1848,16 @@ function bindContractConfirmForm() {
         feedback.innerHTML = '<div class="text-muted">Submitting confirmation...</div>';
 
         postJson(`/api/contracts/${contractId}/confirm`)
-            .then(() =>
-                postJson(`/api/contracts/${contractId}/review`, {
+            .then(() => {
+                if (!rating) {
+                    return null;
+                }
+
+                return postJson(`/api/contracts/${contractId}/review`, {
                     rating: Number(rating),
                     comment,
-                })
-            )
+                });
+            })
             .then(() => {
                 if (!reportReason.trim()) {
                     return null;
@@ -1864,10 +1878,10 @@ function bindContractConfirmForm() {
                     modal.hide();
                 }, 700);
             })
-            .catch(() => {
+            .catch((error) => {
                 submitButton.disabled = false;
                 feedback.innerHTML =
-                    '<div class="alert alert-danger mb-0">Unable to confirm contract, review, or report.</div>';
+                    `<div class="alert alert-danger mb-0">${error?.message || "Unable to confirm contract, review, or report."}</div>`;
             });
     });
 }

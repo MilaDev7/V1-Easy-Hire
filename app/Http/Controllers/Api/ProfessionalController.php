@@ -7,6 +7,7 @@ use App\Models\Application;
 use App\Models\Contract;
 use App\Models\JobPost;
 use App\Models\Professional;
+use App\Models\ProfessionalPortfolioItem;
 use App\Models\Report;
 use App\Models\Review;
 use App\Services\ApplyCreditService;
@@ -157,10 +158,23 @@ class ProfessionalController extends Controller
 
         $reportCount = Report::where('reported_id', $professional->user_id)->count();
         $averageRating = $reviews->count() > 0 ? $reviews->avg('rating') : 0;
+        $portfolioItems = ProfessionalPortfolioItem::where('professional_id', $professional->id)
+            ->latest()
+            ->get()
+            ->map(function (ProfessionalPortfolioItem $item) {
+                return [
+                    'id' => $item->id,
+                    'image_url' => asset('storage/'.$item->image_path),
+                    'description' => $item->description,
+                    'linked_job_id' => $item->job_id,
+                    'created_at' => $item->created_at,
+                ];
+            });
 
         return response()->json([
             'professional' => $professional,
             'completed_jobs' => $completedJobs,
+            'portfolio_items' => $portfolioItems,
             'reviews' => $reviews,
             'reviews_count' => $reviews->count(),
             // Only expose aggregate report signals to non-admin consumers.

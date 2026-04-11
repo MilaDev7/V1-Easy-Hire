@@ -29,4 +29,9 @@ protected $fillable = [
     {
         return $this->belongsTo(User::class);
     }
+
+    public function portfolioItems()
+    {
+        return $this->hasMany(ProfessionalPortfolioItem::class, 'professional_id');
+    }
 }

@@ -25,7 +25,7 @@
                 <input type="hidden" id="direct-request-pro-id">
                 <div class="mb-3">
                     <label class="form-label fw-bold">Title</label>
-                    <input type="text" class="form-control" id="direct-request-title" placeholder="e.g., Need web developer">
+                    <input type="text" class="form-control" id="direct-request-title">
                 </div>
                 <div class="mb-3">
                     <label class="form-label fw-bold">Description</label>
@@ -83,12 +83,6 @@
                 window.currentProIdForRequest = professionalId;
                 if (typeof window.showDirectRequestModal === "function") {
                     window.showDirectRequestModal();
-                    setTimeout(function () {
-                        const titleInput = document.getElementById("direct-request-title");
-                        if (titleInput && !titleInput.value.trim()) {
-                            titleInput.value = "Hiring request for " + professionalName;
-                        }
-                    }, 0);
                 }
             });
         }

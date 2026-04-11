@@ -37,6 +37,9 @@ Route::middleware(['auth:sanctum', 'check_status', 'role:professional'])->group(
     Route::post('/pro/profile-update', [ProfileController::class, 'updateProProfile']);
     Route::post('/pro/profile-update-simple', [ProfileController::class, 'updateProProfileSimple']);
     Route::post('/pro/complete-profile', [ProfileController::class, 'updateProProfile']);
+    Route::get('/pro/portfolio', [ProfileController::class, 'myPortfolioItems']);
+    Route::post('/pro/portfolio', [ProfileController::class, 'uploadPortfolioItem']);
+    Route::delete('/pro/portfolio/{id}', [ProfileController::class, 'deletePortfolioItem']);
 });
 
 // Client Setup

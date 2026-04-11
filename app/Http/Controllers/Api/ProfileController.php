@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Application;
 use App\Models\Professional;
+use App\Models\ProfessionalPortfolioItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -296,5 +298,138 @@ class ProfileController extends Controller
         $pro->save();
 
         return response()->json(['message' => 'Profile Updated Successfully']);
+    }
+
+    /**
+     * Upload a professional portfolio item (image + optional description + optional linked completed job).
+     */
+    public function uploadPortfolioItem(Request $request)
+    {
+        $user = Auth::user();
+        $professional = Professional::where('user_id', $user->id)->first();
+
+        if (! $professional) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Professional profile not found',
+            ], 404);
+        }
+
+        $request->validate([
+            'image' => 'required|image|mimes:jpeg,png,jpg,webp|max:4096',
+            'description' => 'nullable|string|max:500',
+            'linked_job_id' => 'nullable|integer|exists:job_posts,id',
+        ]);
+
+        $linkedJobId = $request->linked_job_id ? (int) $request->linked_job_id : null;
+
+        if ($linkedJobId) {
+            $isCompletedForProfessional = Application::where('professional_id', $user->id)
+                ->where('job_id', $linkedJobId)
+                ->where('status', 'accepted')
+                ->whereHas('job', function ($query) {
+                    $query->where('status', 'completed');
+                })
+                ->exists();
+
+            if (! $isCompletedForProfessional) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Linked job must be one of your completed jobs',
+                ], 422);
+            }
+        }
+
+        $imagePath = $request->file('image')->store('portfolio', 'public');
+
+        $item = ProfessionalPortfolioItem::create([
+            'professional_id' => $professional->id,
+            'job_id' => $linkedJobId,
+            'image_path' => $imagePath,
+            'description' => $request->description,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Portfolio item uploaded',
+            'data' => [
+                'id' => $item->id,
+                'image_url' => asset('storage/'.$item->image_path),
+                'description' => $item->description,
+                'linked_job_id' => $item->job_id,
+            ],
+        ]);
+    }
+
+    /**
+     * List current professional portfolio items.
+     */
+    public function myPortfolioItems()
+    {
+        $user = Auth::user();
+        $professional = Professional::where('user_id', $user->id)->first();
+
+        if (! $professional) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Professional profile not found',
+            ], 404);
+        }
+
+        $items = ProfessionalPortfolioItem::where('professional_id', $professional->id)
+            ->latest()
+            ->get()
+            ->map(function (ProfessionalPortfolioItem $item) {
+                return [
+                    'id' => $item->id,
+                    'image_url' => asset('storage/'.$item->image_path),
+                    'description' => $item->description,
+                    'linked_job_id' => $item->job_id,
+                    'created_at' => $item->created_at,
+                ];
+            });
+
+        return response()->json([
+            'success' => true,
+            'data' => $items,
+        ]);
+    }
+
+    /**
+     * Delete one portfolio item for authenticated professional.
+     */
+    public function deletePortfolioItem($id)
+    {
+        $user = Auth::user();
+        $professional = Professional::where('user_id', $user->id)->first();
+
+        if (! $professional) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Professional profile not found',
+            ], 404);
+        }
+
+        $item = ProfessionalPortfolioItem::where('id', $id)
+            ->where('professional_id', $professional->id)
+            ->first();
+
+        if (! $item) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Portfolio item not found',
+            ], 404);
+        }
+
+        if ($item->image_path) {
+            Storage::disk('public')->delete($item->image_path);
+        }
+
+        $item->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Portfolio item deleted',
+        ]);
     }
 }

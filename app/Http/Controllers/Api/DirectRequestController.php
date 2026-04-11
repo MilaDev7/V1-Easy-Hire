@@ -91,6 +91,14 @@ class DirectRequestController extends Controller
             ], 403);
         }
 
+        // Enforce direct request limit at send-time as well.
+        $remainingRequests = (int) ($subscription->direct_requests_remaining ?? 0);
+        if ($remainingRequests <= 0) {
+            return response()->json([
+                'message' => 'Direct requests limit reached. Please upgrade your plan.',
+            ], 403);
+        }
+
         // Check if professional exists
         $professional = \App\Models\Professional::where('id', $proId)->first();
         if (! $professional) {

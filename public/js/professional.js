@@ -843,6 +843,11 @@ function bindProfessionalSettings() {
     const darkModeLabel = document.getElementById("professional-dark-mode-label");
     const deleteAccountButton = document.getElementById("professional-delete-account-button");
     const confirmDeleteAccountButton = document.getElementById("professional-confirm-delete-account-button");
+    const portfolioImageInput = document.getElementById("professional-portfolio-image-input");
+    const portfolioDescriptionInput = document.getElementById("professional-portfolio-description-input");
+    const portfolioLinkedJobInput = document.getElementById("professional-portfolio-linked-job-input");
+    const uploadPortfolioButton = document.getElementById("professional-upload-portfolio-btn");
+    const portfolioFeedback = document.getElementById("professional-portfolio-feedback");
     const settingsModal = settingsModalElement
         ? bootstrap.Modal.getOrCreateInstance(settingsModalElement)
         : null;
@@ -948,6 +953,81 @@ function bindProfessionalSettings() {
                 saveBtn.disabled = false;
                 saveBtn.innerHTML = originalText;
             });
+        });
+    }
+
+    if (uploadPortfolioButton && portfolioImageInput) {
+        uploadPortfolioButton.addEventListener("click", function () {
+            const file = portfolioImageInput.files && portfolioImageInput.files[0];
+            const description = portfolioDescriptionInput ? portfolioDescriptionInput.value.trim() : "";
+            const linkedJobIdRaw = portfolioLinkedJobInput ? portfolioLinkedJobInput.value.trim() : "";
+
+            if (!file) {
+                if (portfolioFeedback) {
+                    portfolioFeedback.innerHTML = '<span class="text-danger">Please select an image first.</span>';
+                } else {
+                    window.alert("Please select an image first.");
+                }
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append("image", file);
+            if (description) {
+                formData.append("description", description);
+            }
+            if (linkedJobIdRaw) {
+                formData.append("linked_job_id", linkedJobIdRaw);
+            }
+
+            uploadPortfolioButton.disabled = true;
+            uploadPortfolioButton.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Uploading...';
+            if (portfolioFeedback) {
+                portfolioFeedback.innerHTML = "";
+            }
+
+            fetch("/api/pro/portfolio", {
+                method: "POST",
+                headers: buildHeaders(),
+                body: formData,
+            })
+                .then(async (response) => {
+                    let payload = null;
+                    try {
+                        payload = await response.json();
+                    } catch (error) {
+                        payload = null;
+                    }
+
+                    if (!response.ok) {
+                        throw new Error(payload?.message || "Unable to upload portfolio item.");
+                    }
+
+                    return payload;
+                })
+                .then(() => {
+                    if (portfolioFeedback) {
+                        portfolioFeedback.innerHTML = '<span class="text-success">Portfolio item uploaded successfully.</span>';
+                    }
+                    portfolioImageInput.value = "";
+                    if (portfolioDescriptionInput) {
+                        portfolioDescriptionInput.value = "";
+                    }
+                    if (portfolioLinkedJobInput) {
+                        portfolioLinkedJobInput.value = "";
+                    }
+                })
+                .catch((error) => {
+                    if (portfolioFeedback) {
+                        portfolioFeedback.innerHTML = `<span class="text-danger">${error.message || "Unable to upload portfolio item."}</span>`;
+                    } else {
+                        window.alert(error.message || "Unable to upload portfolio item.");
+                    }
+                })
+                .finally(() => {
+                    uploadPortfolioButton.disabled = false;
+                    uploadPortfolioButton.innerHTML = '<i class="fa-solid fa-upload me-1"></i> Upload Portfolio Item';
+                });
         });
     }
 
@@ -1152,16 +1232,21 @@ window.acceptDirectRequest = function(id, title, clientName, budget) {
                     'Accept': 'application/json'
                 }
             })
-            .then(res => res.json())
-            .then(data => {
-                if (data.message && data.message.includes('3 active contracts')) {
-                    // Show error in modal
-                    const messageEl = document.getElementById('action-modal-message');
-                    messageEl.innerHTML = '<div class="alert alert-warning mb-0"><i class="fa-solid fa-exclamation-triangle me-2"></i>' + data.message + '</div>';
-                    confirmBtn.disabled = false;
-                    confirmBtn.innerHTML = '<i class="fa-solid fa-check me-1"></i>Accept';
-                    return;
+            .then(async (res) => {
+                let data = {};
+                try {
+                    data = await res.json();
+                } catch (e) {
+                    data = {};
                 }
+
+                if (!res.ok || data.success === false) {
+                    throw new Error(data.message || 'Unable to accept request.');
+                }
+
+                return data;
+            })
+            .then(data => {
                 bootstrap.Modal.getInstance(modal).hide();
                 const contentArea = document.getElementById("professional-content-area") || document.getElementById("content-area");
                 if (contentArea) {
@@ -1170,8 +1255,13 @@ window.acceptDirectRequest = function(id, title, clientName, budget) {
                 loadDirectRequests();
                 loadProfessionalStats();
             })
-            .catch(err => {
-                bootstrap.Modal.getInstance(modal).hide();
+            .catch((err) => {
+                const messageEl = document.getElementById('action-modal-message');
+                if (messageEl) {
+                    messageEl.innerHTML = '<div class="alert alert-warning mb-0"><i class="fa-solid fa-exclamation-triangle me-2"></i>' + (err?.message || 'Unable to accept request.') + '</div>';
+                }
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = '<i class="fa-solid fa-check me-1"></i>Accept';
             });
         };
 
@@ -1216,8 +1306,21 @@ window.rejectDirectRequest = function(id, title, clientName, budget) {
                     'Accept': 'application/json'
                 }
             })
-            .then(res => res.json())
-            .then(data => {
+            .then(async (res) => {
+                let data = {};
+                try {
+                    data = await res.json();
+                } catch (e) {
+                    data = {};
+                }
+
+                if (!res.ok) {
+                    throw new Error(data.message || 'Unable to reject request.');
+                }
+
+                return data;
+            })
+            .then(() => {
                 bootstrap.Modal.getInstance(modal).hide();
                 const contentArea = document.getElementById("professional-content-area") || document.getElementById("content-area");
                 if (contentArea) {
@@ -1225,8 +1328,13 @@ window.rejectDirectRequest = function(id, title, clientName, budget) {
                 }
                 loadDirectRequests();
             })
-            .catch(err => {
-                bootstrap.Modal.getInstance(modal).hide();
+            .catch((err) => {
+                const messageEl = document.getElementById('action-modal-message');
+                if (messageEl) {
+                    messageEl.innerHTML = '<div class="alert alert-warning mb-0"><i class="fa-solid fa-exclamation-triangle me-2"></i>' + (err?.message || 'Unable to reject request.') + '</div>';
+                }
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = '<i class="fa-solid fa-times me-1"></i>Reject';
             });
         };
 

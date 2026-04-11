@@ -435,6 +435,30 @@
 
                     <hr class="my-4">
 
+                    <div class="mb-4">
+                        <h6 class="fw-bold mb-3"><i class="fa-solid fa-images me-2"></i>Portfolio</h6>
+                        <div class="row g-2">
+                            <div class="col-12">
+                                <label class="form-label small text-muted mb-1">Work Image</label>
+                                <input type="file" class="form-control" id="professional-portfolio-image-input" accept="image/*">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label small text-muted mb-1">Short Description (Optional)</label>
+                                <textarea class="form-control" id="professional-portfolio-description-input" rows="2" placeholder="Describe this work..."></textarea>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small text-muted mb-1">Linked Job ID (Optional)</label>
+                                <input type="number" class="form-control" id="professional-portfolio-linked-job-input" min="1" placeholder="e.g. 12">
+                            </div>
+                            <div class="col-12 col-md-6 d-flex align-items-end">
+                                <button type="button" class="btn btn-outline-success w-100" id="professional-upload-portfolio-btn">
+                                    <i class="fa-solid fa-upload me-1"></i> Upload Portfolio Item
+                                </button>
+                            </div>
+                        </div>
+                        <div id="professional-portfolio-feedback" class="small mt-2"></div>
+                    </div>
+
                     <div class="d-flex justify-content-between align-items-center rounded-3 border p-3 mb-3">
                         <div>
                             <h6 class="mb-1">Dark Mode</h6>

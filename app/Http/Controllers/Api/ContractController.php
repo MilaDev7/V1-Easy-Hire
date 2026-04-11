@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Contract;
 use App\Models\JobPost;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 
 class ContractController extends Controller
 {
@@ -30,6 +31,9 @@ class ContractController extends Controller
 
         // ✅ Mark completed (waiting client confirmation)
         $contract->status = 'completed';
+        if (Schema::hasColumn('contracts', 'client_confirmed_at')) {
+            $contract->client_confirmed_at = null;
+        }
         $contract->save();
 
         return response()->json([
@@ -56,6 +60,9 @@ class ContractController extends Controller
         }
 
         $contract->status = 'completed';
+        if (Schema::hasColumn('contracts', 'client_confirmed_at')) {
+            $contract->client_confirmed_at = now();
+        }
         $contract->save();
 
         if ($contract->job) {

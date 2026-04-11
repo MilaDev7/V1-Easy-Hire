@@ -4,6 +4,7 @@ use App\Http\Controllers\ChapaController;
 use App\Http\Controllers\Api\AuthController;
 use App\Models\Application;
 use App\Models\Professional;
+use App\Models\ProfessionalPortfolioItem;
 use App\Models\Report;
 use App\Models\Review;
 use Illuminate\Support\Facades\Route;
@@ -75,10 +76,14 @@ Route::get('/professional/{id}', function ($id) {
 
     $reportsCount = $reports->count();
     $averageRating = $reviews->count() > 0 ? round((float) $reviews->avg('rating'), 1) : 0;
+    $portfolioItems = ProfessionalPortfolioItem::where('professional_id', $professional->id)
+        ->latest()
+        ->get();
 
     return view('professional.show', [
         'professional' => $professional,
         'completedJobs' => $completedJobs,
+        'portfolioItems' => $portfolioItems,
         'reviews' => $reviews,
         'averageRating' => $averageRating,
         'reports' => $reports,

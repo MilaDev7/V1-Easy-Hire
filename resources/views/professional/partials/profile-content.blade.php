@@ -61,15 +61,12 @@
                                 <button type="button" class="btn btn-success" id="action-hire-btn">
                                     <i class="fa-solid fa-paper-plane me-1"></i> Send Request
                                 </button>
-                                <button type="button" class="btn btn-outline-danger" id="action-report-btn">
-                                    <i class="fa-solid fa-flag me-1"></i> Report
-                                </button>
                             </div>
                         </div>
 
                         <div id="profile-actions-guest" class="alert alert-info d-none py-2 px-3 mb-0 mt-2">
                             <i class="fa-solid fa-circle-info me-1"></i>
-                            Login as a client to send a request or report.
+                            Login as a client to send a request.
                             <a href="/login" class="alert-link ms-1">Login</a>
                         </div>
 
@@ -124,29 +121,69 @@
                 <h4 class="fw-bold text-success mb-3">
                     <i class="fa-solid fa-layer-group me-2"></i>Portfolio
                 </h4>
-                @if(($completedJobs ?? collect())->isEmpty())
-                    <div class="alert alert-secondary mb-0">No project portfolio available yet.</div>
+                @if(($portfolioItems ?? collect())->isEmpty())
+                    <div class="alert alert-secondary mb-0">No portfolio items uploaded yet.</div>
                 @else
                     <div class="row g-3">
-                        @foreach($completedJobs as $application)
+                        @foreach($portfolioItems as $item)
                             <div class="col-12 col-md-6 col-xl-4">
                                 <div class="card border h-100 rounded-3">
-                                    <div class="card-body">
-                                        <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
-                                            <h6 class="fw-bold mb-0 text-success">{{ $application->job->title ?? 'Project' }}</h6>
-                                            <span class="badge bg-success">Completed</span>
+                                    <img
+                                        src="{{ asset('storage/' . $item->image_path) }}"
+                                        alt="Portfolio item"
+                                        class="card-img-top"
+                                        style="height: 180px; object-fit: cover;"
+                                    >
+                                    <div class="card-body border-top">
+                                        <div class="d-flex justify-content-between align-items-start gap-2 mb-1">
+                                            <h6 class="fw-bold mb-0 text-success">Project Work</h6>
+                                            @if(!empty($item->job_id))
+                                                <span class="badge bg-light text-dark border">Job #{{ $item->job_id }}</span>
+                                            @endif
                                         </div>
-                                        <p class="text-muted small mb-2">
-                                            {{ \Illuminate\Support\Str::limit((string) ($application->job->description ?? 'No description available.'), 100) }}
-                                        </p>
-                                        <div class="small text-muted d-flex justify-content-between">
-                                            <span><i class="fa-solid fa-location-dot me-1"></i>{{ $application->job->location ?? 'N/A' }}</span>
-                                            <span>{{ optional($application->job->created_at)->format('M d, Y') }}</span>
-                                        </div>
+                                        @if(!empty($item->description))
+                                            <p class="text-muted small mb-0">{{ \Illuminate\Support\Str::limit((string) $item->description, 120) }}</p>
+                                        @else
+                                            <p class="text-muted small mb-0">No description</p>
+                                        @endif
                                     </div>
                                 </div>
                             </div>
                         @endforeach
+                    </div>
+                @endif
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12">
+        <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-body p-4">
+                <h4 class="fw-bold text-success mb-3">
+                    <i class="fa-solid fa-check-circle me-2"></i>Completed Jobs
+                </h4>
+                @if(($completedJobs ?? collect())->isEmpty())
+                    <div class="alert alert-secondary mb-0">No completed jobs yet.</div>
+                @else
+                    <div class="table-responsive">
+                        <table class="table align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Job Title</th>
+                                    <th>Status</th>
+                                    <th>Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($completedJobs as $application)
+                                    <tr>
+                                        <td class="fw-semibold">{{ $application->job->title ?? 'Job' }}</td>
+                                        <td><span class="badge bg-success">Completed</span></td>
+                                        <td class="text-muted">{{ optional($application->job->created_at)->format('M d, Y') }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
                     </div>
                 @endif
             </div>
