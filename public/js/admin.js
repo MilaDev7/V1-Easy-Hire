@@ -852,6 +852,7 @@ function renderContractsTable(contracts) {
                 <td>${contract.professional?.phone || 'N/A'}</td>
                 <td>${contract.budget ? '$' + contract.budget : 'N/A'}</td>
                 <td>${statusBadge}</td>
+                <td>${contract.client_confirmed_at ? new Date(contract.client_confirmed_at).toLocaleDateString() : 'Pending'}</td>
                 <td>${contract.created_at ? new Date(contract.created_at).toLocaleDateString() : 'N/A'}</td>
                 <td>
                     <div class="d-flex gap-2">
@@ -876,6 +877,7 @@ function renderContractsTable(contracts) {
                         <th scope="col">Professional Phone</th>
                         <th scope="col">Budget</th>
                         <th scope="col">Status</th>
+                        <th scope="col">Client Confirm</th>
                         <th scope="col">Created</th>
                         <th scope="col">Actions</th>
                     </tr>
