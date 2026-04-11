@@ -139,22 +139,21 @@
                 <h4 class="fw-bold text-danger mb-3 mt-4">
                     <i class="fa-solid fa-flag me-2"></i>Reports ({{ $reportsCount ?? 0 }})
                 </h4>
-                @if(($reports ?? collect())->isEmpty())
-                    <div class="alert alert-secondary">No reports found.</div>
+                @if(($reportsCount ?? 0) > 0)
+                    <div class="alert alert-danger d-flex justify-content-between align-items-center mb-0">
+                        <span>
+                            <i class="fa-solid fa-flag me-2"></i>
+                            Total reports: <strong>{{ (int) ($reportsCount ?? 0) }}</strong>
+                        </span>
+                        @if(($reportsCount ?? 0) > 3)
+                            <span class="badge text-bg-danger">
+                                <i class="fa-solid fa-triangle-exclamation me-1"></i>Warning
+                            </span>
+                        @endif
+                    </div>
                 @else
-                    <div class="list-group">
-                        @foreach($reports as $report)
-                            <div class="list-group-item mb-2 rounded border-danger-subtle">
-                                <div class="d-flex justify-content-between align-items-start mb-2">
-                                    <div>
-                                        <i class="fa-solid fa-user me-1 text-danger"></i>
-                                        <strong>{{ $report->reporter->name ?? 'Anonymous' }}</strong>
-                                    </div>
-                                    <small class="text-muted">{{ optional($report->created_at)->format('M d, Y') }}</small>
-                                </div>
-                                <p class="mb-0 text-muted small">{{ $report->reason ?: 'No reason provided' }}</p>
-                            </div>
-                        @endforeach
+                    <div class="alert alert-success mb-0">
+                        <i class="fa-solid fa-check-circle me-2"></i>No reports
                     </div>
                 @endif
             </div>

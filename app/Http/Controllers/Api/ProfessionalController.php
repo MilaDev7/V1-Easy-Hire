@@ -14,6 +14,8 @@ use Illuminate\Http\Request;
 
 class ProfessionalController extends Controller
 {
+    private const REPORT_WARNING_THRESHOLD = 3;
+
     public function __construct(private ApplyCreditService $applyCreditService) {}
 
     public function me()
@@ -88,19 +90,7 @@ class ProfessionalController extends Controller
 
         $professionals = $query->get()->map(function ($pro) {
             $reviews = Review::where('reviewed_id', $pro->user_id)->with('reviewer:id,name')->get();
-            $reports = Report::where('reported_id', $pro->user_id)
-                ->with('reporter:id,name')
-                ->orderBy('created_at', 'desc')
-                ->take(3)
-                ->get()
-                ->map(function ($r) {
-                    return [
-                        'id' => $r->id,
-                        'reason' => $r->reason,
-                        'reporter_name' => $r->reporter ? $r->reporter->name : 'Anonymous',
-                        'created_at' => $r->created_at->format('Y-m-d'),
-                    ];
-                });
+            $reportCount = Report::where('reported_id', $pro->user_id)->count();
 
             return [
                 'id' => $pro->id,
@@ -123,8 +113,10 @@ class ProfessionalController extends Controller
                         'created_at' => $r->created_at,
                     ];
                 }),
-                'reports_count' => Report::where('reported_id', $pro->user_id)->count(),
-                'reports' => $reports,
+                // Only expose aggregate report signals to non-admin consumers.
+                'report_count' => (int) $reportCount,
+                'reports_count' => (int) $reportCount,
+                'report_warning' => $reportCount > self::REPORT_WARNING_THRESHOLD,
             ];
         });
 
@@ -163,19 +155,7 @@ class ProfessionalController extends Controller
                 ];
             });
 
-        $reportsCount = Report::where('reported_id', $professional->user_id)->count();
-        $reports = Report::where('reported_id', $professional->user_id)
-            ->with('reporter:id,name')
-            ->orderBy('created_at', 'desc')
-            ->get()
-            ->map(function ($r) {
-                return [
-                    'id' => $r->id,
-                    'reason' => $r->reason,
-                    'reporter_name' => $r->reporter ? $r->reporter->name : 'Anonymous',
-                    'created_at' => $r->created_at->format('Y-m-d'),
-                ];
-            });
+        $reportCount = Report::where('reported_id', $professional->user_id)->count();
         $averageRating = $reviews->count() > 0 ? $reviews->avg('rating') : 0;
 
         return response()->json([
@@ -183,8 +163,11 @@ class ProfessionalController extends Controller
             'completed_jobs' => $completedJobs,
             'reviews' => $reviews,
             'reviews_count' => $reviews->count(),
-            'reports_count' => $reportsCount,
-            'reports' => $reports,
+            // Only expose aggregate report signals to non-admin consumers.
+            'report_count' => (int) $reportCount,
+            'reports_count' => (int) $reportCount,
+            'report_warning' => $reportCount > self::REPORT_WARNING_THRESHOLD,
+            'report_warning_threshold' => self::REPORT_WARNING_THRESHOLD,
             'average_rating' => round($averageRating, 1),
         ]);
     }

@@ -339,8 +339,8 @@ function renderProfessionalsSection() {
                 let locationText = p.location || "N/A";
                 let rating = p.average_rating || 0;
                 let reviewsCount = p.reviews_count || 0;
-                let reportsCount = p.reports_count || 0;
-                let reports = p.reports || [];
+                let reportsCount = Number(p.report_count ?? p.reports_count ?? 0);
+                let reportWarning = Boolean(p.report_warning);
                 let reviewText = reviewsCount > 0 ? reviewsCount + ' review' + (reviewsCount > 1 ? 's' : '') : 'No reviews';
                 
                 // Generate stars inline
@@ -350,14 +350,12 @@ function renderProfessionalsSection() {
                     starsHtml += '<i class="fa-solid fa-star" style="color: ' + (i <= fullStars ? '#ffc107;' : '#e4e5e9;') + '"></i>';
                 }
                 
-                // Build reports section - compact with preview only
+                // Build reports section using count only (no reporter/reason details).
                 let reportsSection = '';
                 if (reportsCount > 0) {
-                    let latestReport = reports[0] ? reports[0].reason : '';
-                    let preview = latestReport.length > 35 ? latestReport.substring(0, 35) + '...' : latestReport;
                     reportsSection = '<div class="mt-2 pt-2 border-top small">' +
                         '<span class="text-danger"><i class="fa-solid fa-flag me-1"></i>' + reportsCount + ' report' + (reportsCount !== 1 ? 's' : '') + '</span>' +
-                        '<div class="text-muted small mt-1">' + preview + '</div>' +
+                        (reportWarning ? '<div class="text-danger fw-semibold mt-1"><i class="fa-solid fa-triangle-exclamation me-1"></i>Warning</div>' : '') +
                         '</div>';
                 } else {
                     reportsSection = '<div class="mt-2 pt-2 border-top small"><span class="text-success"><i class="fa-solid fa-check-circle me-1"></i>No reports</span></div>';
@@ -517,7 +515,8 @@ function renderProfessionalProfileInDashboard(payload) {
 
     const pro = payload?.professional || {};
     const reviews = Array.isArray(payload?.reviews) ? payload.reviews : [];
-    const reports = Array.isArray(payload?.reports) ? payload.reports : [];
+    const reportCount = Number(payload?.report_count ?? payload?.reports_count ?? 0);
+    const reportWarning = Boolean(payload?.report_warning);
     const completedJobs = Array.isArray(payload?.completed_jobs) ? payload.completed_jobs : [];
     const averageRating = Number(payload?.average_rating || 0);
     const proId = pro.id;
@@ -541,20 +540,14 @@ function renderProfessionalProfileInDashboard(payload) {
         `).join("")
         : '<div class="alert alert-secondary mb-0">No reviews yet.</div>';
 
-    const reportsHtml = reports.length
-        ? reports.map((report) => `
-            <div class="list-group-item mb-2 rounded border-danger-subtle">
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                    <div>
-                        <i class="fa-solid fa-user me-1 text-danger"></i>
-                        <strong>${report.reporter_name || "Anonymous"}</strong>
-                    </div>
-                    <small class="text-muted">${formatDate(report.created_at)}</small>
-                </div>
-                <p class="mb-0 text-muted small">${report.reason || "No reason provided"}</p>
+    const reportsHtml = reportCount > 0
+        ? `
+            <div class="alert alert-danger mb-0 d-flex justify-content-between align-items-center">
+                <span><i class="fa-solid fa-flag me-2"></i>Total reports: <strong>${reportCount}</strong></span>
+                ${reportWarning ? '<span class="badge text-bg-danger"><i class="fa-solid fa-triangle-exclamation me-1"></i>Warning</span>' : ''}
             </div>
-        `).join("")
-        : '<div class="alert alert-secondary mb-0">No reports found.</div>';
+        `
+        : '<div class="alert alert-success mb-0"><i class="fa-solid fa-check-circle me-2"></i>No reports</div>';
 
     const completedJobsHtml = completedJobs.length
         ? completedJobs.map((application) => `
@@ -622,8 +615,8 @@ function renderProfessionalProfileInDashboard(payload) {
                     </div>
 
                     <div id="dashboard-profile-reports-section">
-                        <h4 class="fw-bold text-danger mb-3"><i class="fa-solid fa-flag me-2"></i>Reports (${reports.length})</h4>
-                        <div class="list-group">${reportsHtml}</div>
+                        <h4 class="fw-bold text-danger mb-3"><i class="fa-solid fa-flag me-2"></i>Reports (${reportCount})</h4>
+                        ${reportsHtml}
                     </div>
                 </div>
             </div>
