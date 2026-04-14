@@ -7,12 +7,23 @@ use App\Models\Professional;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Spatie\Permission\PermissionRegistrar;
+use Spatie\Permission\Models\Role;
 
 // Recommended for transactions
 
 class AuthController extends Controller
 {
+    private function ensureBaseRoles(): void
+    {
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+        Role::findOrCreate('client', 'web');
+        Role::findOrCreate('professional', 'web');
+        Role::findOrCreate('admin', 'web');
+    }
+
     // Get current user (works for all roles)
     public function me()
     {
@@ -40,24 +51,29 @@ class AuthController extends Controller
             'password' => 'required|string|min:6|confirmed',
         ]);
 
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'phone' => $request->phone,
-            'password' => Hash::make($request->password),
-            'role' => 'professional',
-        ]);
+        $this->ensureBaseRoles();
 
-        // ✅ assign role
-        $user->assignRole('professional');
+        $user = DB::transaction(function () use ($request) {
+            $user = User::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'phone' => $request->phone,
+                'password' => Hash::make($request->password),
+                'role' => 'professional',
+            ]);
 
-        // 🔥 CREATE PROFESSIONAL PROFILE
-        Professional::create([
-            'user_id' => $user->id,
-            'skill' => '',
-            'experience' => 0,
-            'bio' => '',
-        ]);
+            $user->assignRole('professional');
+
+            // 🔥 CREATE PROFESSIONAL PROFILE
+            Professional::create([
+                'user_id' => $user->id,
+                'skill' => '',
+                'experience' => 0,
+                'bio' => '',
+            ]);
+
+            return $user;
+        });
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
@@ -78,15 +94,21 @@ class AuthController extends Controller
             'password' => 'required|string|min:6|confirmed', // password_confirmation needed
         ]);
 
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'phone' => $request->phone,
-            'password' => Hash::make($request->password),
-            'role' => 'client',
-        ]);
+        $this->ensureBaseRoles();
 
-        $user->assignRole('client'); // assign Spatie role
+        $user = DB::transaction(function () use ($request) {
+            $user = User::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'phone' => $request->phone,
+                'password' => Hash::make($request->password),
+                'role' => 'client',
+            ]);
+
+            $user->assignRole('client'); // assign Spatie role
+
+            return $user;
+        });
 
         $token = $user->createToken('API Token')->plainTextToken;
 

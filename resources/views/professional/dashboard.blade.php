@@ -263,7 +263,7 @@
                     </div>
                     <div class="dropdown">
                         <button class="btn p-0 border-0 bg-transparent" data-bs-toggle="dropdown" aria-expanded="false">
-                            <img src="{{ asset('images/user1.jpg') }}" id="professional-topbar-photo" alt="Profile" class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover; border: 2px solid rgba(0,0,0,0.1); display: none;">
+                            <img src="{{ asset('images/user1.jpg') }}" id="professional-topbar-photo" alt="Profile" class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover; border: 2px solid rgba(0,0,0,0.1);">
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end shadow">
                             <li><a class="dropdown-item" href="/pro/dashboard"><i class="fa-solid fa-user me-2"></i>Account</a></li>
@@ -290,7 +290,6 @@
                             alt="Professional Photo"
                             id="professional-dashboard-photo"
                             class="professional-sidebar-photo rounded border mb-3"
-                            style="display: none;"
                         >
                         <h1 class="h4 mb-1" id="professional-dashboard-name">Loading...</h1>
                         <p class="text-muted mb-2" id="professional-sidebar-skill">Loading...</p>

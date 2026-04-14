@@ -22,6 +22,9 @@
                             <option value="Carpenter">Carpenter</option>
                             <option value="Painter">Painter</option>
                             <option value="Welder">Welder</option>
+                            <option value="Elevator Technician">Elevator Technician</option>
+                            <option value="Auto Mechanic">Auto Mechanic</option>
+                            <option value="Construction Worker">Construction Worker</option>
                         </optgroup>
                         <optgroup label="Home Services">
                             <option value="Cleaner">Cleaner / Housekeeping</option>

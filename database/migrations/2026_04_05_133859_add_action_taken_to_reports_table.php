@@ -12,6 +12,9 @@ return new class extends Migration
     public function up()
     {
         Schema::table('reports', function (Blueprint $table) {
+            if (! Schema::hasColumn('reports', 'status')) {
+                $table->enum('status', ['pending', 'resolved'])->default('pending')->after('reason');
+            }
             $table->string('action_taken')->nullable()->after('status');
             $table->timestamp('resolved_at')->nullable()->after('action_taken');
         });

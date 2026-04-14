@@ -30,6 +30,7 @@ document.addEventListener("DOMContentLoaded", function () {
         "Gardener",
         "Technician",
         "Elevator Technician",
+        "Auto Mechanic",
     ];
 
     // Generic payload and UI helpers.

@@ -51,10 +51,27 @@
           const dashboardUrl = user.role === 'admin' 
               ? '/admin/dashboard' 
               : (user.role === 'professional' ? '/pro/dashboard' : '/client/dashboard');
+          const defaultPhoto = @json(asset('images/user1.jpg'));
+          const normalizePhotoUrl = (value) => {
+              if (typeof value !== 'string') return defaultPhoto;
+              const trimmed = value.trim();
+              if (!trimmed) return defaultPhoto;
+              if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('/')) {
+                  return trimmed;
+              }
+              return `/storage/${trimmed.replace(/^storage\//, '')}`;
+          };
+          const photoUrl = normalizePhotoUrl(user.profile_photo);
 
           authSection.innerHTML = `
               <div class="d-flex ms-auto align-items-center gap-2">
-                  <img src="${user.profile_photo}" alt="Profile" class="rounded-circle border" style="width: 36px; height: 36px; object-fit: cover;">
+                  <img
+                      src="${photoUrl}"
+                      alt="Profile"
+                      class="rounded-circle border"
+                      style="width: 36px; height: 36px; object-fit: cover;"
+                      onerror="this.onerror=null;this.src='${defaultPhoto}';"
+                  >
                   <span class="fw-semibold text-dark">${user.name}</span>
                   <div class="dropdown">
                       <button class="btn p-0 border-0 bg-transparent" data-bs-toggle="dropdown" aria-expanded="false">
