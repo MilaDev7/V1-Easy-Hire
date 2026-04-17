@@ -328,6 +328,7 @@
             @include('admin.components.jobs')
             @include('admin.components.contracts')
             @include('admin.components.reports')
+            @include('admin.components.payments')
             @include('admin.components.plans')
         </div>
     </main>

@@ -302,6 +302,7 @@ function loadAdminSection(view) {
     const jobsSection = document.getElementById('jobs-section');
     const contractsSection = document.getElementById('contracts-section');
     const reportsSection = document.getElementById('reports-section');
+    const paymentsSection = document.getElementById('payments-section');
     const plansSection = document.getElementById('plans-section');
     const allProfessionalsSection = document.getElementById('all-professionals-section');
     
@@ -340,6 +341,16 @@ function loadAdminSection(view) {
             contractsSection.style.display = 'block';
         } else if (['reports', 'resolved-reports'].includes(view) && reportsSection) {
             reportsSection.style.display = 'block';
+        } else if (['all-payments', 'pending-payments'].includes(view) && paymentsSection) {
+            paymentsSection.style.display = 'block';
+            const titleEl = document.getElementById('payments-section-title');
+            const subtitleEl = document.getElementById('payments-section-subtitle');
+            if (titleEl) titleEl.textContent = sections[view].title;
+            if (subtitleEl) {
+                subtitleEl.textContent = view === 'pending-payments'
+                    ? 'Pending subscriptions waiting for payment completion.'
+                    : 'Search and audit completed payment transactions.';
+            }
         } else if (['plans'].includes(view) && plansSection) {
             plansSection.style.display = 'block';
         }
@@ -387,13 +398,234 @@ function renderProfessionalsTableError() {
 }
 
 function loadResolvedReports() { fetchJson("/api/admin/reports?status=resolved").then(p => { reportsData = Array.isArray(p) ? p : []; renderReportsTable(reportsData, true); }).catch(renderReportsTableError); }
-function loadAllPayments() { 
-    const area = document.getElementById('users-table-area');
-    if (area) area.innerHTML = '<div class="alert alert-info mb-0">Payments section coming soon.</div>';
+let currentPaymentsView = 'all-payments';
+let paymentFilterState = { q: '', plan_id: '', date_from: '', date_to: '' };
+
+function formatPaymentMoney(value, currency = 'ETB') {
+    const amount = Number(value || 0);
+    return `${amount.toLocaleString()} ${currency}`;
 }
-function loadPendingPayments() { 
-    const area = document.getElementById('users-table-area');
-    if (area) area.innerHTML = '<div class="alert alert-info mb-0">Pending payments section coming soon.</div>';
+
+function renderPaymentsSummary(stats, isPendingView) {
+    if (isPendingView) {
+        return `
+            <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-sm h-100" style="border-top: 4px solid #ffc107 !important;">
+                        <div class="card-body">
+                            <p class="text-muted text-uppercase small mb-1">Pending Items</p>
+                            <h4 class="mb-0">${stats.pending_count ?? 0}</h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-sm h-100" style="border-top: 4px solid #fd7e14 !important;">
+                        <div class="card-body">
+                            <p class="text-muted text-uppercase small mb-1">Expected Revenue</p>
+                            <h4 class="mb-0">${formatPaymentMoney(stats.expected_revenue ?? 0)}</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    return `
+        <div class="row g-3 mb-4">
+            <div class="col-md-3">
+                <div class="card border-0 shadow-sm h-100" style="border-top: 4px solid #198754 !important;">
+                    <div class="card-body">
+                        <p class="text-muted text-uppercase small mb-1">Total Revenue</p>
+                        <h5 class="mb-0">${formatPaymentMoney(stats.total_revenue ?? 0)}</h5>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-0 shadow-sm h-100" style="border-top: 4px solid #0d6efd !important;">
+                    <div class="card-body">
+                        <p class="text-muted text-uppercase small mb-1">Payments</p>
+                        <h5 class="mb-0">${stats.total_payments ?? 0}</h5>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-0 shadow-sm h-100" style="border-top: 4px solid #6f42c1 !important;">
+                    <div class="card-body">
+                        <p class="text-muted text-uppercase small mb-1">Unique Payers</p>
+                        <h5 class="mb-0">${stats.unique_payers ?? 0}</h5>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-0 shadow-sm h-100" style="border-top: 4px solid #20c997 !important;">
+                    <div class="card-body">
+                        <p class="text-muted text-uppercase small mb-1">Today Revenue</p>
+                        <h5 class="mb-0">${formatPaymentMoney(stats.today_revenue ?? 0)}</h5>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderPaymentsFilters(plans, isPendingView) {
+    const planOptions = toArray(plans).map((plan) => (
+        `<option value="${plan.id}" ${String(paymentFilterState.plan_id) === String(plan.id) ? 'selected' : ''}>${plan.name}</option>`
+    )).join('');
+
+    return `
+        <div class="card border-0 bg-light mb-4">
+            <div class="card-body">
+                <div class="row g-2">
+                    <div class="${isPendingView ? 'col-md-8' : 'col-md-4'}">
+                        <input type="text" id="payments-filter-q" class="form-control" placeholder="Search tx_ref, name, email" value="${paymentFilterState.q || ''}">
+                    </div>
+                    ${isPendingView ? '' : `
+                        <div class="col-md-2">
+                            <select id="payments-filter-plan" class="form-select">
+                                <option value="">All plans</option>
+                                ${planOptions}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <input type="date" id="payments-filter-date-from" class="form-control" value="${paymentFilterState.date_from || ''}">
+                        </div>
+                        <div class="col-md-2">
+                            <input type="date" id="payments-filter-date-to" class="form-control" value="${paymentFilterState.date_to || ''}">
+                        </div>
+                    `}
+                    <div class="${isPendingView ? 'col-md-4' : 'col-md-2'} d-flex gap-2">
+                        <button type="button" class="btn btn-dark w-100" id="payments-apply-filters-btn">
+                            <i class="fa-solid fa-filter me-1"></i> Apply
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary w-100" id="payments-clear-filters-btn">Clear</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderPaymentsTable(payments, isPendingView) {
+    if (!payments.length) {
+        return `<div class="alert alert-light border mb-0">${isPendingView ? 'No pending payments found.' : 'No payments found.'}</div>`;
+    }
+
+    const rows = payments.map((payment) => {
+        const statusBadge = (payment.status || '').toLowerCase() === 'pending'
+            ? '<span class="badge bg-warning text-dark">Pending</span>'
+            : '<span class="badge bg-success">Completed</span>';
+
+        return `
+            <tr>
+                <td class="fw-semibold">${payment.tx_ref || 'N/A'}</td>
+                <td>${payment.user_name || 'N/A'}</td>
+                <td>${payment.user_email || 'N/A'}</td>
+                <td>${payment.plan_name || 'N/A'}</td>
+                <td>${formatPaymentMoney(payment.amount, payment.currency || 'ETB')}</td>
+                <td>${statusBadge}</td>
+                <td>${new Date(payment.processed_at || payment.created_at).toLocaleString()}</td>
+            </tr>
+        `;
+    }).join('');
+
+    return `
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th scope="col">Tx Ref</th>
+                        <th scope="col">Client</th>
+                        <th scope="col">Email</th>
+                        <th scope="col">Plan</th>
+                        <th scope="col">Amount</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">${isPendingView ? 'Created At' : 'Processed At'}</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>
+    `;
+}
+
+function bindPaymentsFilters() {
+    const applyBtn = document.getElementById('payments-apply-filters-btn');
+    const clearBtn = document.getElementById('payments-clear-filters-btn');
+
+    if (applyBtn) {
+        applyBtn.addEventListener('click', () => {
+            paymentFilterState.q = document.getElementById('payments-filter-q')?.value?.trim() || '';
+            paymentFilterState.plan_id = document.getElementById('payments-filter-plan')?.value || '';
+            paymentFilterState.date_from = document.getElementById('payments-filter-date-from')?.value || '';
+            paymentFilterState.date_to = document.getElementById('payments-filter-date-to')?.value || '';
+            window.reloadAdminPaymentsView();
+        });
+    }
+
+    if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+            paymentFilterState = { q: '', plan_id: '', date_from: '', date_to: '' };
+            window.reloadAdminPaymentsView();
+        });
+    }
+}
+
+function renderPaymentsView(payload, isPendingView) {
+    const area = document.getElementById('payments-table-area');
+    if (!area) return;
+
+    const plans = isPendingView ? [] : toArray(payload?.plans);
+    const stats = payload?.stats || {};
+    const payments = toArray(payload?.payments);
+
+    area.innerHTML = `
+        ${renderPaymentsSummary(stats, isPendingView)}
+        ${renderPaymentsFilters(plans, isPendingView)}
+        ${renderPaymentsTable(payments, isPendingView)}
+    `;
+
+    bindPaymentsFilters();
+}
+
+function loadAllPayments() {
+    currentPaymentsView = 'all-payments';
+    const query = new URLSearchParams();
+    if (paymentFilterState.q) query.set('q', paymentFilterState.q);
+    if (paymentFilterState.plan_id) query.set('plan_id', paymentFilterState.plan_id);
+    if (paymentFilterState.date_from) query.set('date_from', paymentFilterState.date_from);
+    if (paymentFilterState.date_to) query.set('date_to', paymentFilterState.date_to);
+
+    return fetchJson(`/api/admin/payments${query.toString() ? `?${query.toString()}` : ''}`)
+        .then((payload) => {
+            renderPaymentsView(payload, false);
+        })
+        .catch(() => {
+            const area = document.getElementById('payments-table-area');
+            if (area) area.innerHTML = '<div class="alert alert-danger mb-0">Unable to load payments.</div>';
+        });
+}
+
+function loadPendingPayments() {
+    currentPaymentsView = 'pending-payments';
+    const query = new URLSearchParams();
+    if (paymentFilterState.q) query.set('q', paymentFilterState.q);
+
+    return fetchJson(`/api/admin/payments/pending${query.toString() ? `?${query.toString()}` : ''}`)
+        .then((payload) => {
+            renderPaymentsView(payload, true);
+        })
+        .catch(() => {
+            const area = document.getElementById('payments-table-area');
+            if (area) area.innerHTML = '<div class="alert alert-danger mb-0">Unable to load pending payments.</div>';
+        });
+}
+
+function reloadAdminPaymentsView() {
+    if (currentPaymentsView === 'pending-payments') {
+        return loadPendingPayments();
+    }
+    return loadAllPayments();
 }
 function loadGeneralSettings() { 
     const area = document.getElementById('users-table-area');
@@ -1445,6 +1677,9 @@ function confirmDeletePlan() {
     window.forceCancelContract = forceCancelContract;
     window.loadReports = loadReports;
     window.loadResolvedReports = loadResolvedReports;
+    window.loadAllPayments = loadAllPayments;
+    window.loadPendingPayments = loadPendingPayments;
+    window.reloadAdminPaymentsView = reloadAdminPaymentsView;
     window.viewReport = viewReport;
     window.openResolveModal = openResolveModal;
     window.loadPlans = loadPlans;

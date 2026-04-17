@@ -167,6 +167,8 @@ Route::middleware(['auth:sanctum', 'check_status'])->group(function () {
         Route::post('/admin/jobs/{id}/cancel', [AdminController::class, 'cancelJob']);
         Route::get('/admin/contracts', [AdminController::class, 'contracts']);
         Route::post('/admin/contracts/{id}/cancel', [AdminController::class, 'forceCancelContract']);
+        Route::get('/admin/payments', [AdminController::class, 'payments']);
+        Route::get('/admin/payments/pending', [AdminController::class, 'pendingPayments']);
 
         // 🔥 REPORTS
         Route::get('/admin/reports', [AdminController::class, 'reports']);

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Mail\ProfessionalStatusMail;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 
 class AdminController extends Controller
@@ -456,6 +457,129 @@ class AdminController extends Controller
         ]);
     }
 
+    public function payments(Request $request)
+    {
+        $query = DB::table('processed_payment_transactions as ppt')
+            ->join('users as u', 'u.id', '=', 'ppt.user_id')
+            ->join('plans as p', 'p.id', '=', 'ppt.plan_id')
+            ->select(
+                'ppt.id',
+                'ppt.tx_ref',
+                'ppt.user_id',
+                'ppt.plan_id',
+                'ppt.processed_at',
+                'u.name as user_name',
+                'u.email as user_email',
+                'p.name as plan_name',
+                'p.price as amount'
+            );
+
+        if ($request->filled('q')) {
+            $search = trim((string) $request->q);
+            $query->where(function ($inner) use ($search) {
+                $inner->where('ppt.tx_ref', 'like', '%'.$search.'%')
+                    ->orWhere('u.name', 'like', '%'.$search.'%')
+                    ->orWhere('u.email', 'like', '%'.$search.'%');
+            });
+        }
+
+        if ($request->filled('plan_id')) {
+            $query->where('ppt.plan_id', (int) $request->plan_id);
+        }
+
+        if ($request->filled('date_from')) {
+            $query->whereDate('ppt.processed_at', '>=', $request->date_from);
+        }
+
+        if ($request->filled('date_to')) {
+            $query->whereDate('ppt.processed_at', '<=', $request->date_to);
+        }
+
+        $statsQuery = clone $query;
+        $todayRevenueQuery = clone $query;
+        $paymentsQuery = clone $query;
+
+        $stats = [
+            'total_payments' => (int) $statsQuery->count(),
+            'total_revenue' => (float) ((clone $query)->sum('p.price') ?? 0),
+            'unique_payers' => (int) ((clone $query)->distinct('ppt.user_id')->count('ppt.user_id')),
+            'today_revenue' => (float) $todayRevenueQuery->whereDate('ppt.processed_at', now()->toDateString())->sum('p.price'),
+        ];
+
+        $payments = $paymentsQuery
+            ->orderByDesc('ppt.processed_at')
+            ->limit(300)
+            ->get()
+            ->map(function ($row) {
+                return [
+                    'id' => $row->id,
+                    'tx_ref' => $row->tx_ref,
+                    'user_id' => $row->user_id,
+                    'user_name' => $row->user_name,
+                    'user_email' => $row->user_email,
+                    'plan_id' => $row->plan_id,
+                    'plan_name' => $row->plan_name,
+                    'amount' => (float) $row->amount,
+                    'currency' => 'ETB',
+                    'status' => 'completed',
+                    'processed_at' => $row->processed_at,
+                ];
+            });
+
+        return response()->json([
+            'stats' => $stats,
+            'filters' => [
+                'q' => $request->q,
+                'plan_id' => $request->plan_id,
+                'date_from' => $request->date_from,
+                'date_to' => $request->date_to,
+            ],
+            'plans' => \App\Models\Plan::orderBy('name')->get(['id', 'name', 'price']),
+            'payments' => $payments,
+        ]);
+    }
+
+    public function pendingPayments(Request $request)
+    {
+        $query = \App\Models\Subscription::with(['user:id,name,email', 'plan:id,name,price'])
+            ->where('status', 'pending');
+
+        if ($request->filled('q')) {
+            $search = trim((string) $request->q);
+            $query->where(function ($inner) use ($search) {
+                $inner->where('tx_ref', 'like', '%'.$search.'%')
+                    ->orWhereHas('user', function ($userQuery) use ($search) {
+                        $userQuery->where('name', 'like', '%'.$search.'%')
+                            ->orWhere('email', 'like', '%'.$search.'%');
+                    });
+            });
+        }
+
+        $pending = $query->latest()->limit(300)->get()->map(function ($subscription) {
+            return [
+                'id' => $subscription->id,
+                'tx_ref' => $subscription->tx_ref,
+                'user_id' => $subscription->user_id,
+                'user_name' => $subscription->user->name ?? 'N/A',
+                'user_email' => $subscription->user->email ?? 'N/A',
+                'plan_id' => $subscription->plan_id,
+                'plan_name' => $subscription->plan->name ?? 'N/A',
+                'amount' => (float) ($subscription->plan->price ?? 0),
+                'currency' => 'ETB',
+                'status' => 'pending',
+                'created_at' => $subscription->created_at,
+            ];
+        });
+
+        return response()->json([
+            'stats' => [
+                'pending_count' => $pending->count(),
+                'expected_revenue' => (float) $pending->sum('amount'),
+            ],
+            'payments' => $pending->values(),
+        ]);
+    }
+
     public function stats()
     {
         \App\Models\Contract::autoCompleteExpiredPendingCompletions();
@@ -463,7 +587,10 @@ class AdminController extends Controller
         return response()->json([
             'pending_professionals' => \App\Models\Professional::where('status', 'pending')->count(),
             'active_contracts' => \App\Models\Contract::where('status', 'active')->count(),
-            'total_users' => User::count(),
+            // Exclude rejected professionals from top-level user KPI.
+            'total_users' => User::whereDoesntHave('professional', function ($query) {
+                $query->where('status', 'rejected');
+            })->count(),
             'open_reports' => \App\Models\Report::where('status', 'pending')->count(),
         ]);
     }
