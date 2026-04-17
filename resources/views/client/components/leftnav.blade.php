@@ -1,6 +1,6 @@
 <aside
     class="client-sidebar d-flex flex-column align-items-center text-center bg-white shadow-sm p-4"
-    style="position: fixed; top: 0; left: 0; width: 280px; min-height: 100vh; border-top: 4px solid #0d6efd !important;"
+    style="position: fixed; top: 0; left: 0; width: 280px; height: 100vh; max-height: 100vh; border-top: 4px solid #0d6efd !important; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;"
 >
     <div class="w-100 text-start mb-4">
         <a href="/" class="navbar-brand d-flex align-items-center gap-2 text-decoration-none fs-5">

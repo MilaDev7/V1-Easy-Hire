@@ -41,11 +41,15 @@
             top: 0;
             left: 0;
             width: 300px;
-            min-height: 100vh;
+            height: 100vh;
+            max-height: 100vh;
             border-radius: 0 28px 28px 0;
             background: rgba(255, 255, 255, 0.92);
             backdrop-filter: blur(12px);
             border-top: 4px solid #6f42c1;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            -webkit-overflow-scrolling: touch;
         }
 
         .professional-sidebar-photo {
@@ -361,6 +365,13 @@
                         >
                             <i class="fa-solid fa-star text-info me-2"></i> Reviews & Reports
                         </button>
+                        <button
+                            type="button"
+                            class="btn btn-outline-dark text-start professional-nav-button"
+                            data-view="portfolio"
+                        >
+                            <i class="fa-solid fa-images text-secondary me-2"></i> Portfolio
+                        </button>
                     </div>
 
                     <div class="mt-auto pt-3 border-top">
@@ -441,32 +452,6 @@
                                 <i class="fa-solid fa-save me-1"></i> Save Changes
                             </button>
                         </div>
-                    </div>
-
-                    <hr class="my-4">
-
-                    <div class="mb-4">
-                        <h6 class="fw-bold mb-3"><i class="fa-solid fa-images me-2"></i>Portfolio</h6>
-                        <div class="row g-2">
-                            <div class="col-12">
-                                <label class="form-label small text-muted mb-1">Work Image</label>
-                                <input type="file" class="form-control" id="professional-portfolio-image-input" accept="image/*">
-                            </div>
-                            <div class="col-12">
-                                <label class="form-label small text-muted mb-1">Short Description (Optional)</label>
-                                <textarea class="form-control" id="professional-portfolio-description-input" rows="2" placeholder="Describe this work..."></textarea>
-                            </div>
-                            <div class="col-12 col-md-6">
-                                <label class="form-label small text-muted mb-1">Linked Job ID (Optional)</label>
-                                <input type="number" class="form-control" id="professional-portfolio-linked-job-input" min="1" placeholder="e.g. 12">
-                            </div>
-                            <div class="col-12 col-md-6 d-flex align-items-end">
-                                <button type="button" class="btn btn-outline-success w-100" id="professional-upload-portfolio-btn">
-                                    <i class="fa-solid fa-upload me-1"></i> Upload Portfolio Item
-                                </button>
-                            </div>
-                        </div>
-                        <div id="professional-portfolio-feedback" class="small mt-2"></div>
                     </div>
 
                     <div class="rounded-3 border border-danger-subtle p-3">

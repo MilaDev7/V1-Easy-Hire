@@ -929,6 +929,11 @@ function bindProfessionalSidebarNavigation() {
                 return;
             }
 
+            if (view === "portfolio") {
+                loadProfessionalPortfolioView();
+                return;
+            }
+
             loadProfessionalJobsView();
         });
     });
@@ -965,11 +970,6 @@ function bindProfessionalSettings() {
     const darkModeLabel = document.getElementById("professional-dark-mode-label");
     const deleteAccountButton = document.getElementById("professional-delete-account-button");
     const confirmDeleteAccountButton = document.getElementById("professional-confirm-delete-account-button");
-    const portfolioImageInput = document.getElementById("professional-portfolio-image-input");
-    const portfolioDescriptionInput = document.getElementById("professional-portfolio-description-input");
-    const portfolioLinkedJobInput = document.getElementById("professional-portfolio-linked-job-input");
-    const uploadPortfolioButton = document.getElementById("professional-upload-portfolio-btn");
-    const portfolioFeedback = document.getElementById("professional-portfolio-feedback");
     const settingsModal = settingsModalElement
         ? bootstrap.Modal.getOrCreateInstance(settingsModalElement)
         : null;
@@ -1075,81 +1075,6 @@ function bindProfessionalSettings() {
                 saveBtn.disabled = false;
                 saveBtn.innerHTML = originalText;
             });
-        });
-    }
-
-    if (uploadPortfolioButton && portfolioImageInput) {
-        uploadPortfolioButton.addEventListener("click", function () {
-            const file = portfolioImageInput.files && portfolioImageInput.files[0];
-            const description = portfolioDescriptionInput ? portfolioDescriptionInput.value.trim() : "";
-            const linkedJobIdRaw = portfolioLinkedJobInput ? portfolioLinkedJobInput.value.trim() : "";
-
-            if (!file) {
-                if (portfolioFeedback) {
-                    portfolioFeedback.innerHTML = '<span class="text-danger">Please select an image first.</span>';
-                } else {
-                    window.alert("Please select an image first.");
-                }
-                return;
-            }
-
-            const formData = new FormData();
-            formData.append("image", file);
-            if (description) {
-                formData.append("description", description);
-            }
-            if (linkedJobIdRaw) {
-                formData.append("linked_job_id", linkedJobIdRaw);
-            }
-
-            uploadPortfolioButton.disabled = true;
-            uploadPortfolioButton.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Uploading...';
-            if (portfolioFeedback) {
-                portfolioFeedback.innerHTML = "";
-            }
-
-            fetch("/api/pro/portfolio", {
-                method: "POST",
-                headers: buildHeaders(),
-                body: formData,
-            })
-                .then(async (response) => {
-                    let payload = null;
-                    try {
-                        payload = await response.json();
-                    } catch (error) {
-                        payload = null;
-                    }
-
-                    if (!response.ok) {
-                        throw new Error(payload?.message || "Unable to upload portfolio item.");
-                    }
-
-                    return payload;
-                })
-                .then(() => {
-                    if (portfolioFeedback) {
-                        portfolioFeedback.innerHTML = '<span class="text-success">Portfolio item uploaded successfully.</span>';
-                    }
-                    portfolioImageInput.value = "";
-                    if (portfolioDescriptionInput) {
-                        portfolioDescriptionInput.value = "";
-                    }
-                    if (portfolioLinkedJobInput) {
-                        portfolioLinkedJobInput.value = "";
-                    }
-                })
-                .catch((error) => {
-                    if (portfolioFeedback) {
-                        portfolioFeedback.innerHTML = `<span class="text-danger">${error.message || "Unable to upload portfolio item."}</span>`;
-                    } else {
-                        window.alert(error.message || "Unable to upload portfolio item.");
-                    }
-                })
-                .finally(() => {
-                    uploadPortfolioButton.disabled = false;
-                    uploadPortfolioButton.innerHTML = '<i class="fa-solid fa-upload me-1"></i> Upload Portfolio Item';
-                });
         });
     }
 
@@ -1477,6 +1402,351 @@ window.rejectDirectRequest = function(id, title, clientName, budget) {
         bootstrap.Modal.getOrCreateInstance(modal).show();
     }, 100);
 };
+
+function ensurePortfolioEditModal() {
+    let modalElement = document.getElementById("professional-portfolio-edit-modal");
+    if (modalElement) {
+        return modalElement;
+    }
+
+    const wrapper = document.createElement("div");
+    wrapper.innerHTML = `
+        <div class="modal fade" id="professional-portfolio-edit-modal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow">
+                    <div class="modal-header">
+                        <h5 class="modal-title"><i class="fa-solid fa-pen me-2"></i>Edit Portfolio Item</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <form id="professional-portfolio-edit-form">
+                        <div class="modal-body">
+                            <input type="hidden" id="portfolio-edit-id">
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Description</label>
+                                <textarea class="form-control" id="portfolio-edit-description" rows="3" maxlength="500" placeholder="Describe this work..."></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Linked Job ID</label>
+                                <input type="number" class="form-control" id="portfolio-edit-job-id" min="1" placeholder="Optional">
+                            </div>
+                            <div class="mb-0">
+                                <label class="form-label fw-semibold">Replace Image</label>
+                                <input type="file" class="form-control" id="portfolio-edit-image" accept="image/*">
+                            </div>
+                            <div id="portfolio-edit-feedback" class="mt-3"></div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-primary" id="portfolio-edit-save-btn">Save</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(wrapper.firstElementChild);
+
+    const form = document.getElementById("professional-portfolio-edit-form");
+    if (form) {
+        form.addEventListener("submit", function (event) {
+            event.preventDefault();
+
+            const itemId = document.getElementById("portfolio-edit-id")?.value;
+            const description = document.getElementById("portfolio-edit-description")?.value ?? "";
+            const jobIdRaw = document.getElementById("portfolio-edit-job-id")?.value ?? "";
+            const imageInput = document.getElementById("portfolio-edit-image");
+            const feedback = document.getElementById("portfolio-edit-feedback");
+            const saveBtn = document.getElementById("portfolio-edit-save-btn");
+
+            if (!itemId || !saveBtn || !feedback) {
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append("_method", "PUT");
+            formData.append("description", description);
+            formData.append("linked_job_id", jobIdRaw);
+            if (imageInput && imageInput.files && imageInput.files[0]) {
+                formData.append("image", imageInput.files[0]);
+            }
+
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Saving...';
+            feedback.innerHTML = "";
+
+            fetch(`/api/pro/portfolio/${itemId}`, {
+                method: "POST",
+                headers: {
+                    "Accept": "application/json",
+                    "Authorization": "Bearer " + localStorage.getItem("token"),
+                },
+                body: formData,
+            })
+                .then(async (response) => {
+                    let payload = null;
+                    try {
+                        payload = await response.json();
+                    } catch (error) {
+                        payload = null;
+                    }
+
+                    if (!response.ok || !payload?.success) {
+                        throw new Error(payload?.message || "Unable to update portfolio item.");
+                    }
+                    return payload;
+                })
+                .then(() => {
+                    feedback.innerHTML = '<div class="alert alert-success mb-0">Portfolio item updated.</div>';
+                    setTimeout(() => {
+                        bootstrap.Modal.getOrCreateInstance(document.getElementById("professional-portfolio-edit-modal")).hide();
+                        loadProfessionalPortfolioView();
+                    }, 500);
+                })
+                .catch((error) => {
+                    feedback.innerHTML = `<div class="alert alert-danger mb-0">${error.message || "Unable to update portfolio item."}</div>`;
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = "Save";
+                });
+        });
+    }
+
+    return document.getElementById("professional-portfolio-edit-modal");
+}
+
+function openPortfolioEditModal(item) {
+    const modalElement = ensurePortfolioEditModal();
+    const idInput = document.getElementById("portfolio-edit-id");
+    const descriptionInput = document.getElementById("portfolio-edit-description");
+    const jobIdInput = document.getElementById("portfolio-edit-job-id");
+    const imageInput = document.getElementById("portfolio-edit-image");
+    const feedback = document.getElementById("portfolio-edit-feedback");
+    const saveBtn = document.getElementById("portfolio-edit-save-btn");
+
+    if (!modalElement || !idInput || !descriptionInput || !jobIdInput || !feedback || !saveBtn) {
+        return;
+    }
+
+    idInput.value = item.id;
+    descriptionInput.value = item.description || "";
+    jobIdInput.value = item.linked_job_id || "";
+    if (imageInput) imageInput.value = "";
+    feedback.innerHTML = "";
+    saveBtn.disabled = false;
+    saveBtn.innerHTML = "Save";
+
+    bootstrap.Modal.getOrCreateInstance(modalElement).show();
+}
+
+function bindPortfolioActions(items) {
+    const createForm = document.getElementById("professional-portfolio-create-form");
+    const createFeedback = document.getElementById("professional-portfolio-create-feedback");
+
+    if (createForm) {
+        createForm.addEventListener("submit", function (event) {
+            event.preventDefault();
+
+            const imageInput = document.getElementById("professional-portfolio-create-image");
+            const descriptionInput = document.getElementById("professional-portfolio-create-description");
+            const jobInput = document.getElementById("professional-portfolio-create-job-id");
+            const submitBtn = document.getElementById("professional-portfolio-create-btn");
+
+            if (!imageInput || !submitBtn) {
+                return;
+            }
+
+            if (!imageInput.files || !imageInput.files[0]) {
+                if (createFeedback) {
+                    createFeedback.innerHTML = '<div class="alert alert-warning mb-0">Please select an image.</div>';
+                }
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append("image", imageInput.files[0]);
+            formData.append("description", descriptionInput?.value ?? "");
+            formData.append("linked_job_id", jobInput?.value ?? "");
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Uploading...';
+            if (createFeedback) createFeedback.innerHTML = "";
+
+            fetch("/api/pro/portfolio", {
+                method: "POST",
+                headers: {
+                    "Accept": "application/json",
+                    "Authorization": "Bearer " + localStorage.getItem("token"),
+                },
+                body: formData,
+            })
+                .then(async (response) => {
+                    let payload = null;
+                    try {
+                        payload = await response.json();
+                    } catch (error) {
+                        payload = null;
+                    }
+
+                    if (!response.ok || !payload?.success) {
+                        throw new Error(payload?.message || "Unable to upload portfolio item.");
+                    }
+                    return payload;
+                })
+                .then(() => {
+                    if (createFeedback) {
+                        createFeedback.innerHTML = '<div class="alert alert-success mb-0">Portfolio item uploaded.</div>';
+                    }
+                    loadProfessionalPortfolioView();
+                })
+                .catch((error) => {
+                    if (createFeedback) {
+                        createFeedback.innerHTML = `<div class="alert alert-danger mb-0">${error.message || "Unable to upload portfolio item."}</div>`;
+                    }
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="fa-solid fa-upload me-1"></i>Add Item';
+                });
+        });
+    }
+
+    document.querySelectorAll(".professional-portfolio-edit-btn").forEach((button) => {
+        button.addEventListener("click", function () {
+            const itemId = Number(button.dataset.itemId);
+            const item = items.find((entry) => Number(entry.id) === itemId);
+            if (!item) return;
+            openPortfolioEditModal(item);
+        });
+    });
+
+    document.querySelectorAll(".professional-portfolio-delete-btn").forEach((button) => {
+        button.addEventListener("click", function () {
+            const itemId = Number(button.dataset.itemId);
+            if (!itemId) return;
+            if (!window.confirm("Delete this portfolio item?")) return;
+
+            button.disabled = true;
+            button.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+            fetch(`/api/pro/portfolio/${itemId}`, {
+                method: "DELETE",
+                headers: {
+                    "Accept": "application/json",
+                    "Authorization": "Bearer " + localStorage.getItem("token"),
+                },
+            })
+                .then(async (response) => {
+                    let payload = null;
+                    try {
+                        payload = await response.json();
+                    } catch (error) {
+                        payload = null;
+                    }
+
+                    if (!response.ok || !payload?.success) {
+                        throw new Error(payload?.message || "Unable to delete portfolio item.");
+                    }
+                })
+                .then(() => {
+                    loadProfessionalPortfolioView();
+                })
+                .catch((error) => {
+                    window.alert(error.message || "Unable to delete portfolio item.");
+                    button.disabled = false;
+                    button.innerHTML = '<i class="fa-solid fa-trash me-1"></i>Delete';
+                });
+        });
+    });
+}
+
+function renderProfessionalPortfolio(items) {
+    const contentArea = getProfessionalContentArea();
+    if (!contentArea) return;
+
+    const cards = items.length ? items.map((item) => `
+        <div class="col-md-6 col-xl-4">
+            <div class="card border-0 shadow-sm h-100">
+                <img src="${item.image_url || "/images/user1.jpg"}" class="card-img-top" alt="Portfolio image" style="height: 180px; object-fit: cover;">
+                <div class="card-body">
+                    <p class="mb-2">${item.description || "No description"}</p>
+                    <p class="text-muted small mb-2">Linked Job: ${item.linked_job_id || "N/A"}</p>
+                    <p class="text-muted small mb-3">Added: ${formatDate(item.created_at)}</p>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-primary professional-portfolio-edit-btn" data-item-id="${item.id}">
+                            <i class="fa-solid fa-pen me-1"></i>Edit
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-danger professional-portfolio-delete-btn" data-item-id="${item.id}">
+                            <i class="fa-solid fa-trash me-1"></i>Delete
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `).join("") : '<div class="alert alert-light border mb-0">No portfolio items yet.</div>';
+
+    contentArea.innerHTML = `
+        <section class="professional-portfolio-section">
+            <div class="card border-0 shadow-sm mb-4" style="border-top: 4px solid #20c997 !important;">
+                <div class="card-body">
+                    <form id="professional-portfolio-create-form">
+                        <div class="row g-2">
+                            <div class="col-md-4">
+                                <input type="file" class="form-control" id="professional-portfolio-create-image" accept="image/*" required>
+                            </div>
+                            <div class="col-md-4">
+                                <input type="text" class="form-control" id="professional-portfolio-create-description" placeholder="Description (optional)">
+                            </div>
+                            <div class="col-md-2">
+                                <input type="number" class="form-control" id="professional-portfolio-create-job-id" min="1" placeholder="Job ID">
+                            </div>
+                            <div class="col-md-2 d-grid">
+                                <button type="submit" class="btn btn-success" id="professional-portfolio-create-btn">
+                                    <i class="fa-solid fa-upload me-1"></i>Add Item
+                                </button>
+                            </div>
+                        </div>
+                        <div id="professional-portfolio-create-feedback" class="mt-2"></div>
+                    </form>
+                </div>
+            </div>
+
+            ${items.length ? `<div class="row g-3">${cards}</div>` : cards}
+        </section>
+    `;
+
+    bindPortfolioActions(items);
+}
+
+function loadProfessionalPortfolioView() {
+    setActiveProfessionalNav("portfolio");
+    clearProfessionalFeedback();
+    setProfessionalContentHeader(
+        "Portfolio",
+        "Create, update, and delete your portfolio items.",
+        true
+    );
+
+    const contentArea = getProfessionalContentArea();
+    if (contentArea) {
+        contentArea.innerHTML = '<div class="text-muted">Loading portfolio...</div>';
+    }
+
+    const reloadButton = document.getElementById("professional-content-reload-button");
+    if (reloadButton) {
+        reloadButton.onclick = function () {
+            loadProfessionalPortfolioView();
+        };
+    }
+
+    return fetchJson("/api/pro/portfolio")
+        .then((payload) => {
+            const items = Array.isArray(payload?.data) ? payload.data : [];
+            renderProfessionalPortfolio(items);
+        })
+        .catch(() => {
+            if (contentArea) {
+                contentArea.innerHTML = '<div class="alert alert-danger mb-0">Unable to load portfolio.</div>';
+            }
+        });
+}
 
 function loadProfessionalJobsView() {
     setActiveProfessionalNav("browse-jobs");

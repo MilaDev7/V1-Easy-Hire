@@ -362,6 +362,87 @@ class ProfileController extends Controller
     }
 
     /**
+     * Update one portfolio item for authenticated professional.
+     */
+    public function updatePortfolioItem(Request $request, $id)
+    {
+        $user = Auth::user();
+        $professional = Professional::where('user_id', $user->id)->first();
+
+        if (! $professional) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Professional profile not found',
+            ], 404);
+        }
+
+        $item = ProfessionalPortfolioItem::where('id', $id)
+            ->where('professional_id', $professional->id)
+            ->first();
+
+        if (! $item) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Portfolio item not found',
+            ], 404);
+        }
+
+        $request->validate([
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
+            'description' => 'nullable|string|max:500',
+            'linked_job_id' => 'nullable|integer|exists:job_posts,id',
+        ]);
+
+        $linkedJobId = $request->linked_job_id ? (int) $request->linked_job_id : null;
+
+        if ($linkedJobId) {
+            $isCompletedForProfessional = Application::where('professional_id', $user->id)
+                ->where('job_id', $linkedJobId)
+                ->where('status', 'accepted')
+                ->whereHas('job', function ($query) {
+                    $query->where('status', 'completed');
+                })
+                ->exists();
+
+            if (! $isCompletedForProfessional) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Linked job must be one of your completed jobs',
+                ], 422);
+            }
+        }
+
+        if ($request->hasFile('image')) {
+            if ($item->image_path) {
+                Storage::disk('public')->delete($item->image_path);
+            }
+            $item->image_path = $request->file('image')->store('portfolio', 'public');
+        }
+
+        if ($request->has('description')) {
+            $item->description = $request->description;
+        }
+
+        if ($request->has('linked_job_id')) {
+            $item->job_id = $linkedJobId;
+        }
+
+        $item->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Portfolio item updated',
+            'data' => [
+                'id' => $item->id,
+                'image_url' => asset('storage/'.$item->image_path),
+                'description' => $item->description,
+                'linked_job_id' => $item->job_id,
+                'created_at' => $item->created_at,
+            ],
+        ]);
+    }
+
+    /**
      * List current professional portfolio items.
      */
     public function myPortfolioItems()
