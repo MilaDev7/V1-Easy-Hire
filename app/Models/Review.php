@@ -23,4 +23,9 @@ class Review extends Model
     {
         return $this->belongsTo(User::class, 'reviewed_id');
     }
+
+    public function contract()
+    {
+        return $this->belongsTo(\App\Models\Contract::class, 'contract_id');
+    }
 }

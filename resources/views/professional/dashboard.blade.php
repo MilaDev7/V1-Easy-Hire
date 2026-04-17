@@ -354,6 +354,13 @@
                         >
                             <i class="fa-solid fa-envelope text-warning me-2"></i> Requests
                         </button>
+                        <button
+                            type="button"
+                            class="btn btn-outline-dark text-start professional-nav-button"
+                            data-view="reviews-reports"
+                        >
+                            <i class="fa-solid fa-star text-info me-2"></i> Reviews & Reports
+                        </button>
                     </div>
 
                     <div class="mt-auto pt-3 border-top">

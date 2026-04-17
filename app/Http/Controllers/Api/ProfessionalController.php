@@ -28,6 +28,30 @@ class ProfessionalController extends Controller
             return response()->json(['message' => 'Professional profile not found'], 404);
         }
 
+        $reviews = Review::where('reviewed_id', $user->id)
+            ->with(['reviewer:id,name', 'contract.job:id,title', 'contract.directRequest:id,title'])
+            ->latest()
+            ->limit(10)
+            ->get()
+            ->map(function ($review) {
+                $contractTitle = $review->contract?->job?->title
+                    ?? $review->contract?->directRequest?->title
+                    ?? 'Direct Request';
+
+                return [
+                    'rating' => $review->rating,
+                    'comment' => $review->comment,
+                    'contract_title' => $contractTitle,
+                    'client_name' => $review->reviewer?->name ?? 'N/A',
+                    'created_at' => $review->created_at,
+                ];
+            });
+
+        $reportCount = Report::where('reported_id', $user->id)->count();
+        $reportStatus = Report::where('reported_id', $user->id)
+            ->where('status', 'pending')
+            ->exists() ? 'under_review' : 'resolved';
+
         return response()->json([
             'id' => $professional->id,
             'name' => $user->name,
@@ -39,6 +63,9 @@ class ProfessionalController extends Controller
             'approval_status' => $professional->status,
             'rate' => $professional->average_rating,
             'total_reviews' => $professional->total_reviews,
+            'reviews' => $reviews->values(),
+            'report_count' => (int) $reportCount,
+            'report_status' => $reportStatus,
         ]);
     }
 

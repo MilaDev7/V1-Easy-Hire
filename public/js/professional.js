@@ -370,6 +370,114 @@ function setProfessionalDashboardLoading(isLoading) {
     }
 }
 
+function renderProfessionalReputationContent(profile) {
+    const contentArea = getProfessionalContentArea();
+    if (!contentArea) {
+        return;
+    }
+
+    const reviews = Array.isArray(profile?.reviews) ? profile.reviews : [];
+    const reportCount = Number(profile?.report_count ?? 0);
+    const reportStatus = String(profile?.report_status || "resolved").toLowerCase();
+    const isUnderReview = reportStatus === "under_review";
+
+    const reviewsTable = reviews.length
+        ? `
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Rating</th>
+                            <th>Comment</th>
+                            <th>Contract Title</th>
+                            <th>Client Name</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${reviews.map((review) => `
+                            <tr>
+                                <td><span class="badge text-bg-light border">${Number(review.rating || 0)}/5</span></td>
+                                <td>${review.comment || "No comment"}</td>
+                                <td>${review.contract_title || "Direct Request"}</td>
+                                <td>${review.client_name || "N/A"}</td>
+                                <td>${formatDate(review.created_at)}</td>
+                            </tr>
+                        `).join("")}
+                    </tbody>
+                </table>
+            </div>
+        `
+        : '<div class="alert alert-light border mb-0">No reviews yet.</div>';
+
+    contentArea.innerHTML = `
+        <section class="professional-reputation-section">
+            <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-sm h-100" style="border-top: 4px solid #dc3545 !important;">
+                        <div class="card-body">
+                            <h5 class="mb-2"><i class="fa-solid fa-shield-halved me-2 text-danger"></i>Reports</h5>
+                            <div class="d-flex align-items-center gap-3">
+                                <div>
+                                    <p class="text-muted small text-uppercase mb-1">Report Count</p>
+                                    <h4 class="mb-0 fw-bold">${reportCount}</h4>
+                                </div>
+                                ${reportCount > 0 ? `<span class="badge ${isUnderReview ? "text-bg-warning text-dark" : "text-bg-success"}">${isUnderReview ? "Under Review" : "Resolved"}</span>` : ""}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-sm h-100" style="border-top: 4px solid #0dcaf0 !important;">
+                        <div class="card-body">
+                            <h5 class="mb-2"><i class="fa-solid fa-star me-2 text-warning"></i>Reviews</h5>
+                            <p class="text-muted mb-0">${reviews.length} review${reviews.length === 1 ? "" : "s"} visible to you.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    ${reviewsTable}
+                </div>
+            </div>
+        </section>
+    `;
+}
+
+function loadProfessionalReputationView() {
+    setActiveProfessionalNav("reviews-reports");
+    clearProfessionalFeedback();
+    setProfessionalContentHeader(
+        "Reviews & Reports",
+        "Your ratings and report summary visibility.",
+        true
+    );
+
+    const contentArea = getProfessionalContentArea();
+    if (contentArea) {
+        contentArea.innerHTML = '<div class="text-muted">Loading reviews and reports...</div>';
+    }
+
+    const reloadButton = document.getElementById("professional-content-reload-button");
+    if (reloadButton) {
+        reloadButton.onclick = function () {
+            loadProfessionalReputationView();
+        };
+    }
+
+    return fetchJson("/api/pro/me")
+        .then((profile) => {
+            renderProfessionalReputationContent(profile);
+        })
+        .catch(() => {
+            if (contentArea) {
+                contentArea.innerHTML = '<div class="alert alert-danger mb-0">Unable to load reviews and reports.</div>';
+            }
+        });
+}
+
 function loadProfessionalStats() {
     return fetchJson("/api/pro/stats")
         .then((payload) => {
@@ -813,6 +921,11 @@ function bindProfessionalSidebarNavigation() {
 
             if (view === "direct-requests") {
                 loadDirectRequests();
+                return;
+            }
+
+            if (view === "reviews-reports") {
+                loadProfessionalReputationView();
                 return;
             }
 
