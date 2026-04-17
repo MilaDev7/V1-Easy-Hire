@@ -65,24 +65,28 @@
                     const pendingProId = localStorage.getItem('pending_pro_id');
                     
                     // ✅ 3. Redirect Logic
+                    // IMPORTANT: Use replace to avoid login page in browser history
+                    let redirectTarget;
                     if (role === 'admin') {
-                        window.location.href = "/admin/dashboard";
+                        redirectTarget = "/admin/dashboard";
                     } else if (role === 'professional') {
                         if (status === 'pending') {
                             alert("Your account is still under review by Admin.");
                         }
-                        window.location.href = "/pro/dashboard";
+                        redirectTarget = "/pro/dashboard";
                     } else if (role === 'client') {
-                        // If there's a redirect URL (e.g., from search page), go there
-                        // Otherwise go to dashboard
                         if (redirectUrl) {
-                            window.location.href = redirectUrl;
+                            redirectTarget = redirectUrl;
                         } else {
-                            window.location.href = "/client/dashboard";
+                            redirectTarget = "/client/dashboard";
                         }
                     } else {
-                        window.location.href = "/"; // Default
+                        redirectTarget = "/";
                     }
+                    
+                    // Replace history to prevent login page from being in back button stack
+                    window.history.replaceState(null, '', redirectTarget);
+                    window.location.href = redirectTarget;
                 } else {
                     // This handles the "Invalid credentials" or "Suspended" message
                     alert(data.message || "Login Failed");
