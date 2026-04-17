@@ -235,7 +235,7 @@
                 <i class="fa-solid fa-chevron-down float-end admin-collapse-icon"></i>
             </div>
             <div class="admin-sidebar-children" id="users-management">
-                <div class="admin-sidebar-child" data-view="all-users">All Users</div>
+                <div class="admin-sidebar-child" data-view="all-users" data-testid="admin-nav-all-users">All Users</div>
                 <div class="admin-sidebar-child" data-view="suspended-users">Suspended Users</div>
                 <div class="admin-sidebar-child" data-view="deleted-users">Deleted Users</div>
             </div>

@@ -90,7 +90,7 @@ function renderJobPosts(jobPosts) {
             const canDelete = status === 'open' || status === 'expired';
 
             return `
-                <tr>
+                <tr data-testid="client-job-row-${jobId}">
                     <td class="fw-semibold">${title}</td>
                     <td>${skill}</td>
                     <td><span class="badge text-bg-light border">${status}</span></td>
@@ -98,7 +98,7 @@ function renderJobPosts(jobPosts) {
                     <td>${startDate}</td>
                     <td>${deadline}</td>
                     <td>
-                        ${canDelete ? `<button type="button" class="btn btn-sm btn-outline-danger delete-job-btn" data-job-id="${jobId}" data-job-title="${title}">
+                        ${canDelete ? `<button type="button" class="btn btn-sm btn-outline-danger delete-job-btn" data-job-id="${jobId}" data-job-title="${title}" data-testid="client-delete-job-${jobId}">
                             <i class="fa-solid fa-trash"></i> Delete
                         </button>` : '<span class="text-muted small">No action</span>'}
                     </td>
@@ -799,7 +799,7 @@ function renderPostJobSection() {
                             <div id="post-job-feedback"></div>
                         </div>
                         <div class="col-12 d-flex justify-content-end">
-                            <button type="submit" id="submit-post-job-button" class="btn btn-success rounded-pill px-4">
+                            <button type="submit" id="submit-post-job-button" class="btn btn-success rounded-pill px-4" data-testid="client-post-job-submit">
                                 Post
                             </button>
                         </div>
@@ -1184,6 +1184,7 @@ function renderApplications(applications) {
                                 class="btn btn-sm btn-outline-success application-action-button"
                                 data-action="accept"
                                 data-application-id="${application.id}"
+                                data-testid="client-application-accept-${application.id}"
                             >
                                 Accept
                             </button>
@@ -1192,6 +1193,7 @@ function renderApplications(applications) {
                                 class="btn btn-sm btn-outline-danger application-action-button"
                                 data-action="reject"
                                 data-application-id="${application.id}"
+                                data-testid="client-application-reject-${application.id}"
                             >
                                 Reject
                             </button>

@@ -28,6 +28,7 @@
             type="button"
             class="btn btn-outline-dark text-start sidebar-nav-button"
             data-view="post-job"
+            data-testid="client-nav-post-job"
         >
             <i class="fa-solid fa-plus-circle text-success me-2"></i> Post Job
         </button>
@@ -35,6 +36,7 @@
             type="button"
             class="btn btn-outline-dark text-start sidebar-nav-button"
             data-view="job-posts"
+            data-testid="client-nav-job-posts"
         >
             <i class="fa-solid fa-list-ul text-primary me-2"></i> Job Posts
         </button>

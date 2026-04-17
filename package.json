@@ -4,9 +4,19 @@
     "type": "module",
     "scripts": {
         "build": "vite build",
-        "dev": "vite"
+        "dev": "vite",
+        "test:e2e": "playwright test",
+        "test:e2e:ui": "playwright test --headed",
+        "test:e2e:debug": "playwright test --debug",
+        "test:e2e:firefox": "playwright test --project=firefox",
+        "test:e2e:firefox:ui": "playwright test --project=firefox --headed",
+        "test:e2e:auth": "playwright test tests/auth.spec.js",
+        "test:e2e:client": "playwright test tests/client.spec.js",
+        "test:e2e:pro": "playwright test tests/pro.spec.js",
+        "test:e2e:admin": "playwright test tests/admin.spec.js"
     },
     "devDependencies": {
+        "@playwright/test": "^1.54.2",
         "@tailwindcss/vite": "^4.0.0",
         "axios": "^1.11.0",
         "concurrently": "^9.0.1",

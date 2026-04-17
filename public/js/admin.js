@@ -84,10 +84,10 @@ function renderPendingProfessionals(professionals) {
                     </td>
                     <td>
                         <div class="d-flex gap-2">
-                            <button type="button" class="btn btn-sm btn-success" onclick="window.approveProfessional(${pro.id})">
+                            <button type="button" class="btn btn-sm btn-success" onclick="window.approveProfessional(${pro.id})" data-testid="admin-approve-professional-${pro.id}">
                                 <i class="fa-solid fa-check me-1"></i>Approve
                             </button>
-                            <button type="button" class="btn btn-sm btn-danger" onclick="window.rejectProfessional(${pro.id})">
+                            <button type="button" class="btn btn-sm btn-danger" onclick="window.rejectProfessional(${pro.id})" data-testid="admin-reject-professional-${pro.id}">
                                 <i class="fa-solid fa-times me-1"></i>Reject
                             </button>
                         </div>
@@ -508,12 +508,12 @@ function renderUsersTable(users, type) {
         let actionBtn = '';
         if (type === 'all') {
             if (!user.deleted_at && !user.is_suspended) {
-                actionBtn = `<button type="button" class="btn btn-sm btn-warning" onclick="suspendUser(${user.id})"><i class="fa-solid fa-ban me-1"></i>Suspend</button>`;
+                actionBtn = `<button type="button" class="btn btn-sm btn-warning" onclick="suspendUser(${user.id})" data-testid="admin-suspend-user-${user.id}"><i class="fa-solid fa-ban me-1"></i>Suspend</button>`;
             } else if (user.is_suspended && !user.deleted_at) {
-                actionBtn = `<button type="button" class="btn btn-sm btn-success" onclick="unsuspendUser(${user.id})"><i class="fa-solid fa-check me-1"></i>Unsuspend</button>`;
+                actionBtn = `<button type="button" class="btn btn-sm btn-success" onclick="unsuspendUser(${user.id})" data-testid="admin-unsuspend-user-${user.id}"><i class="fa-solid fa-check me-1"></i>Unsuspend</button>`;
             }
         } else if (type === 'suspended') {
-            actionBtn = `<button type="button" class="btn btn-sm btn-success" onclick="unsuspendUser(${user.id})"><i class="fa-solid fa-check me-1"></i>Unsuspend</button>`;
+            actionBtn = `<button type="button" class="btn btn-sm btn-success" onclick="unsuspendUser(${user.id})" data-testid="admin-unsuspend-user-${user.id}"><i class="fa-solid fa-check me-1"></i>Unsuspend</button>`;
         } else if (type === 'deleted') {
             actionBtn = `<button type="button" class="btn btn-sm btn-info" onclick="restoreUser(${user.id})"><i class="fa-solid fa-trash-restore me-1"></i>Restore</button>`;
         }

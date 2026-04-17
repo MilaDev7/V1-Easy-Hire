@@ -198,6 +198,7 @@ function renderProfessionalJobs(jobs) {
                                 data-job-id="${job.id}"
                                 data-has-applied="${alreadyApplied ? "true" : "false"}"
                                 data-skill-match="${skillMatch ? "true" : "false"}"
+                                data-testid="professional-apply-${job.id}"
                                 ${alreadyApplied ? "disabled" : ""}
                             >
                                 ${buttonText}

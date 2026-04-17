@@ -15,7 +15,7 @@
                         <i class="fa-solid fa-eye"></i>
                     </button>
                 </div>
-                <button onclick="handleLogin()" class="btn btn-dark w-100 py-2 fw-bold">Sign In</button>
+                <button onclick="handleLogin()" class="btn btn-dark w-100 py-2 fw-bold" data-testid="login-submit">Sign In</button>
             </div>
         </div>
     </div>
