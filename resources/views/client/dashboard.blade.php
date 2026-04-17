@@ -18,6 +18,29 @@
             transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
         }
 
+        .client-sidebar {
+            height: 100vh;
+            max-height: 100vh;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        @media (max-width: 991.98px) {
+            .client-sidebar {
+                position: static !important;
+                width: 100% !important;
+                height: auto !important;
+                max-height: none !important;
+                overflow: visible !important;
+            }
+
+            .client-dashboard-main {
+                margin-left: 0 !important;
+                padding: 24px 16px 64px !important;
+            }
+        }
+
         body.client-dashboard-dark {
             background: #111827 !important;
             color: #f9fafb;

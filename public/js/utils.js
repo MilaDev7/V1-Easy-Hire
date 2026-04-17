@@ -125,7 +125,11 @@ document.addEventListener("DOMContentLoaded", function () {
             return value;
         }
 
-        return `$${amount}`;
+        const formattedAmount = Number.isInteger(amount)
+            ? amount.toLocaleString()
+            : amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+        return `Br ${formattedAmount}`;
     }
 
     function shortText(text) {

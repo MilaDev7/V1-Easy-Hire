@@ -92,33 +92,39 @@ function renderProfessionalJobsSection() {
 
     contentArea.innerHTML = `
         <section class="professional-jobs-section">
-            <div class="row g-3 mb-4 p-3 rounded-3" style="background: linear-gradient(135deg, #e9ecef 0%, #f8f9fa 100%); border: 1px solid rgba(0,0,0,0.05);">
-                <div class="col-md-6">
-                    <label for="pro-job-skill-search" class="form-label small text-uppercase text-muted mb-2">Skill</label>
-                    <input
-                        type="text"
-                        id="pro-job-skill-search"
-                        class="form-control"
-                        placeholder="Search by skill"
-                    >
+            <div class="mb-4 p-3 p-lg-4 rounded-4 shadow-sm" style="background: linear-gradient(135deg, rgba(32, 201, 151, 0.14), rgba(13, 110, 253, 0.09)); border: 1px solid rgba(15, 23, 42, 0.08);">
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+                    <h3 class="h5 mb-0 fw-bold"><i class="fa-solid fa-compass me-2 text-success"></i>Find Your Next Job</h3>
+                    <span class="badge text-bg-light border">Live opportunities</span>
                 </div>
-                <div class="col-md-4">
-                    <label for="pro-job-location-search" class="form-label small text-uppercase text-muted mb-2">Location</label>
-                    <input
-                        type="text"
-                        id="pro-job-location-search"
-                        class="form-control"
-                        placeholder="Search by location"
-                    >
-                </div>
-                <div class="col-md-2 d-flex align-items-end">
-                    <button
-                        type="button"
-                        id="pro-job-search-button"
-                        class="btn btn-dark w-100"
-                    >
-                        Search
-                    </button>
+                <div class="row g-3">
+                    <div class="col-md-5">
+                        <label for="pro-job-skill-search" class="form-label small text-uppercase text-muted mb-2">Skill</label>
+                        <input
+                            type="text"
+                            id="pro-job-skill-search"
+                            class="form-control"
+                            placeholder="Painting, Electrician, Plumbing..."
+                        >
+                    </div>
+                    <div class="col-md-5">
+                        <label for="pro-job-location-search" class="form-label small text-uppercase text-muted mb-2">Location</label>
+                        <input
+                            type="text"
+                            id="pro-job-location-search"
+                            class="form-control"
+                            placeholder="Bahir Dar, Addis Ababa..."
+                        >
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button
+                            type="button"
+                            id="pro-job-search-button"
+                            class="btn btn-success w-100 fw-semibold"
+                        >
+                            <i class="fa-solid fa-magnifying-glass me-1"></i>Search
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -144,6 +150,10 @@ function renderProfessionalJobs(jobs) {
         return;
     }
 
+    const totalJobs = jobs.length;
+    const matchedJobs = jobs.filter((job) => Boolean(job.skill_match)).length;
+    const appliedJobs = jobs.filter((job) => Boolean(job.has_applied)).length;
+
     const cards = jobs
         .map((job) => {
             const skills = job.skills || job.skill || "N/A";
@@ -151,50 +161,75 @@ function renderProfessionalJobs(jobs) {
             const location = job.location || "N/A";
             const alreadyApplied = Boolean(job.has_applied);
             const skillMatch = Boolean(job.skill_match);
-            const buttonClass = alreadyApplied ? "btn btn-secondary" : "btn btn-dark";
+            const buttonClass = alreadyApplied ? "btn btn-secondary" : "btn btn-success";
             const buttonText = alreadyApplied ? "Applied" : "Apply";
             const startDate = job.start_date ? formatDate(job.start_date) : null;
             const deadline = job.deadline ? formatDate(job.deadline) : null;
-            
-            const dateBadges = [];
-            if (startDate) dateBadges.push(`<span class="badge text-bg-light border">Start: ${startDate}</span>`);
-            if (deadline) dateBadges.push(`<span class="badge text-bg-light border">Deadline: ${deadline}</span>`);
+            const skillTags = String(skills)
+                .split(/[,/|]+/)
+                .map((value) => value.trim())
+                .filter(Boolean)
+                .slice(0, 4);
+            const statusBadge = status.toLowerCase() === "open"
+                ? '<span class="badge text-bg-success-subtle border text-success">Open</span>'
+                : `<span class="badge text-bg-light border">${status}</span>`;
 
             return `
-                <article class="card professional-job-card shadow-sm h-100" style="border-left: 4px solid #20c997 !important;">
+                <article class="card professional-job-card shadow-sm h-100 overflow-hidden" style="border: 1px solid rgba(15, 23, 42, 0.08); border-left: 4px solid ${skillMatch ? "#20c997" : "#f59e0b"} !important;">
                     <div class="card-body p-4 d-flex flex-column">
-                        <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 mb-3">
+                        <div class="d-flex align-items-start justify-content-between gap-3 mb-3">
                             <div>
                                 <h3 class="h5 mb-2">${job.title || "Untitled Job"}</h3>
-                                <p class="professional-job-description mb-0">${shortText(job.description)}</p>
+                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                    ${statusBadge}
+                                    <span class="badge ${skillMatch ? "text-bg-success" : "text-bg-warning text-dark"}">${skillMatch ? "Skill Match" : "Needs Skill Check"}</span>
+                                </div>
                             </div>
-                            <div class="text-lg-end">
+                            <div class="text-end">
                                 <p class="text-muted small text-uppercase mb-1">Budget</p>
-                                <p class="h5 mb-0">${formatPrice(job.budget)}</p>
+                                <p class="h5 mb-0 fw-bold text-success">${formatPrice(job.budget)}</p>
                             </div>
                         </div>
 
-                        <div class="d-flex flex-wrap gap-2 mb-3">
-                            <span class="professional-job-skills">
-                                <i class="fa-solid fa-sparkles"></i> ${skills}
-                            </span>
-                            <span class="badge text-bg-light border">Status: ${status}</span>
-                            <span class="badge text-bg-light border">Location: ${location}</span>
-                            <span class="badge ${skillMatch ? "text-bg-success" : "text-bg-warning"}">
-                                ${skillMatch ? "Skill Match" : "Skill Check"}
-                            </span>
-                        </div>
-                        
-                        ${dateBadges.length > 0 ? `<div class="d-flex flex-wrap gap-2 mb-3">${dateBadges.join('')}</div>` : ''}
+                        <p class="professional-job-description mb-3">${shortText(job.description)}</p>
 
-                        <div class="professional-job-meta text-muted mb-4">
-                            Frontend placeholder match check is currently based on your primary skill and the job skill.
+                        <div class="row g-2 mb-3">
+                            <div class="col-12 col-md-4">
+                                <div class="small rounded-3 px-2 py-2 border bg-light-subtle">
+                                    <span class="text-muted d-block text-uppercase" style="font-size: 0.68rem;">Location</span>
+                                    <span class="fw-semibold">${location}</span>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <div class="small rounded-3 px-2 py-2 border bg-light-subtle">
+                                    <span class="text-muted d-block text-uppercase" style="font-size: 0.68rem;">Start</span>
+                                    <span class="fw-semibold">${startDate || "Flexible"}</span>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <div class="small rounded-3 px-2 py-2 border bg-light-subtle">
+                                    <span class="text-muted d-block text-uppercase" style="font-size: 0.68rem;">Deadline</span>
+                                    <span class="fw-semibold">${deadline || "N/A"}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex flex-wrap gap-2 mb-4">
+                            ${(skillTags.length ? skillTags : ["General"]).map((tag) => `
+                                <span class="badge rounded-pill text-bg-light border">${tag}</span>
+                            `).join("")}
+                        </div>
+
+                        <div class="professional-job-meta text-muted mb-4 small">
+                            ${skillMatch
+                                ? '<i class="fa-solid fa-circle-check text-success me-1"></i>This job aligns with your current skill profile.'
+                                : '<i class="fa-solid fa-circle-info text-warning me-1"></i>You can review requirements before applying.'}
                         </div>
 
                         <div class="mt-auto d-flex justify-content-end">
                             <button
                                 type="button"
-                                class="${buttonClass} professional-apply-button"
+                                class="${buttonClass} professional-apply-button fw-semibold px-4"
                                 data-job-id="${job.id}"
                                 data-has-applied="${alreadyApplied ? "true" : "false"}"
                                 data-skill-match="${skillMatch ? "true" : "false"}"
@@ -210,7 +245,14 @@ function renderProfessionalJobs(jobs) {
         })
         .join("");
 
-    results.innerHTML = `<div class="row g-3">${cards}</div>`;
+    results.innerHTML = `
+        <div class="d-flex flex-wrap gap-2 mb-3">
+            <span class="badge text-bg-light border">Total: ${totalJobs}</span>
+            <span class="badge text-bg-success-subtle border text-success">Skill Match: ${matchedJobs}</span>
+            <span class="badge text-bg-secondary">Applied: ${appliedJobs}</span>
+        </div>
+        <div class="row g-3">${cards}</div>
+    `;
     bindProfessionalApplyButtons();
 }
 

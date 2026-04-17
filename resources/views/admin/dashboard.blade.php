@@ -31,11 +31,15 @@
             top: 0;
             left: 0;
             width: 300px;
-            min-height: 100vh;
+            height: 100vh;
+            max-height: 100vh;
             border-radius: 0 28px 28px 0;
             background: rgba(255, 255, 255, 0.92);
             backdrop-filter: blur(12px);
             border-top: 4px solid #6f42c1;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            -webkit-overflow-scrolling: touch;
         }
 
         .admin-sidebar-photo {
