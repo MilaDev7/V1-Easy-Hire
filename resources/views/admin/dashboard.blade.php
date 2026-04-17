@@ -285,17 +285,6 @@
             </div>
         </div>
 
-        <div class="mt-auto pt-3 border-top">
-            <div class="admin-sidebar-item" data-toggle="settings-menu" style="margin: 0;">
-                <i class="fa-solid fa-gear me-2"></i> Settings
-                <i class="fa-solid fa-chevron-down float-end admin-collapse-icon"></i>
-            </div>
-            <div class="admin-sidebar-children" id="settings-menu">
-                <div class="admin-sidebar-child" style="cursor: pointer;" onclick="event.stopPropagation(); toggleAdminDarkMode();">
-                    <i class="fa-solid fa-moon me-2"></i> Dark Mode
-                </div>
-            </div>
-        </div>
     </aside>
 
     <main class="admin-dashboard-shell" id="admin-dashboard">
@@ -312,6 +301,7 @@
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end shadow">
                             <li><a class="dropdown-item" href="/admin/dashboard"><i class="fa-solid fa-user me-2"></i>Account</a></li>
+                            <li><button type="button" class="dropdown-item" onclick="toggleAdminDarkMode()"><i class="fa-solid fa-moon me-2"></i>Dark Mode</button></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item text-danger" href="#" onclick="logout(); return false;"><i class="fa-solid fa-right-from-bracket me-2"></i>Logout</a></li>
                         </ul>

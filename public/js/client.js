@@ -2159,6 +2159,7 @@ function bindClientProfileForm() {
 
 function bindDashboardTools() {
     const darkModeToggle = document.getElementById("dark-mode-toggle");
+    const topbarDarkModeToggle = document.getElementById("client-topbar-dark-mode");
     const settingsButton = document.getElementById("settings-button");
     const settingsModalElement = document.getElementById("dashboard-settings-modal");
     const deleteAccountModalElement = document.getElementById("delete-account-modal");
@@ -2202,6 +2203,10 @@ function bindDashboardTools() {
 
     if (darkModeToggle) {
         darkModeToggle.addEventListener("click", toggleDarkMode);
+    }
+
+    if (topbarDarkModeToggle) {
+        topbarDarkModeToggle.addEventListener("click", toggleDarkMode);
     }
 
     if (settingsButton) {

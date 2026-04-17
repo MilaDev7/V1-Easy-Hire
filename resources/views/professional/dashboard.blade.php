@@ -49,9 +49,12 @@
         }
 
         .professional-sidebar-photo {
-            width: 112px;
-            height: 112px;
+            width: 128px;
+            height: 128px;
             object-fit: cover;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
         }
 
         .professional-sidebar-meta {
@@ -267,6 +270,7 @@
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end shadow">
                             <li><a class="dropdown-item" href="/pro/dashboard"><i class="fa-solid fa-user me-2"></i>Account</a></li>
+                            <li><button type="button" class="dropdown-item" id="professional-topbar-dark-mode"><i class="fa-solid fa-moon me-2"></i>Dark Mode</button></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item text-danger" href="#" onclick="logout(); return false;"><i class="fa-solid fa-right-from-bracket me-2"></i>Logout</a></li>
                         </ul>
@@ -456,17 +460,6 @@
                             </div>
                         </div>
                         <div id="professional-portfolio-feedback" class="small mt-2"></div>
-                    </div>
-
-                    <div class="d-flex justify-content-between align-items-center rounded-3 border p-3 mb-3">
-                        <div>
-                            <h6 class="mb-1">Dark Mode</h6>
-                            <p class="text-muted small mb-0">Switch the professional dashboard theme.</p>
-                        </div>
-                        <button type="button" id="professional-dark-mode-toggle" class="btn btn-outline-secondary btn-sm">
-                            <i class="fa-solid fa-moon me-1"></i>
-                            <span id="professional-dark-mode-label">Enable</span>
-                        </button>
                     </div>
 
                     <div class="rounded-3 border border-danger-subtle p-3">

@@ -848,6 +848,7 @@ function bindProfessionalSettings() {
     const settingsModalElement = document.getElementById("professional-settings-modal");
     const deleteAccountModalElement = document.getElementById("professional-delete-account-modal");
     const darkModeToggle = document.getElementById("professional-dark-mode-toggle");
+    const topbarDarkModeToggle = document.getElementById("professional-topbar-dark-mode");
     const darkModeLabel = document.getElementById("professional-dark-mode-label");
     const deleteAccountButton = document.getElementById("professional-delete-account-button");
     const confirmDeleteAccountButton = document.getElementById("professional-confirm-delete-account-button");
@@ -1065,6 +1066,20 @@ function bindProfessionalSettings() {
 
     if (darkModeToggle) {
         darkModeToggle.addEventListener("click", function () {
+            document.body.classList.toggle("professional-dashboard-dark");
+
+            if (document.body.classList.contains("professional-dashboard-dark")) {
+                localStorage.setItem("professional_dashboard_theme", "dark");
+            } else {
+                localStorage.removeItem("professional_dashboard_theme");
+            }
+
+            syncProfessionalDarkModeLabel();
+        });
+    }
+
+    if (topbarDarkModeToggle) {
+        topbarDarkModeToggle.addEventListener("click", function () {
             document.body.classList.toggle("professional-dashboard-dark");
 
             if (document.body.classList.contains("professional-dashboard-dark")) {

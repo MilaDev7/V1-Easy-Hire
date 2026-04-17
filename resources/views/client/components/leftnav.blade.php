@@ -16,8 +16,8 @@
             src="{{ asset('images/user1.jpg') }}"
             alt="Client Profile Photo"
             id="client-sidebar-photo"
-            class="rounded border object-fit-cover"
-            style="width: 96px; height: 96px; display: none;"
+            class="rounded border object-fit-cover d-block mx-auto"
+            style="width: 128px; height: 128px; display: none;"
         >
     </div>
 
@@ -134,17 +134,6 @@
                 </div>
 
                 <hr class="my-4">
-
-                <div class="d-flex justify-content-between align-items-center rounded-3 border p-3 mb-3">
-                    <div>
-                        <h6 class="mb-1">Dark Mode</h6>
-                        <p class="text-muted small mb-0">Switch the dashboard theme inside Settings.</p>
-                    </div>
-                    <button type="button" id="dark-mode-toggle" class="btn btn-outline-secondary btn-sm">
-                        <i class="fa-solid fa-moon me-1"></i>
-                        <span id="dark-mode-label">Enable</span>
-                    </button>
-                </div>
 
                 <div class="rounded-3 border border-danger-subtle p-3">
                     <h6 class="text-danger mb-1">Delete Account</h6>

@@ -115,6 +115,7 @@
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end shadow">
                             <li><a class="dropdown-item" href="/client/dashboard"><i class="fa-solid fa-user me-2"></i>Account</a></li>
+                            <li><button type="button" class="dropdown-item" id="client-topbar-dark-mode"><i class="fa-solid fa-moon me-2"></i>Dark Mode</button></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item text-danger" href="#" onclick="logout(); return false;"><i class="fa-solid fa-right-from-bracket me-2"></i>Logout</a></li>
                         </ul>

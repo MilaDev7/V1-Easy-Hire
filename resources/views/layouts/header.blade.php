@@ -1,4 +1,18 @@
   <!-- navbar -->
+  <style>
+      body.site-dark-mode {
+          background: #111827 !important;
+          color: #f9fafb;
+      }
+
+      body.site-dark-mode .nav-link {
+          color: #e5e7eb !important;
+      }
+
+      body.site-dark-mode .nav-link:hover {
+          color: #ffffff !important;
+      }
+  </style>
 
 
   <nav class="navbar navbar-expand-lg bg-white shadow-sm sticky-top">
@@ -39,12 +53,42 @@
   </nav>
 
   <script>
+  function isSiteDarkModeEnabled() {
+      return localStorage.getItem('site_theme') === 'dark';
+  }
+
+  function applySiteTheme() {
+      const isDark = isSiteDarkModeEnabled();
+      const nav = document.querySelector('nav.navbar');
+
+      document.body.classList.toggle('site-dark-mode', isDark);
+
+      if (nav) {
+          nav.classList.toggle('bg-white', !isDark);
+          nav.classList.toggle('navbar-light', !isDark);
+          nav.classList.toggle('bg-dark', isDark);
+          nav.classList.toggle('navbar-dark', isDark);
+      }
+  }
+
+  function toggleSiteDarkMode() {
+      if (isSiteDarkModeEnabled()) {
+          localStorage.removeItem('site_theme');
+      } else {
+          localStorage.setItem('site_theme', 'dark');
+      }
+
+      applySiteTheme();
+      renderAuthSection();
+  }
+
   // Render auth section based on user state
   async function renderAuthSection() {
       const authSection = document.getElementById('auth-section');
       if (!authSection) return;
 
       const user = await initAuth();
+      const isDark = isSiteDarkModeEnabled();
 
       if (user) {
           // Logged in - show profile photo + name + dropdown
@@ -65,20 +109,20 @@
 
           authSection.innerHTML = `
               <div class="d-flex ms-auto align-items-center gap-2">
-                  <img
-                      src="${photoUrl}"
-                      alt="Profile"
-                      class="rounded-circle border"
-                      style="width: 36px; height: 36px; object-fit: cover;"
-                      onerror="this.onerror=null;this.src='${defaultPhoto}';"
-                  >
-                  <span class="fw-semibold text-dark">${user.name}</span>
+                  <span class="fw-semibold ${isDark ? 'text-light' : 'text-dark'}">${user.name}</span>
                   <div class="dropdown">
                       <button class="btn p-0 border-0 bg-transparent" data-bs-toggle="dropdown" aria-expanded="false">
-                          <i class="fa-solid fa-chevron-down text-muted"></i>
+                          <img
+                              src="${photoUrl}"
+                              alt="Profile"
+                              class="rounded-circle border"
+                              style="width: 36px; height: 36px; object-fit: cover;"
+                              onerror="this.onerror=null;this.src='${defaultPhoto}';"
+                          >
                       </button>
                       <ul class="dropdown-menu dropdown-menu-end shadow">
                           <li><a class="dropdown-item" href="${dashboardUrl}"><i class="fa-solid fa-user me-2"></i>Account</a></li>
+                          <li><button type="button" class="dropdown-item" onclick="toggleSiteDarkMode()"><i class="fa-solid fa-moon me-2"></i>${isDark ? 'Light Mode' : 'Dark Mode'}</button></li>
                           <li><hr class="dropdown-divider"></li>
                           <li><a class="dropdown-item text-danger" href="#" onclick="logout(); return false;"><i class="fa-solid fa-right-from-bracket me-2"></i>Logout</a></li>
                       </ul>
@@ -97,5 +141,8 @@
   }
 
   // Initialize on page load
-  document.addEventListener('DOMContentLoaded', renderAuthSection);
+  document.addEventListener('DOMContentLoaded', function () {
+      applySiteTheme();
+      renderAuthSection();
+  });
   </script>
