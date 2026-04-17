@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string('title');
             $table->text('description');
             $table->decimal('budget', 10, 2)->nullable(); // optional
-            $table->enum('status', ['open', 'assigned', 'completed', 'cancelled'])->default('open');
+            $table->enum('status', ['open', 'assigned', 'completed', 'cancelled', 'expired'])->default('open');
             $table->string('location'); // city / area
             $table->timestamps();
         });

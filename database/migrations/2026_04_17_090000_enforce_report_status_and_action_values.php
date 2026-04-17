@@ -22,13 +22,17 @@ return new class extends Migration
             ->whereNotIn('status', ['pending', 'resolved'])
             ->update(['status' => 'pending']);
 
-        DB::statement("ALTER TABLE reports MODIFY COLUMN status ENUM('pending','resolved') NOT NULL DEFAULT 'pending'");
-        DB::statement("ALTER TABLE reports MODIFY COLUMN action_taken ENUM('none','warning','suspend_user','cancel_contract') NOT NULL DEFAULT 'none'");
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement("ALTER TABLE reports MODIFY COLUMN status ENUM('pending','resolved') NOT NULL DEFAULT 'pending'");
+            DB::statement("ALTER TABLE reports MODIFY COLUMN action_taken ENUM('none','warning','suspend_user','cancel_contract') NOT NULL DEFAULT 'none'");
+        }
     }
 
     public function down(): void
     {
-        DB::statement("ALTER TABLE reports MODIFY COLUMN action_taken VARCHAR(255) NULL");
-        DB::statement("ALTER TABLE reports MODIFY COLUMN status ENUM('pending','resolved') NOT NULL DEFAULT 'pending'");
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement("ALTER TABLE reports MODIFY COLUMN action_taken VARCHAR(255) NULL");
+            DB::statement("ALTER TABLE reports MODIFY COLUMN status ENUM('pending','resolved') NOT NULL DEFAULT 'pending'");
+        }
     }
 };
