@@ -15,8 +15,6 @@ use Illuminate\Http\Request;
 
 class ProfessionalController extends Controller
 {
-    private const REPORT_WARNING_THRESHOLD = 3;
-
     public function __construct(private ApplyCreditService $applyCreditService) {}
 
     public function me()
@@ -118,7 +116,12 @@ class ProfessionalController extends Controller
 
         $professionals = $query->get()->map(function ($pro) {
             $reviews = Review::where('reviewed_id', $pro->user_id)->with('reviewer:id,name')->get();
-            $reportCount = Report::where('reported_id', $pro->user_id)->count();
+            $activeReportsCount = Report::where('reported_id', $pro->user_id)
+                ->where('status', 'pending')
+                ->count();
+            $issuesRecordedCount = Report::where('reported_id', $pro->user_id)
+                ->where('action_taken', '!=', 'none')
+                ->count();
 
             return [
                 'id' => $pro->id,
@@ -141,10 +144,8 @@ class ProfessionalController extends Controller
                         'created_at' => $r->created_at,
                     ];
                 }),
-                // Only expose aggregate report signals to non-admin consumers.
-                'report_count' => (int) $reportCount,
-                'reports_count' => (int) $reportCount,
-                'report_warning' => $reportCount > self::REPORT_WARNING_THRESHOLD,
+                'active_reports_count' => (int) $activeReportsCount,
+                'issues_recorded_count' => (int) $issuesRecordedCount,
             ];
         });
 
@@ -183,7 +184,12 @@ class ProfessionalController extends Controller
                 ];
             });
 
-        $reportCount = Report::where('reported_id', $professional->user_id)->count();
+        $activeReportsCount = Report::where('reported_id', $professional->user_id)
+            ->where('status', 'pending')
+            ->count();
+        $issuesRecordedCount = Report::where('reported_id', $professional->user_id)
+            ->where('action_taken', '!=', 'none')
+            ->count();
         $averageRating = $reviews->count() > 0 ? $reviews->avg('rating') : 0;
         $portfolioItems = ProfessionalPortfolioItem::where('professional_id', $professional->id)
             ->latest()
@@ -204,12 +210,58 @@ class ProfessionalController extends Controller
             'portfolio_items' => $portfolioItems,
             'reviews' => $reviews,
             'reviews_count' => $reviews->count(),
-            // Only expose aggregate report signals to non-admin consumers.
-            'report_count' => (int) $reportCount,
-            'reports_count' => (int) $reportCount,
-            'report_warning' => $reportCount > self::REPORT_WARNING_THRESHOLD,
-            'report_warning_threshold' => self::REPORT_WARNING_THRESHOLD,
+            'active_reports_count' => (int) $activeReportsCount,
+            'issues_recorded_count' => (int) $issuesRecordedCount,
             'average_rating' => round($averageRating, 1),
+        ]);
+    }
+
+    public function publicProfileSummary($id)
+    {
+        $professional = Professional::find($id);
+
+        if (! $professional) {
+            return response()->json(['message' => 'Professional not found'], 404);
+        }
+
+        $activeReportsCount = Report::where('reported_id', $professional->user_id)
+            ->where('status', 'pending')
+            ->count();
+        $issuesRecordedCount = Report::where('reported_id', $professional->user_id)
+            ->where('action_taken', '!=', 'none')
+            ->count();
+
+        return response()->json([
+            'active_reports_count' => (int) $activeReportsCount,
+            'issues_recorded_count' => (int) $issuesRecordedCount,
+        ]);
+    }
+
+    public function myReports()
+    {
+        $userId = auth()->id();
+
+        $reports = Report::query()
+            ->where('reported_id', $userId)
+            ->latest()
+            ->get()
+            ->map(function ($report) {
+                $status = $report->status === 'resolved' ? 'resolved' : 'pending';
+                return [
+                    'id' => $report->id,
+                    'reason' => $report->reason,
+                    'status' => $status,
+                    'action_taken' => $report->action_taken ?: 'none',
+                    'created_at' => $report->created_at,
+                ];
+            });
+
+        return response()->json([
+            'total_reports' => $reports->count(),
+            'active_reports_count' => $reports->where('status', 'pending')->count(),
+            'resolved_reports_count' => $reports->where('status', 'resolved')->count(),
+            'active_reports' => $reports->where('status', 'pending')->values(),
+            'resolved_reports' => $reports->where('status', 'resolved')->values(),
         ]);
     }
 

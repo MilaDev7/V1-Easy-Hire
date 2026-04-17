@@ -339,8 +339,7 @@ function renderProfessionalsSection() {
                 let locationText = p.location || "N/A";
                 let rating = p.average_rating || 0;
                 let reviewsCount = p.reviews_count || 0;
-                let reportsCount = Number(p.report_count ?? p.reports_count ?? 0);
-                let reportWarning = Boolean(p.report_warning);
+                let issuesRecordedCount = Number(p.issues_recorded_count ?? 0);
                 let reviewText = reviewsCount > 0 ? reviewsCount + ' review' + (reviewsCount > 1 ? 's' : '') : 'No reviews';
                 
                 // Generate stars inline
@@ -350,16 +349,12 @@ function renderProfessionalsSection() {
                     starsHtml += '<i class="fa-solid fa-star" style="color: ' + (i <= fullStars ? '#ffc107;' : '#e4e5e9;') + '"></i>';
                 }
                 
-                // Build reports section using count only (no reporter/reason details).
-                let reportsSection = '';
-                if (reportsCount > 0) {
-                    reportsSection = '<div class="mt-2 pt-2 border-top small">' +
-                        '<span class="text-danger"><i class="fa-solid fa-flag me-1"></i>' + reportsCount + ' report' + (reportsCount !== 1 ? 's' : '') + '</span>' +
-                        (reportWarning ? '<div class="text-danger fw-semibold mt-1"><i class="fa-solid fa-triangle-exclamation me-1"></i>Warning</div>' : '') +
-                        '</div>';
-                } else {
-                    reportsSection = '<div class="mt-2 pt-2 border-top small"><span class="text-success"><i class="fa-solid fa-check-circle me-1"></i>No reports</span></div>';
-                }
+                // Client-facing risk signal: only resolved issues (action_taken != none).
+                let reportsSection = issuesRecordedCount > 0
+                    ? '<div class="mt-2 pt-2 border-top small">' +
+                        '<span class="text-danger fw-semibold"><i class="fa-solid fa-triangle-exclamation me-1"></i>' + issuesRecordedCount + ' issue' + (issuesRecordedCount !== 1 ? 's' : '') + ' recorded</span>' +
+                        '</div>'
+                    : '';
                 
                 return '<div class="col-md-6 col-xl-4" onclick="window.openProfessionalProfilePage(' + proId + ')" style="cursor:pointer;">' +
                     '<div class="card border-0 shadow-sm h-100" style="border-left: 4px solid #0d6efd !important; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform=\'translateY(-5px)\';this.style.boxShadow=\'0 8px 25px rgba(0,0,0,0.15)\';" onmouseout="this.style.transform=\'\';this.style.boxShadow=\'\';">' +
@@ -516,8 +511,7 @@ function renderProfessionalProfileInDashboard(payload) {
     const pro = payload?.professional || {};
     const reviews = Array.isArray(payload?.reviews) ? payload.reviews : [];
     const portfolioItems = Array.isArray(payload?.portfolio_items) ? payload.portfolio_items : [];
-    const reportCount = Number(payload?.report_count ?? payload?.reports_count ?? 0);
-    const reportWarning = Boolean(payload?.report_warning);
+    const issuesRecordedCount = Number(payload?.issues_recorded_count ?? 0);
     const completedJobs = Array.isArray(payload?.completed_jobs) ? payload.completed_jobs : [];
     const averageRating = Number(payload?.average_rating || 0);
     const status = String(pro.status || "pending").toLowerCase();
@@ -558,14 +552,13 @@ function renderProfessionalProfileInDashboard(payload) {
         ` : "")
         : '<div class="alert alert-secondary mb-0">No reviews yet.</div>';
 
-    const reportsHtml = reportCount > 0
+    const reportsHtml = issuesRecordedCount > 0
         ? `
             <div class="alert alert-danger mb-0 d-flex justify-content-between align-items-center">
-                <span><i class="fa-solid fa-flag me-2"></i>Total reports: <strong>${reportCount}</strong></span>
-                ${reportWarning ? '<span class="badge text-bg-danger"><i class="fa-solid fa-triangle-exclamation me-1"></i>Warning</span>' : ''}
+                <span><i class="fa-solid fa-triangle-exclamation me-2"></i><strong>${issuesRecordedCount}</strong> issue${issuesRecordedCount !== 1 ? "s" : ""} recorded</span>
             </div>
         `
-        : '<div class="alert alert-success mb-0"><i class="fa-solid fa-check-circle me-2"></i>No reports</div>';
+        : "";
 
     const portfolioHtml = portfolioItems.length
         ? portfolioItems.map((item) => `
@@ -624,7 +617,7 @@ function renderProfessionalProfileInDashboard(payload) {
                                 <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
                                     <h2 class="h3 fw-bold mb-0 text-dark">${name}</h2>
                                     <span class="badge rounded-pill ${statusClass}">${statusLabel}</span>
-                                    ${reportWarning ? '<span class="badge rounded-pill text-bg-danger"><i class="fa-solid fa-triangle-exclamation me-1"></i>This professional has received multiple reports</span>' : ""}
+                                    ${issuesRecordedCount > 0 ? `<span class="badge rounded-pill text-bg-danger"><i class="fa-solid fa-triangle-exclamation me-1"></i>${issuesRecordedCount} issue${issuesRecordedCount !== 1 ? "s" : ""} recorded</span>` : ""}
                                 </div>
                                 <p class="text-muted mb-2">${pro.skill || "Professional"}</p>
                                 <div class="d-flex flex-wrap align-items-center gap-3 small mb-3">
@@ -691,14 +684,16 @@ function renderProfessionalProfileInDashboard(payload) {
                 </div>
             </div>
 
-            <div class="col-12" id="dashboard-profile-reports-section">
-                <div class="card border-0 shadow-sm rounded-4">
-                    <div class="card-body p-4">
-                        <h4 class="fw-bold text-danger mb-3"><i class="fa-solid fa-shield-halved me-2"></i>System Signal</h4>
-                        ${reportsHtml}
+            ${issuesRecordedCount > 0 ? `
+                <div class="col-12" id="dashboard-profile-reports-section">
+                    <div class="card border-0 shadow-sm rounded-4">
+                        <div class="card-body p-4">
+                            <h4 class="fw-bold text-danger mb-3"><i class="fa-solid fa-shield-halved me-2"></i>System Signal</h4>
+                            ${reportsHtml}
+                        </div>
                     </div>
                 </div>
-            </div>
+            ` : ""}
         </div>
     `;
 

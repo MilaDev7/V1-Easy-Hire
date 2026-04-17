@@ -1256,6 +1256,8 @@ function renderReportsTable(reports, isResolvedView = false) {
                 ? '<span class="badge bg-danger">Suspended User</span>'
                 : report.action_taken === 'cancel_contract'
                     ? '<span class="badge bg-warning text-dark">Contract Cancelled</span>'
+                    : report.action_taken === 'warning'
+                        ? '<span class="badge bg-info text-dark">Warning Issued</span>'
                     : '<span class="badge bg-secondary">No Action</span>';
 
             return `
@@ -1366,6 +1368,8 @@ function viewReport(id) {
                             ? '<span class="badge bg-danger px-3 py-2"><i class="fa-solid fa-ban me-1"></i>Suspended User</span>'
                             : report.action_taken === 'cancel_contract'
                                 ? '<span class="badge bg-warning text-dark px-3 py-2"><i class="fa-solid fa-file-circle-xmark me-1"></i>Contract Cancelled</span>'
+                                : report.action_taken === 'warning'
+                                    ? '<span class="badge bg-info text-dark px-3 py-2"><i class="fa-solid fa-triangle-exclamation me-1"></i>Warning Issued</span>'
                                 : '<span class="badge bg-secondary px-3 py-2"><i class="fa-solid fa-minus me-1"></i>No Action</span>'}
                         ${report.resolved_at ? `<div class="mt-2 text-muted small"><i class="fa-solid fa-check me-1"></i>Resolved on: ${new Date(report.resolved_at).toLocaleString()}</div>` : ''}
                     </div>

@@ -51,7 +51,8 @@
                 <div class="mb-3">
                     <select id="report-action-select" class="form-select">
                         <option value="">Select an action...</option>
-                        <option value="no_action">No Action</option>
+                        <option value="none">No Action</option>
+                        <option value="warning">Warning</option>
                         <option value="suspend_user">Suspend Reported User</option>
                         <option value="cancel_contract">Cancel Contract</option>
                     </select>

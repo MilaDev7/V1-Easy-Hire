@@ -30,6 +30,7 @@ Route::get('/chapa/payment-success', [ChapaController::class, 'verifyPayment']);
 // Professionals are usually public so clients can browse them
 Route::get('/professionals', [ProfessionalController::class, 'index']);
 Route::get('/professionals/{id}', [ProfessionalController::class, 'show']);
+Route::get('/public/professional/{id}', [ProfessionalController::class, 'publicProfileSummary']);
 
 // Professional Setup
 Route::middleware(['auth:sanctum', 'check_status', 'role:professional'])->group(function () {
@@ -112,6 +113,7 @@ Route::middleware(['auth:sanctum', 'check_status'])->group(function () {
     Route::middleware('role:professional')->group(function () {
         // Profile Management
         Route::post('/professional/profile', [ProfessionalController::class, 'updateProfile']);
+        Route::get('/professional/my-reports', [ProfessionalController::class, 'myReports']);
         Route::get('/pro/me', [ProfessionalController::class, 'me']);
 
         // Job/Application Management

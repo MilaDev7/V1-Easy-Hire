@@ -66,6 +66,62 @@
             background: #f8fafc;
         }
 
+        .professional-meta-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.65rem 0.75rem;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.7);
+            border: 1px solid rgba(15, 23, 42, 0.06);
+        }
+
+        .professional-meta-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .professional-meta-label {
+            font-size: 0.68rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #64748b;
+            margin-bottom: 0.1rem;
+        }
+
+        .professional-meta-value {
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 0;
+            line-height: 1.2;
+        }
+
+        .professional-rate-display {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            flex-wrap: wrap;
+        }
+
+        .professional-rate-score {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 38px;
+            padding: 0.12rem 0.5rem;
+            border-radius: 999px;
+            background: #fff3cd;
+            color: #664d03;
+            font-size: 0.76rem;
+            font-weight: 700;
+            border: 1px solid rgba(102, 77, 3, 0.2);
+        }
+
         .professional-sidebar-nav .btn {
             border-radius: 16px;
             padding: 0.9rem 1rem;
@@ -122,6 +178,7 @@
         }
 
         body.professional-dashboard-dark .professional-sidebar-meta,
+        body.professional-dashboard-dark .professional-meta-item,
         body.professional-dashboard-dark .professional-job-skills,
         body.professional-dashboard-dark .badge.text-bg-light,
         body.professional-dashboard-dark .alert-light,
@@ -135,6 +192,20 @@
 
         body.professional-dashboard-dark .text-muted {
             color: #94a3b8 !important;
+        }
+
+        body.professional-dashboard-dark .professional-meta-label {
+            color: #94a3b8;
+        }
+
+        body.professional-dashboard-dark .professional-meta-value {
+            color: #e5eefb;
+        }
+
+        body.professional-dashboard-dark .professional-rate-score {
+            background: #1e293b;
+            color: #facc15;
+            border-color: rgba(250, 204, 21, 0.35);
         }
 
         body.professional-dashboard-dark .btn-close {
@@ -307,22 +378,22 @@
                     </div>
 
                     <div class="professional-sidebar-meta p-3 mb-4 rounded-3" style="background: linear-gradient(135deg, #e9ecef 0%, #f8f9fa 100%);">
-                        <div class="d-flex align-items-center mb-3">
-                            <div class="bg-primary bg-opacity-10 rounded-circle p-2 me-2">
+                        <div class="professional-meta-item mb-2">
+                            <div class="professional-meta-icon" style="background: rgba(13, 110, 253, 0.14);">
                                 <i class="fa-solid fa-location-dot text-primary"></i>
                             </div>
                             <div>
-                                <p class="small text-uppercase text-muted mb-0">Location</p>
-                                <p class="fw-semibold mb-0" id="professional-sidebar-location">Loading...</p>
+                                <p class="professional-meta-label">Location</p>
+                                <p class="professional-meta-value" id="professional-sidebar-location">Loading...</p>
                             </div>
                         </div>
-                        <div class="d-flex align-items-center">
-                            <div class="bg-warning bg-opacity-10 rounded-circle p-2 me-2">
+                        <div class="professional-meta-item">
+                            <div class="professional-meta-icon" style="background: rgba(255, 193, 7, 0.2);">
                                 <i class="fa-solid fa-chart-line text-warning"></i>
                             </div>
                             <div>
-                                <p class="small text-uppercase text-muted mb-0">Rate</p>
-                                <div id="professional-sidebar-rate" class="d-flex align-items-center">
+                                <p class="professional-meta-label">Rate</p>
+                                <div id="professional-sidebar-rate" class="professional-rate-display">
                                     <span class="text-muted small">Loading...</span>
                                 </div>
                             </div>

@@ -179,7 +179,7 @@ class AdminController extends Controller
                 'id' => $report->id,
                 'reason' => $report->reason,
                 'status' => $report->status,
-                'action_taken' => $report->action_taken,
+                'action_taken' => $report->action_taken ?: 'none',
                 'resolved_at' => $report->resolved_at,
                 'created_at' => $report->created_at,
                 'reporter' => $report->reporter ? ['id' => $report->reporter->id, 'name' => $report->reporter->name, 'email' => $report->reporter->email] : null,
@@ -204,12 +204,16 @@ class AdminController extends Controller
     {
         $report = \App\Models\Report::with('contract')->findOrFail($id);
 
+        $request->validate([
+            'action' => 'nullable|in:none,warning,suspend_user,cancel_contract',
+        ]);
+
         // ❌ prevent double resolve
         if ($report->status === 'resolved') {
             return response()->json(['message' => 'Report already resolved'], 400);
         }
 
-        $actionTaken = 'no_action';
+        $actionTaken = $request->input('action', 'none');
 
         // 🔴 Suspend User
         if ($request->action === 'suspend_user') {
@@ -222,6 +226,11 @@ class AdminController extends Controller
 
                 $actionTaken = 'suspend_user';
             }
+        }
+
+        // 🟡 Warning only (audit trail)
+        if ($request->action === 'warning') {
+            $actionTaken = 'warning';
         }
 
         // 🔴 Cancel Contract

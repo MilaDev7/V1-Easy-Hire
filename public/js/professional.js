@@ -335,10 +335,12 @@ function loadProfessionalIdentity() {
                 if (rate > 0) {
                     let starsHtml = "";
                     for (let i = 1; i <= 5; i++) {
-                        starsHtml += `<i class="fa-star ${i <= Math.round(rate) ? 'fas text-warning' : 'far text-secondary'}"></i>`;
+                        starsHtml += `<i class="fa-star ${i <= Math.round(rate) ? "fas text-warning" : "far text-secondary"}" style="font-size: 0.78rem;"></i>`;
                     }
-                    starsHtml += `<span class="ms-1 text-muted small">${rate.toFixed(1)}</span>`;
-                    rateElement.innerHTML = starsHtml;
+                    rateElement.innerHTML = `
+                        <span>${starsHtml}</span>
+                        <span class="professional-rate-score">${rate.toFixed(1)}</span>
+                    `;
                 } else {
                     rateElement.innerHTML = '<span class="text-muted">Unavailable</span>';
                 }
@@ -370,16 +372,18 @@ function setProfessionalDashboardLoading(isLoading) {
     }
 }
 
-function renderProfessionalReputationContent(profile) {
+function renderProfessionalReputationContent(profile, reportsPayload) {
     const contentArea = getProfessionalContentArea();
     if (!contentArea) {
         return;
     }
 
     const reviews = Array.isArray(profile?.reviews) ? profile.reviews : [];
-    const reportCount = Number(profile?.report_count ?? 0);
-    const reportStatus = String(profile?.report_status || "resolved").toLowerCase();
-    const isUnderReview = reportStatus === "under_review";
+    const activeReports = Array.isArray(reportsPayload?.active_reports) ? reportsPayload.active_reports : [];
+    const resolvedReports = Array.isArray(reportsPayload?.resolved_reports) ? reportsPayload.resolved_reports : [];
+    const totalReports = Number(reportsPayload?.total_reports ?? activeReports.length + resolvedReports.length);
+    const activeReportsCount = Number(reportsPayload?.active_reports_count ?? activeReports.length);
+    const resolvedReportsCount = Number(reportsPayload?.resolved_reports_count ?? resolvedReports.length);
 
     const reviewsTable = reviews.length
         ? `
@@ -410,35 +414,107 @@ function renderProfessionalReputationContent(profile) {
         `
         : '<div class="alert alert-light border mb-0">No reviews yet.</div>';
 
+    const renderReportsRows = (items) => {
+        if (!items.length) {
+            return '<tr><td colspan="4" class="text-muted text-center py-3">No reports</td></tr>';
+        }
+
+        return items.map((report) => {
+            const statusLabel = report?.status === "resolved" ? "Resolved" : "Under Review";
+            const statusClass = report?.status === "resolved" ? "text-bg-success" : "text-bg-warning text-dark";
+            const actionTakenRaw = String(report?.action_taken || "none");
+            const actionTakenLabel = actionTakenRaw
+                .split("_")
+                .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+                .join(" ");
+            const actionTakenClass = actionTakenRaw === "suspend_user"
+                ? "text-bg-danger"
+                : actionTakenRaw === "cancel_contract"
+                    ? "text-bg-dark"
+                    : actionTakenRaw === "warning"
+                        ? "text-bg-warning text-dark"
+                        : "text-bg-secondary";
+            const rowClass = report?.status === "resolved" ? "table-success" : "";
+
+            return `
+                <tr class="${rowClass}">
+                    <td>${report?.reason || "No reason provided."}</td>
+                    <td><span class="badge ${statusClass}">${statusLabel}</span></td>
+                    <td><span class="badge ${actionTakenClass}">${actionTakenLabel}</span></td>
+                    <td>${formatDate(report?.created_at)}</td>
+                </tr>
+            `;
+        }).join("");
+    };
+
     contentArea.innerHTML = `
         <section class="professional-reputation-section">
             <div class="row g-3 mb-4">
-                <div class="col-md-6">
+                <div class="col-12">
                     <div class="card border-0 shadow-sm h-100" style="border-top: 4px solid #dc3545 !important;">
                         <div class="card-body">
-                            <h5 class="mb-2"><i class="fa-solid fa-shield-halved me-2 text-danger"></i>Reports</h5>
                             <div class="d-flex align-items-center gap-3">
                                 <div>
-                                    <p class="text-muted small text-uppercase mb-1">Report Count</p>
-                                    <h4 class="mb-0 fw-bold">${reportCount}</h4>
+                                    <p class="text-muted small text-uppercase mb-1">Total Reports</p>
+                                    <h4 class="mb-0 fw-bold">${totalReports}</h4>
                                 </div>
-                                ${reportCount > 0 ? `<span class="badge ${isUnderReview ? "text-bg-warning text-dark" : "text-bg-success"}">${isUnderReview ? "Under Review" : "Resolved"}</span>` : ""}
+                                ${activeReportsCount > 0 ? '<span class="badge text-bg-warning text-dark">Under Review</span>' : ""}
                             </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="card border-0 shadow-sm h-100" style="border-top: 4px solid #0dcaf0 !important;">
-                        <div class="card-body">
-                            <h5 class="mb-2"><i class="fa-solid fa-star me-2 text-warning"></i>Reviews</h5>
-                            <p class="text-muted mb-0">${reviews.length} review${reviews.length === 1 ? "" : "s"} visible to you.</p>
+                            <p class="text-muted mb-0 mt-2 small">Active: ${activeReportsCount} | Resolved: ${resolvedReportsCount}</p>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="card border-0 shadow-sm">
+            <div class="card border-0 shadow-sm mb-4">
                 <div class="card-body">
+                    <h5 class="fw-bold mb-3"><i class="fa-solid fa-flag me-2 text-danger"></i>Active Reports (${activeReportsCount})</h5>
+                    <div class="table-responsive">
+                        <table class="table align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Message</th>
+                                    <th>Status</th>
+                                    <th>Action Taken</th>
+                                    <th>Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${renderReportsRows(activeReports)}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body">
+                    <h5 class="fw-bold mb-3"><i class="fa-solid fa-check-circle me-2 text-success"></i>Resolved Reports (${resolvedReportsCount})</h5>
+                    <div class="table-responsive">
+                        <table class="table align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Message</th>
+                                    <th>Status</th>
+                                    <th>Action Taken</th>
+                                    <th>Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${renderReportsRows(resolvedReports)}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex align-items-center justify-content-between mb-3 mt-4">
+                <h4 class="fw-bold mb-0 text-info"><i class="fa-solid fa-star me-2"></i>Reviews</h4>
+                <span class="badge text-bg-light border">Total: ${reviews.length}</span>
+            </div>
+
+            <div class="card border-0 shadow-sm">
+                <div class="card-body" style="border-top: 4px solid #0dcaf0;">
                     ${reviewsTable}
                 </div>
             </div>
@@ -467,9 +543,9 @@ function loadProfessionalReputationView() {
         };
     }
 
-    return fetchJson("/api/pro/me")
-        .then((profile) => {
-            renderProfessionalReputationContent(profile);
+    return Promise.all([fetchJson("/api/pro/me"), fetchJson("/api/professional/my-reports")])
+        .then(([profile, reportsPayload]) => {
+            renderProfessionalReputationContent(profile, reportsPayload);
         })
         .catch(() => {
             if (contentArea) {
