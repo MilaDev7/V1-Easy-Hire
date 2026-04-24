@@ -225,7 +225,7 @@
         <div class="text-center mb-4">
             <a href="/" class="navbar-brand d-flex align-items-center justify-content-center gap-2 text-decoration-none mb-3 mx-auto" style="width: fit-content;">
                 <div style="background: linear-gradient(135deg, #198754, #20c997); width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(25, 135, 84, 0.3);">
-                    <i class="fa-solid fa-bolt text-white fs-5"></i>
+                    <i class="fa-solid fa-handshake text-white fs-5"></i>
                 </div>
                 <span class="fw-bold" style="background: linear-gradient(135deg, #198754, #20c997); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">EasyHire</span>
             </a>

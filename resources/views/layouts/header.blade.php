@@ -21,7 +21,7 @@
           <!-- Logo -->
           <a class="navbar-brand d-flex align-items-center gap-2" href="/">
               <div style="background: linear-gradient(135deg, #198754, #20c997); width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(25, 135, 84, 0.3);">
-                  <i class="fa-solid fa-bolt text-white fs-5"></i>
+                  <i class="fa-solid fa-handshake text-white fs-5"></i>
               </div>
               <span class="fw-bold" style="background: linear-gradient(135deg, #198754, #20c997); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">EasyHire</span>
           </a>
