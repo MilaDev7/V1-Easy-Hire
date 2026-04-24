@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\ClientController;
 use App\Http\Controllers\Api\ContractController;
 use App\Http\Controllers\Api\DirectRequestController;
 use App\Http\Controllers\Api\JobPostController;
+use App\Http\Controllers\Api\MessageController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\ProfessionalController;
 use App\Http\Controllers\Api\ProfileController;
@@ -64,8 +65,11 @@ Route::middleware(['auth:sanctum', 'check_status'])->group(function () {
     Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
     Route::post('/notifications/{id}/read', [NotificationController::class, 'markRead']);
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead']);
+    Route::post('/notifications/clear', [NotificationController::class, 'clearAll']);
     Route::post('/contracts/{id}/report', [ReportController::class, 'store']);
     Route::post('/contracts/{id}/review', [ReviewController::class, 'store']);
+    Route::get('/messages', [MessageController::class, 'index']);
+    Route::post('/messages/{id}/read', [MessageController::class, 'markRead']);
 
     // Client Routes
 
@@ -172,6 +176,7 @@ Route::middleware(['auth:sanctum', 'check_status'])->group(function () {
         Route::post('/admin/users/{id}/suspend', [AdminController::class, 'suspendUser']);
         Route::post('/admin/users/{id}/unsuspend', [AdminController::class, 'unsuspendUser']);
         Route::post('/admin/users/{id}/restore', [AdminController::class, 'restoreUser']);
+        Route::post('/admin/users/{id}/contact', [AdminController::class, 'contactUser']);
 
         // 🔥 JOBS & CONTRACTS
         Route::get('/admin/jobs', [AdminController::class, 'jobs']);
