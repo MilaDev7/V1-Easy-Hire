@@ -2354,6 +2354,173 @@ function loadProfessionalJobsView() {
     return loadProfessionalJobs();
 }
 
+function loadProfessionalInitialView() {
+    const view = new URLSearchParams(window.location.search).get("view");
+
+    if (view === "my-contracts") {
+        return loadProfessionalContracts();
+    }
+
+    if (view === "my-applications") {
+        return loadProfessionalApplications();
+    }
+
+    if (view === "direct-requests") {
+        return loadDirectRequests();
+    }
+
+    if (view === "reviews-reports") {
+        return loadProfessionalReputationView();
+    }
+
+    if (view === "portfolio") {
+        return loadProfessionalPortfolioView();
+    }
+
+    return loadProfessionalJobsView();
+}
+
+function renderProfessionalMessages(payload) {
+    const contentArea = getProfessionalContentArea();
+
+    if (!contentArea) {
+        return;
+    }
+
+    setProfessionalContentHeader(
+        "Messages",
+        "Messages from admin",
+        true
+    );
+
+    const items = toArray(payload?.data);
+    if (!items.length) {
+        contentArea.innerHTML = '<div class="alert alert-light border mb-0">No messages yet.</div>';
+        return;
+    }
+
+    const rows = items.map((item) => {
+        const unread = !item.read_at;
+        const subject = item.subject || "Message from Admin";
+        const body = item.message || "";
+        const sentAt = item.created_at ? new Date(item.created_at).toLocaleString() : "N/A";
+        const action = unread
+            ? `<button type="button" class="btn btn-sm btn-outline-primary pro-message-read-btn" data-message-id="${item.id}">Mark as read</button>`
+            : '<span class="badge text-bg-light border">Read</span>';
+
+        return `
+            <tr class="${unread ? "table-light" : ""}">
+                <td class="fw-semibold">${subject}</td>
+                <td>${body}</td>
+                <td>${sentAt}</td>
+                <td>${action}</td>
+            </tr>
+        `;
+    }).join("");
+
+    contentArea.innerHTML = `
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th scope="col">Subject</th>
+                        <th scope="col">Message</th>
+                        <th scope="col">Date</th>
+                        <th scope="col">Action</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>
+    `;
+
+    document.querySelectorAll(".pro-message-read-btn").forEach((button) => {
+        button.addEventListener("click", function () {
+            const id = button.dataset.messageId;
+            if (!id) {
+                return;
+            }
+
+            postJson(`/api/messages/${id}/read`, {}).finally(() => {
+                loadProfessionalMessagesView();
+                loadProNotifications();
+            });
+        });
+    });
+}
+
+function loadProfessionalMessagesView() {
+    setActiveProfessionalNav("notifications");
+    clearProfessionalFeedback();
+    setProfessionalContentHeader(
+        "Messages",
+        "Messages from admin",
+        true
+    );
+
+    const contentArea = getProfessionalContentArea();
+    if (contentArea) {
+        contentArea.innerHTML = '<div class="text-muted">Loading messages...</div>';
+    }
+
+    const reloadButton = document.getElementById("professional-content-reload-button");
+    if (reloadButton) {
+        reloadButton.onclick = function () {
+            loadProfessionalMessagesView();
+        };
+    }
+
+    return fetchJson("/api/messages")
+        .then((payload) => {
+            renderProfessionalMessages(payload);
+        })
+        .catch(() => {
+            if (contentArea) {
+                contentArea.innerHTML = '<div class="alert alert-danger mb-0">Unable to load messages.</div>';
+            }
+        });
+}
+
+function getProNotificationTone(type) {
+    const value = String(type || "").toLowerCase();
+
+    if (value.includes("accepted") || value.includes("confirmed") || value.includes("purchase_success")) {
+        return { accent: "#198754", badgeClass: "text-bg-success", label: "Success" };
+    }
+
+    if (value.includes("rejected")) {
+        return { accent: "#dc3545", badgeClass: "text-bg-danger", label: "Rejected" };
+    }
+
+    if (value.includes("received") || value.includes("requested")) {
+        return { accent: "#fd7e14", badgeClass: "text-bg-warning text-dark", label: "Pending" };
+    }
+
+    if (value === "admin_message") {
+        return { accent: "#0d6efd", badgeClass: "text-bg-primary", label: "Admin" };
+    }
+
+    return { accent: "#6c757d", badgeClass: "text-bg-secondary", label: "Update" };
+}
+
+function getProNotificationDefaultActionUrl(type) {
+    const value = String(type || "").toLowerCase();
+
+    if (value.includes("application")) {
+        return "/pro/dashboard?view=my-applications";
+    }
+
+    if (value.includes("direct_request")) {
+        return "/pro/dashboard?view=direct-requests";
+    }
+
+    if (value.includes("completion")) {
+        return "/pro/dashboard?view=my-contracts";
+    }
+
+    return "/pro/dashboard";
+}
+
 function renderProNotifications(payload) {
     const list = document.getElementById("pro-notification-list");
     const badge = document.getElementById("pro-notification-badge");
@@ -2380,17 +2547,23 @@ function renderProNotifications(payload) {
     list.innerHTML = notifications
         .map((item) => {
             const isUnread = !item.read_at;
-            const actionUrl = item.action_url || "";
+            const actionUrl = item.action_url || getProNotificationDefaultActionUrl(item.type);
             const createdAt = item.created_at ? new Date(item.created_at).toLocaleString() : "";
+            const tone = getProNotificationTone(item.type);
+            const bgStyle = isUnread ? "background: rgba(13, 110, 253, 0.05);" : "";
 
             return `
                 <button
                     type="button"
-                    class="w-100 text-start border-0 bg-transparent px-3 py-2 ${isUnread ? "bg-light" : ""} pro-notification-item"
+                    class="w-100 text-start border-0 px-3 py-2 pro-notification-item"
                     data-notification-id="${item.id}"
                     data-action-url="${actionUrl}"
+                    style="border-left: 4px solid ${tone.accent}; ${bgStyle}"
                 >
-                    <div class="fw-semibold small">${item.title || "Notification"}</div>
+                    <div class="d-flex align-items-center justify-content-between gap-2">
+                        <div class="fw-semibold small">${item.title || "Notification"}</div>
+                        <span class="badge ${tone.badgeClass}">${tone.label}</span>
+                    </div>
                     <div class="small text-muted">${item.message || ""}</div>
                     <div class="small text-muted mt-1">${createdAt}</div>
                 </button>
@@ -2434,12 +2607,20 @@ function loadProNotifications() {
 
 function bindProNotifications() {
     const markAllButton = document.getElementById("pro-notification-mark-all");
+    const clearButton = document.getElementById("pro-notification-clear");
     const bellButton = document.getElementById("pro-notification-bell");
 
     if (markAllButton) {
         markAllButton.addEventListener("click", function (event) {
             event.preventDefault();
             postJson("/api/notifications/read-all", {}).finally(() => loadProNotifications());
+        });
+    }
+
+    if (clearButton) {
+        clearButton.addEventListener("click", function (event) {
+            event.preventDefault();
+            postJson("/api/notifications/clear", {}).finally(() => loadProNotifications());
         });
     }
 
@@ -2458,7 +2639,7 @@ function initializeProfessionalDashboard() {
 
     Promise.allSettled([
         loadProfessionalStats(),
-        loadProfessionalJobsView(),
+        loadProfessionalInitialView(),
         loadProfessionalApplyPlan(),
         loadProNotifications(),
         loadProfessionalIdentity(),

@@ -141,7 +141,10 @@
                             <div class="dropdown-menu dropdown-menu-end shadow p-0" style="width: 340px;">
                                 <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
                                     <strong class="small">Notifications</strong>
-                                    <button type="button" class="btn btn-sm btn-link text-decoration-none p-0" id="client-notification-mark-all">Mark all read</button>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <button type="button" class="btn btn-sm btn-link text-decoration-none p-0" id="client-notification-mark-all">Mark all read</button>
+                                        <button type="button" class="btn btn-sm btn-link text-decoration-none p-0 text-danger" id="client-notification-clear">Clear</button>
+                                    </div>
                                 </div>
                                 <div id="client-notification-list" style="max-height: 320px; overflow-y: auto;">
                                     <div class="text-muted small p-3">Loading...</div>

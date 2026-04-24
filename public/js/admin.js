@@ -736,6 +736,16 @@ function setUsersFeedback(type, message) {
     feedback.innerHTML = message;
 }
 
+function formatUserStatusLabel(user) {
+    if (user.deleted_at) {
+        return 'Deleted';
+    }
+    if (user.is_suspended) {
+        return 'Suspended';
+    }
+    return 'Active';
+}
+
 function actionLoadingKey(userId, action) {
     return `${action}:${userId}`;
 }
@@ -777,6 +787,26 @@ function getUserActionButton(user, type) {
     `;
 }
 
+function renderUserActionButtons(user, type) {
+    const viewButton = `
+        <button
+            type="button"
+            class="btn btn-sm btn-outline-primary"
+            onclick="openUserDetails(${user.id})"
+        >
+            <i class="fa-solid fa-envelope me-1"></i>Contact
+        </button>
+    `;
+
+    const statusButton = getUserActionButton(user, type);
+    const buttons = [viewButton];
+    if (statusButton) {
+        buttons.push(statusButton);
+    }
+
+    return `<div class="d-flex flex-wrap gap-2">${buttons.join('')}</div>`;
+}
+
 function renderUsersTable(users, type) {
     const area = document.getElementById('users-table-area');
     if (!area) return;
@@ -802,14 +832,7 @@ function renderUsersTable(users, type) {
                 ? '<span class="badge bg-info">Professional</span>'
                 : '<span class="badge bg-secondary">Client</span>';
 
-        let actionBtn = '';
-        if (type === 'all') {
-            actionBtn = getUserActionButton(user, type);
-        } else if (type === 'suspended') {
-            actionBtn = getUserActionButton(user, type);
-        } else if (type === 'deleted') {
-            actionBtn = getUserActionButton(user, type);
-        }
+        const actionBtn = renderUserActionButtons(user, type);
 
         return `
             <tr data-user-id="${user.id}">
@@ -949,6 +972,119 @@ function restoreUser(id) {
                 .catch(err => alert(err.message || 'Failed to restore user.'));
         }
     );
+}
+
+function openUserDetails(id) {
+    const user = usersTableData.find((item) => Number(item.id) === Number(id));
+    if (!user) {
+        setUsersFeedback('danger', 'User details not found.');
+        return;
+    }
+
+    const userIdField = document.getElementById('contact-user-id');
+    const nameEl = document.getElementById('detail-user-name');
+    const emailEl = document.getElementById('detail-user-email');
+    const roleEl = document.getElementById('detail-user-role');
+    const statusEl = document.getElementById('detail-user-status');
+
+    if (userIdField) userIdField.value = String(user.id);
+    if (nameEl) nameEl.textContent = user.name || 'N/A';
+    if (emailEl) emailEl.textContent = user.email || 'N/A';
+    if (roleEl) roleEl.textContent = user.role || 'N/A';
+    if (statusEl) statusEl.textContent = formatUserStatusLabel(user);
+
+    const modal = new bootstrap.Modal(document.getElementById('user-details-modal'));
+    modal.show();
+}
+
+function openContactUserModal() {
+    const userId = document.getElementById('contact-user-id')?.value;
+    if (!userId) {
+        return;
+    }
+
+    const feedback = document.getElementById('contact-user-feedback');
+    const form = document.getElementById('contact-user-form');
+    const subjectInput = document.getElementById('contact-user-subject');
+    const messageInput = document.getElementById('contact-user-message');
+    const emailCheckbox = document.getElementById('contact-user-send-email');
+
+    if (feedback) {
+        feedback.innerHTML = '';
+    }
+    if (form) {
+        form.reset();
+    }
+    if (subjectInput) {
+        subjectInput.value = '';
+    }
+    if (messageInput) {
+        messageInput.value = '';
+    }
+    if (emailCheckbox) {
+        emailCheckbox.checked = false;
+    }
+
+    const detailsModal = bootstrap.Modal.getInstance(document.getElementById('user-details-modal'));
+    if (detailsModal) {
+        detailsModal.hide();
+    }
+
+    const contactModal = new bootstrap.Modal(document.getElementById('contact-user-modal'));
+    contactModal.show();
+}
+
+function bindContactUserForm() {
+    const openBtn = document.getElementById('open-contact-user-modal-btn');
+    const form = document.getElementById('contact-user-form');
+    const submitBtn = document.getElementById('contact-user-submit-btn');
+    const feedback = document.getElementById('contact-user-feedback');
+
+    if (openBtn) {
+        openBtn.addEventListener('click', openContactUserModal);
+    }
+
+    if (!form || !submitBtn || !feedback) {
+        return;
+    }
+
+    form.addEventListener('submit', function (event) {
+        event.preventDefault();
+
+        const userId = document.getElementById('contact-user-id')?.value;
+        const subject = document.getElementById('contact-user-subject')?.value?.trim() || '';
+        const message = document.getElementById('contact-user-message')?.value?.trim() || '';
+        const sendEmail = document.getElementById('contact-user-send-email')?.checked || false;
+
+        if (!userId || !message) {
+            feedback.innerHTML = '<div class="alert alert-warning mb-0">Message is required.</div>';
+            return;
+        }
+
+        submitBtn.disabled = true;
+        feedback.innerHTML = '<div class="text-muted">Sending...</div>';
+
+        postJson(`/api/admin/users/${userId}/contact`, {
+            subject,
+            message,
+            send_email: sendEmail,
+        })
+            .then(() => {
+                feedback.innerHTML = '<div class="alert alert-success mb-0">Message sent successfully.</div>';
+                setTimeout(() => {
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('contact-user-modal'));
+                    if (modal) {
+                        modal.hide();
+                    }
+                }, 500);
+            })
+            .catch((error) => {
+                feedback.innerHTML = `<div class="alert alert-danger mb-0">${error?.message || 'Failed to send message.'}</div>`;
+            })
+            .finally(() => {
+                submitBtn.disabled = false;
+            });
+    });
 }
 
 function loadJobs() {
@@ -1852,6 +1988,7 @@ function confirmDeletePlan() {
             syncPlanScopeFields();
         }
         initializeAdminSidebar();
+        bindContactUserForm();
         loadAdminDarkModePreference();
         Promise.allSettled([
             loadAdminStats(),
@@ -1874,6 +2011,7 @@ function confirmDeletePlan() {
     window.suspendUser = suspendUser;
     window.unsuspendUser = unsuspendUser;
     window.restoreUser = restoreUser;
+    window.openUserDetails = openUserDetails;
     window.approveProfessional = approveProfessional;
     window.rejectProfessional = rejectProfessional;
     window.suspendProfessional = suspendProfessional;

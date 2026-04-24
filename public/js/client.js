@@ -2051,6 +2051,7 @@ function bindSidebarNavigation() {
 
             if (view === "requests") {
                 loadClientRequests();
+                return;
             }
         });
     });
@@ -2433,6 +2434,156 @@ function loadClientRequests() {
         });
 }
 
+function loadClientInitialView() {
+    const view = new URLSearchParams(window.location.search).get("view");
+
+    if (view === "post-job") {
+        return loadPostJob();
+    }
+
+    if (view === "professionals") {
+        return loadProfessionals();
+    }
+
+    if (view === "applications") {
+        return loadApplications();
+    }
+
+    if (view === "contracts") {
+        return loadAllContracts();
+    }
+
+    if (view === "requests") {
+        return loadClientRequests();
+    }
+
+    return loadJobPosts();
+}
+
+function renderClientMessagesSection(payload) {
+    const contentArea = document.getElementById("content-area");
+
+    if (!contentArea) {
+        return;
+    }
+
+    setContentHeader("Messages", "Messages from admin", true);
+    const data = toArray(payload?.data);
+
+    if (!data.length) {
+        contentArea.innerHTML = '<div class="alert alert-light border mb-0">No messages yet.</div>';
+        return;
+    }
+
+    const rows = data.map((item) => {
+        const unread = !item.read_at;
+        const subject = item.subject || "Message from Admin";
+        const messageText = item.message || "";
+        const sentAt = item.created_at ? new Date(item.created_at).toLocaleString() : "N/A";
+        const button = unread
+            ? `<button type="button" class="btn btn-sm btn-outline-primary client-message-read-btn" data-message-id="${item.id}">Mark as read</button>`
+            : '<span class="badge text-bg-light border">Read</span>';
+
+        return `
+            <tr class="${unread ? "table-light" : ""}">
+                <td class="fw-semibold">${subject}</td>
+                <td>${messageText}</td>
+                <td>${sentAt}</td>
+                <td>${button}</td>
+            </tr>
+        `;
+    }).join("");
+
+    contentArea.innerHTML = `
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th scope="col">Subject</th>
+                        <th scope="col">Message</th>
+                        <th scope="col">Date</th>
+                        <th scope="col">Action</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>
+    `;
+
+    document.querySelectorAll(".client-message-read-btn").forEach((button) => {
+        button.addEventListener("click", function () {
+            const id = button.dataset.messageId;
+            if (!id) {
+                return;
+            }
+
+            postJson(`/api/messages/${id}/read`, {}).finally(() => {
+                loadClientMessages();
+                loadClientNotifications();
+            });
+        });
+    });
+}
+
+function loadClientMessages() {
+    setActiveSidebarButton("notifications");
+    const contentArea = document.getElementById("content-area");
+    if (contentArea) {
+        setContentHeader("Messages", "Messages from admin", true);
+        contentArea.innerHTML = '<div class="text-muted">Loading messages...</div>';
+    }
+
+    return fetchJson("/api/messages")
+        .then((payload) => {
+            renderClientMessagesSection(payload);
+        })
+        .catch(() => {
+            if (contentArea) {
+                contentArea.innerHTML = '<div class="alert alert-danger mb-0">Unable to load messages.</div>';
+            }
+        });
+}
+
+function getClientNotificationTone(type) {
+    const value = String(type || "").toLowerCase();
+
+    if (value.includes("accepted") || value.includes("confirmed") || value.includes("purchase_success")) {
+        return { accent: "#198754", badgeClass: "text-bg-success", label: "Success" };
+    }
+
+    if (value.includes("rejected")) {
+        return { accent: "#dc3545", badgeClass: "text-bg-danger", label: "Rejected" };
+    }
+
+    if (value.includes("received") || value.includes("requested")) {
+        return { accent: "#fd7e14", badgeClass: "text-bg-warning text-dark", label: "Pending" };
+    }
+
+    if (value === "admin_message") {
+        return { accent: "#0d6efd", badgeClass: "text-bg-primary", label: "Admin" };
+    }
+
+    return { accent: "#6c757d", badgeClass: "text-bg-secondary", label: "Update" };
+}
+
+function getClientNotificationDefaultActionUrl(type) {
+    const value = String(type || "").toLowerCase();
+
+    if (value.includes("application")) {
+        return "/client/dashboard?view=applications";
+    }
+
+    if (value.includes("direct_request")) {
+        return "/client/dashboard?view=requests";
+    }
+
+    if (value.includes("completion")) {
+        return "/client/dashboard?view=contracts";
+    }
+
+    return "/client/dashboard";
+}
+
 function renderClientNotifications(payload) {
     const list = document.getElementById("client-notification-list");
     const badge = document.getElementById("client-notification-badge");
@@ -2458,14 +2609,20 @@ function renderClientNotifications(payload) {
 
     list.innerHTML = notifications.map((item) => {
         const isUnread = !item.read_at;
-        const actionUrl = item.action_url || "";
+        const actionUrl = item.action_url || getClientNotificationDefaultActionUrl(item.type);
         const createdAt = item.created_at ? new Date(item.created_at).toLocaleString() : "";
+        const tone = getClientNotificationTone(item.type);
+        const bgStyle = isUnread ? "background: rgba(13, 110, 253, 0.05);" : "";
         return `
             <button type="button"
-                class="w-100 text-start border-0 bg-transparent px-3 py-2 ${isUnread ? "bg-light" : ""} client-notification-item"
+                class="w-100 text-start border-0 px-3 py-2 client-notification-item"
                 data-notification-id="${item.id}"
-                data-action-url="${actionUrl}">
-                <div class="fw-semibold small">${item.title || "Notification"}</div>
+                data-action-url="${actionUrl}"
+                style="border-left: 4px solid ${tone.accent}; ${bgStyle}">
+                <div class="d-flex align-items-center justify-content-between gap-2">
+                    <div class="fw-semibold small">${item.title || "Notification"}</div>
+                    <span class="badge ${tone.badgeClass}">${tone.label}</span>
+                </div>
                 <div class="small text-muted">${item.message || ""}</div>
                 <div class="small text-muted mt-1">${createdAt}</div>
             </button>
@@ -2506,12 +2663,21 @@ function loadClientNotifications() {
 
 function bindClientNotifications() {
     const markAllButton = document.getElementById("client-notification-mark-all");
+    const clearButton = document.getElementById("client-notification-clear");
     const bellButton = document.getElementById("client-notification-bell");
 
     if (markAllButton) {
         markAllButton.addEventListener("click", function (event) {
             event.preventDefault();
             postJson("/api/notifications/read-all", {})
+                .finally(() => loadClientNotifications());
+        });
+    }
+
+    if (clearButton) {
+        clearButton.addEventListener("click", function (event) {
+            event.preventDefault();
+            postJson("/api/notifications/clear", {})
                 .finally(() => loadClientNotifications());
         });
     }
@@ -2535,7 +2701,7 @@ function bindClientNotifications() {
 
         Promise.allSettled([
             loadStats(),
-            loadJobPosts(),
+            loadClientInitialView(),
             loadSubscription(),
             loadClientNotifications(),
             loadClientIdentity(),
