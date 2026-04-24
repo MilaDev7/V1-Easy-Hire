@@ -19,6 +19,7 @@ class ApplicationController extends Controller
      */
     public function apply(Request $request, $jobId)
     {
+        JobPost::autoExpireOpenJobs();
 
         $user = auth()->user();
         $professional = $user->professional;
@@ -99,6 +100,8 @@ class ApplicationController extends Controller
 
         // 5b. Check if job is expired (past deadline)
         if ($job->deadline && $job->deadline < now()->toDateString()) {
+            $job->status = 'expired';
+            $job->save();
             return response()->json(['message' => 'Job deadline has passed.'], 400);
         }
 

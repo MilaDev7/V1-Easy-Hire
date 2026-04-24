@@ -989,6 +989,11 @@ function renderContracts(contracts) {
             // Check if already reviewed/reported
             const hasReview = contract.has_review || false;
             const hasReport = contract.has_report || false;
+            const reportedByProfessional = Boolean(contract.reported_by_professional);
+            const professionalReportStatus = String(contract.professional_report_status || "").toLowerCase();
+            const professionalReportBadge = reportedByProfessional
+                ? `<span class="badge ${professionalReportStatus === "resolved" ? "bg-secondary" : "bg-warning text-dark"} ms-1"><i class="fa-solid fa-triangle-exclamation me-1"></i>${professionalReportStatus === "resolved" ? "Reported by Pro (Resolved)" : "Reported by Pro"}</span>`
+                : "";
             
             // Only show completion decision buttons when waiting for client confirmation.
             let actionButtons = '';
@@ -1058,10 +1063,15 @@ function renderContracts(contracts) {
                         >
                             Cancel
                         </button>
+                        ${professionalReportBadge}
                     </div>
                 `;
             } else {
-                actionButtons = '<span class="badge bg-secondary">Pending</span>';
+                actionButtons = `<span class="badge bg-secondary">Pending</span>${professionalReportBadge}`;
+            }
+
+            if ((status === 'pending_completion' || status === 'completed' || status === 'cancelled') && professionalReportBadge) {
+                actionButtons += professionalReportBadge;
             }
 
             return `

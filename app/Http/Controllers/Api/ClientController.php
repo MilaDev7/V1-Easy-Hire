@@ -67,6 +67,13 @@ class ClientController extends Controller
                     ->where('reporter_id', $userId)
                     ->exists();
 
+                // Check if professional has reported this client on this contract.
+                $professionalReport = \App\Models\Report::where('contract_id', $contract->id)
+                    ->where('reporter_id', $contract->professional_id)
+                    ->where('reported_id', $userId)
+                    ->latest()
+                    ->first();
+
                 $title = $contract->job->title
                     ?? $contract->directRequest->title
                     ?? 'Direct Request';
@@ -83,6 +90,8 @@ class ClientController extends Controller
                     'created_at' => optional($contract->created_at)->format('Y-m-d') ?? 'N/A',
                     'has_review' => $hasReview,
                     'has_report' => $hasReport,
+                    'reported_by_professional' => (bool) $professionalReport,
+                    'professional_report_status' => $professionalReport?->status ?? null,
                 ];
             });
 
@@ -98,6 +107,7 @@ class ClientController extends Controller
             $query->where('client_id', auth()->id());
         })
             ->with(['job', 'professional.professional'])
+            ->latest()
             ->where(function ($query) {
                 // Do not show withdrawn applications in client dashboard.
                 $query->whereNull('cover_letter')
@@ -121,6 +131,8 @@ class ClientController extends Controller
     // ✅ Active Job Posts (open + assigned)
     public function jobPostCount()
     {
+        JobPost::autoExpireOpenJobs();
+
         $count = JobPost::where('client_id', auth()->id())
             ->whereIn('status', ['open', 'assigned'])
             ->count();
@@ -152,6 +164,8 @@ class ClientController extends Controller
 
     public function jobPosts()
     {
+        JobPost::autoExpireOpenJobs();
+
         $posts = \App\Models\JobPost::where('client_id', auth()->id())
             ->latest()
             ->get()

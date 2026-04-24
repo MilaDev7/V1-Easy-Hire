@@ -219,19 +219,26 @@ function renderProfessionalJobs(jobs) {
         .map((job) => {
             const skills = job.skills || job.skill || "N/A";
             const status = job.status || "open";
+            const normalizedStatus = String(status).toLowerCase();
             const location = job.location || "N/A";
             const alreadyApplied = Boolean(job.has_applied);
             const skillMatch = Boolean(job.skill_match);
-            const buttonClass = alreadyApplied ? "btn btn-secondary" : "btn btn-success";
-            const buttonText = alreadyApplied ? "Applied" : "Apply";
             const startDate = job.start_date ? formatDate(job.start_date) : null;
             const deadline = job.deadline ? formatDate(job.deadline) : null;
+            const deadlinePast = Boolean(job.deadline) && new Date(job.deadline) < new Date(new Date().setHours(0, 0, 0, 0));
+            const isOpen = normalizedStatus === "open" && !deadlinePast;
+            const isExpired = normalizedStatus === "expired" || deadlinePast;
+            const canApply = !alreadyApplied && skillMatch && isOpen;
+            const buttonClass = canApply ? "btn btn-success" : "btn btn-secondary";
+            const buttonText = alreadyApplied ? "Applied" : (isExpired ? "Expired" : "Apply");
             const skillTags = String(skills)
                 .split(/[,/|]+/)
                 .map((value) => value.trim())
                 .filter(Boolean)
                 .slice(0, 4);
-            const statusBadge = status.toLowerCase() === "open"
+            const statusBadge = isExpired
+                ? '<span class="badge text-bg-danger-subtle border text-danger">Expired</span>'
+                : normalizedStatus === "open"
                 ? '<span class="badge text-bg-success-subtle border text-success">Open</span>'
                 : `<span class="badge text-bg-light border">${status}</span>`;
 
@@ -295,7 +302,7 @@ function renderProfessionalJobs(jobs) {
                                 data-has-applied="${alreadyApplied ? "true" : "false"}"
                                 data-skill-match="${skillMatch ? "true" : "false"}"
                                 data-testid="professional-apply-${job.id}"
-                                ${alreadyApplied ? "disabled" : ""}
+                                ${canApply ? "" : "disabled"}
                             >
                                 ${buttonText}
                             </button>
@@ -936,26 +943,80 @@ function renderProfessionalContracts(contracts) {
         .map((contract) => {
             const status = (contract.status || "active").toLowerCase();
             const isActive = status === "active";
+            const isCompleted = status === "completed";
+            const hasReview = Boolean(contract.has_review);
+            const hasReport = Boolean(contract.has_report);
             const statusLabel = status === "completed"
                 ? "Completed"
                 : status === "pending_completion"
                     ? "Pending Completion"
                     : contract.status || "Active";
-            const actionButton = isActive
-                ? `
-                    <button
-                        type="button"
-                        class="btn btn-success w-100 professional-complete-contract-button"
-                        data-contract-id="${contract.id}"
-                    >
-                        Complete
-                    </button>
-                `
-                : status === "pending_completion"
-                    ? '<span class="text-muted small">Waiting client confirmation</span>'
-                    : status === "completed"
-                        ? '<span class="text-muted small">Completed</span>'
-                        : '<span class="text-muted small">No action</span>';
+            let actionButton = '<span class="text-muted small">No action</span>';
+
+            if (isActive) {
+                actionButton = `
+                    <div class="d-flex flex-column gap-2 align-items-end">
+                        <button
+                            type="button"
+                            class="btn btn-success professional-complete-contract-button"
+                            data-contract-id="${contract.id}"
+                        >
+                            Complete
+                        </button>
+                        ${hasReport
+                            ? '<span class="badge bg-danger"><i class="fa-solid fa-flag me-1"></i>Reported</span>'
+                            : `
+                                <button
+                                    type="button"
+                                    class="btn btn-outline-danger professional-contract-feedback-button"
+                                    data-contract-id="${contract.id}"
+                                    data-mode="report"
+                                >
+                                    <i class="fa-solid fa-flag me-1"></i>Report Client
+                                </button>
+                            `}
+                    </div>
+                `;
+            } else if (status === "pending_completion") {
+                actionButton = '<span class="text-muted small">Waiting client confirmation</span>';
+            } else if (isCompleted) {
+                const badges = `
+                    ${hasReview ? '<span class="badge bg-success"><i class="fa-solid fa-star me-1"></i>Rated</span>' : ''}
+                    ${hasReport ? '<span class="badge bg-danger"><i class="fa-solid fa-flag me-1"></i>Reported</span>' : ''}
+                `;
+                const buttons = `
+                    ${!hasReview
+                        ? `
+                            <button
+                                type="button"
+                                class="btn btn-outline-primary professional-contract-feedback-button"
+                                data-contract-id="${contract.id}"
+                                data-mode="rate"
+                            >
+                                <i class="fa-solid fa-star me-1"></i>Rate Client
+                            </button>
+                        `
+                        : ''}
+                    ${!hasReport
+                        ? `
+                            <button
+                                type="button"
+                                class="btn btn-outline-danger professional-contract-feedback-button"
+                                data-contract-id="${contract.id}"
+                                data-mode="report"
+                            >
+                                <i class="fa-solid fa-flag me-1"></i>Report Client
+                            </button>
+                        `
+                        : ''}
+                `;
+                actionButton = `
+                    <div class="d-flex flex-column gap-2 align-items-end">
+                        ${badges}
+                        ${buttons.trim() !== "" ? `<div class="d-flex flex-column gap-2 align-items-end">${buttons}</div>` : '<span class="text-muted small">Completed</span>'}
+                    </div>
+                `;
+            }
 
             return `
                 <tr>
@@ -1081,6 +1142,190 @@ function bindProfessionalContractActions() {
                     showProfessionalFeedback("danger", error.message || "Unable to complete contract.");
                 });
         });
+    });
+
+    document.querySelectorAll(".professional-contract-feedback-button").forEach((button) => {
+        button.addEventListener("click", function () {
+            const contractId = button.dataset.contractId;
+            const mode = button.dataset.mode || "report";
+
+            if (!contractId) {
+                return;
+            }
+
+            openProfessionalContractFeedbackModal(contractId, mode);
+        });
+    });
+}
+
+function ensureProfessionalContractFeedbackModal() {
+    let modalElement = document.getElementById("professional-contract-feedback-modal");
+
+    if (modalElement) {
+        return modalElement;
+    }
+
+    const wrapper = document.createElement("div");
+    wrapper.innerHTML = `
+        <div class="modal fade" id="professional-contract-feedback-modal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="professional-contract-feedback-title">Rate / Report Client</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <form id="professional-contract-feedback-form">
+                        <div class="modal-body">
+                            <input type="hidden" id="professional-contract-feedback-id">
+                            <input type="hidden" id="professional-contract-feedback-mode" value="report">
+
+                            <div class="mb-3" id="professional-rating-wrap">
+                                <label for="professional-contract-rating" class="form-label fw-semibold">Rating</label>
+                                <select id="professional-contract-rating" class="form-select">
+                                    <option value="">Select rating</option>
+                                    <option value="5">5 - Excellent</option>
+                                    <option value="4">4 - Good</option>
+                                    <option value="3">3 - Fair</option>
+                                    <option value="2">2 - Poor</option>
+                                    <option value="1">1 - Bad</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3" id="professional-review-wrap">
+                                <label for="professional-contract-review" class="form-label fw-semibold">Review Comment (Optional)</label>
+                                <textarea id="professional-contract-review" class="form-control" rows="3" placeholder="Write short review"></textarea>
+                            </div>
+
+                            <div class="mb-3" id="professional-report-reason-wrap">
+                                <label for="professional-contract-report-reason" class="form-label fw-semibold">Reason</label>
+                                <select id="professional-contract-report-reason" class="form-select">
+                                    <option value="">Select reason</option>
+                                    <option value="Late payment">Late payment</option>
+                                    <option value="Abusive behavior">Abusive behavior</option>
+                                    <option value="Scope manipulation">Scope manipulation</option>
+                                    <option value="No communication">No communication</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3" id="professional-report-message-wrap">
+                                <label for="professional-contract-report-message" class="form-label fw-semibold">Message (Optional)</label>
+                                <textarea id="professional-contract-report-message" class="form-control" rows="3" placeholder="Additional details"></textarea>
+                            </div>
+
+                            <div id="professional-contract-feedback-status"></div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-primary" id="professional-contract-feedback-submit">Submit</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(wrapper.firstElementChild);
+    bindProfessionalContractFeedbackForm();
+    return document.getElementById("professional-contract-feedback-modal");
+}
+
+function openProfessionalContractFeedbackModal(contractId, mode) {
+    const modalElement = ensureProfessionalContractFeedbackModal();
+    const idInput = document.getElementById("professional-contract-feedback-id");
+    const modeInput = document.getElementById("professional-contract-feedback-mode");
+    const titleEl = document.getElementById("professional-contract-feedback-title");
+    const ratingWrap = document.getElementById("professional-rating-wrap");
+    const reviewWrap = document.getElementById("professional-review-wrap");
+    const reportReasonWrap = document.getElementById("professional-report-reason-wrap");
+    const reportMessageWrap = document.getElementById("professional-report-message-wrap");
+    const feedback = document.getElementById("professional-contract-feedback-status");
+    const ratingInput = document.getElementById("professional-contract-rating");
+    const reviewInput = document.getElementById("professional-contract-review");
+    const reportReasonInput = document.getElementById("professional-contract-report-reason");
+    const reportMessageInput = document.getElementById("professional-contract-report-message");
+    const submitBtn = document.getElementById("professional-contract-feedback-submit");
+
+    if (!modalElement || !idInput || !modeInput || !titleEl || !feedback || !submitBtn) {
+        return;
+    }
+
+    const safeMode = mode === "rate" ? "rate" : "report";
+    idInput.value = contractId;
+    modeInput.value = safeMode;
+    titleEl.textContent = safeMode === "rate" ? "Rate Client" : "Report Client";
+
+    if (ratingInput) ratingInput.value = "";
+    if (reviewInput) reviewInput.value = "";
+    if (reportReasonInput) reportReasonInput.value = "";
+    if (reportMessageInput) reportMessageInput.value = "";
+    feedback.innerHTML = "";
+
+    if (ratingWrap) ratingWrap.classList.toggle("d-none", safeMode !== "rate");
+    if (reviewWrap) reviewWrap.classList.toggle("d-none", safeMode !== "rate");
+    if (reportReasonWrap) reportReasonWrap.classList.toggle("d-none", safeMode !== "report");
+    if (reportMessageWrap) reportMessageWrap.classList.toggle("d-none", safeMode !== "report");
+
+    submitBtn.className = safeMode === "rate" ? "btn btn-primary" : "btn btn-danger";
+    submitBtn.textContent = safeMode === "rate" ? "Submit Rating" : "Submit Report";
+
+    bootstrap.Modal.getOrCreateInstance(modalElement).show();
+}
+
+function bindProfessionalContractFeedbackForm() {
+    const form = document.getElementById("professional-contract-feedback-form");
+    if (!form) {
+        return;
+    }
+
+    form.addEventListener("submit", function (event) {
+        event.preventDefault();
+
+        const contractId = document.getElementById("professional-contract-feedback-id")?.value;
+        const mode = document.getElementById("professional-contract-feedback-mode")?.value || "report";
+        const rating = document.getElementById("professional-contract-rating")?.value || "";
+        const comment = document.getElementById("professional-contract-review")?.value?.trim() || "";
+        const reason = document.getElementById("professional-contract-report-reason")?.value || "";
+        const message = document.getElementById("professional-contract-report-message")?.value?.trim() || "";
+        const feedback = document.getElementById("professional-contract-feedback-status");
+        const submitBtn = document.getElementById("professional-contract-feedback-submit");
+        const modalElement = document.getElementById("professional-contract-feedback-modal");
+
+        if (!contractId || !feedback || !submitBtn || !modalElement) {
+            return;
+        }
+
+        if (mode === "rate" && !rating) {
+            feedback.innerHTML = '<div class="alert alert-warning mb-0">Please select rating.</div>';
+            return;
+        }
+
+        if (mode === "report" && !reason) {
+            feedback.innerHTML = '<div class="alert alert-warning mb-0">Please select report reason.</div>';
+            return;
+        }
+
+        submitBtn.disabled = true;
+        feedback.innerHTML = '<div class="text-muted">Submitting...</div>';
+
+        const request = mode === "rate"
+            ? postJson(`/api/contracts/${contractId}/review`, { rating: Number(rating), comment })
+            : postJson(`/api/contracts/${contractId}/report`, { reason, message });
+
+        request
+            .then(() => {
+                feedback.innerHTML = `<div class="alert alert-success mb-0">${mode === "rate" ? "Rating submitted." : "Report submitted."}</div>`;
+                loadProfessionalContracts();
+                setTimeout(() => {
+                    bootstrap.Modal.getOrCreateInstance(modalElement).hide();
+                }, 500);
+            })
+            .catch((error) => {
+                feedback.innerHTML = `<div class="alert alert-danger mb-0">${error?.message || "Unable to submit."}</div>`;
+            })
+            .finally(() => {
+                submitBtn.disabled = false;
+            });
     });
 }
 

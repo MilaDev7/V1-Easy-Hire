@@ -267,6 +267,8 @@ class ProfessionalController extends Controller
 
     public function jobs(Request $request)
     {
+        JobPost::autoExpireOpenJobs();
+
         $userId = auth()->id();
         $professional = Professional::where('user_id', $userId)->first();
         $query = JobPost::query()->where('status', 'open');
@@ -319,6 +321,8 @@ class ProfessionalController extends Controller
 
     public function apply(Request $request)
     {
+        JobPost::autoExpireOpenJobs();
+
         $userId = auth()->id();
         $request->validate([
             'job_id' => 'required|exists:job_posts,id',
@@ -357,6 +361,13 @@ class ProfessionalController extends Controller
 
         if ($job->status !== 'open') {
             return response()->json(['message' => 'Job is not open'], 400);
+        }
+
+        if ($job->deadline && $job->deadline < now()->toDateString()) {
+            $job->status = 'expired';
+            $job->save();
+
+            return response()->json(['message' => 'Job deadline has passed.'], 400);
         }
 
         if (! str_contains(strtolower($professional->skill), strtolower($job->skill))) {
@@ -426,6 +437,14 @@ class ProfessionalController extends Controller
             ->latest()
             ->get()
             ->map(function ($contract) {
+                $userId = auth()->id();
+                $hasReview = \App\Models\Review::where('contract_id', $contract->id)
+                    ->where('reviewer_id', $userId)
+                    ->exists();
+                $hasReport = \App\Models\Report::where('contract_id', $contract->id)
+                    ->where('reporter_id', $userId)
+                    ->exists();
+
                 $title = $contract->job->title
                     ?? $contract->directRequest->title
                     ?? 'Direct Request';
@@ -439,6 +458,8 @@ class ProfessionalController extends Controller
                     'budget' => $contract->agreed_price,
                     'status' => $contract->status,
                     'created_at' => $contract->created_at,
+                    'has_review' => $hasReview,
+                    'has_report' => $hasReport,
                 ];
             });
 

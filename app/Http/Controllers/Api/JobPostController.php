@@ -113,6 +113,8 @@ class JobPostController extends Controller
 
     public function getMatchingJobs()
     {
+        JobPost::autoExpireOpenJobs();
+
         $user = auth()->user();
 
         $professional = $user->professional;

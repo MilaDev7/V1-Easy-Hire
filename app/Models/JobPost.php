@@ -32,4 +32,13 @@ class JobPost extends Model
         // Add 'job_id' because it doesn't match 'job_post_id'
         return $this->hasMany(Application::class, 'job_id');
     }
+
+    public static function autoExpireOpenJobs(): void
+    {
+        static::query()
+            ->where('status', 'open')
+            ->whereNotNull('deadline')
+            ->whereDate('deadline', '<', now()->toDateString())
+            ->update(['status' => 'expired']);
+    }
 }
