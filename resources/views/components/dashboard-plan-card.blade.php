@@ -5,6 +5,9 @@
     $durationLabel = $durationLabel ?? 'Duration';
     $expiryLabel = $expiryLabel ?? 'Expires';
     $requestsLabel = $requestsLabel ?? 'Direct Requests';
+    $showRequests = isset($showRequests)
+        ? (bool) $showRequests
+        : ($requestsLabel !== null && $requestsLabel !== false && $requestsLabel !== '');
     $gradientStart = $gradientStart ?? '#2d665b';
     $gradientEnd = $gradientEnd ?? '#1e4a42';
     $borderColor = $borderColor ?? '#28a745';
@@ -35,10 +38,12 @@
                     <p class="text-white-50 small mb-0 text-uppercase">{{ $expiryLabel }}</p>
                     <p class="text-white mb-0 fw-semibold" id="{{ $idPrefix }}current-plan-expiry">--</p>
                 </div>
-                <div class="text-center" style="min-width: 130px;">
-                    <p class="text-white-50 small mb-0 text-uppercase">{{ $requestsLabel }}</p>
-                    <p class="text-white mb-0 fw-semibold" id="{{ $idPrefix }}current-plan-requests">--</p>
-                </div>
+                @if ($showRequests)
+                    <div class="text-center" style="min-width: 130px;">
+                        <p class="text-white-50 small mb-0 text-uppercase">{{ $requestsLabel }}</p>
+                        <p class="text-white mb-0 fw-semibold" id="{{ $idPrefix }}current-plan-requests">--</p>
+                    </div>
+                @endif
             </div>
         </div>
     </div>

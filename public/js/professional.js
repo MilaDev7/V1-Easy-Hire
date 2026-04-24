@@ -672,13 +672,18 @@ function loadProfessionalStats() {
             setText("pro-active-contracts-count", payload.active_contracts ?? 0);
             setText("pro-completed-jobs-count", payload.completed_jobs ?? 0);
             setText("pro-remaining-applies-count", payload.remaining_apply ?? 0);
-            setText("pro-apply-limit-badge", `Monthly ${payload.monthly_limit ?? 0}`);
+            const daysLeft = Number(payload.days_left ?? 0);
+            if (payload.expiry_date) {
+                setText("pro-apply-limit-badge", `Expires in ${daysLeft} day${daysLeft === 1 ? "" : "s"}`);
+            } else {
+                setText("pro-apply-limit-badge", "No active plan");
+            }
         })
         .catch(() => {
             setText("pro-active-contracts-count", "--");
             setText("pro-completed-jobs-count", "--");
             setText("pro-remaining-applies-count", "--");
-            setText("pro-apply-limit-badge", "Monthly --");
+            setText("pro-apply-limit-badge", "--");
         });
 }
 
@@ -694,15 +699,31 @@ function setApplyPlanFeedback(type, message) {
 
 function renderProfessionalTopPlanCard(state) {
     const totalRemaining = Number(state?.remaining_total ?? 0);
-    const monthlyLimit = Number(state?.monthly_limit ?? 0);
-    const periodEnd = state?.period_end || "";
-    const extraRemaining = Number(state?.extra_remaining ?? 0);
+    const durationDays = Number(state?.current_plan_duration_days ?? 0);
+    const durationText = totalRemaining > 0 && durationDays > 0 ? `${durationDays} Days` : "N/A";
+    const expiryDate = state?.expiry_date || "";
+    const daysLeft = Number(state?.days_left ?? 0);
+    let formattedExpiry = "";
+
+    if (expiryDate) {
+        const parsed = new Date(expiryDate);
+        if (!Number.isNaN(parsed.getTime())) {
+            formattedExpiry = parsed.toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+            });
+        }
+    }
+
+    const expiryText = !expiryDate
+        ? "No active plan"
+        : `${formattedExpiry || expiryDate} (${daysLeft} day${daysLeft === 1 ? "" : "s"} left)`;
 
     setText("pro-current-plan-name", state?.current_plan_name || "Free Plan");
-    setText("pro-current-plan-jobs", `${totalRemaining}/${monthlyLimit}`);
-    setText("pro-current-plan-duration", "Monthly");
-    setText("pro-current-plan-expiry", periodEnd || "N/A");
-    setText("pro-current-plan-requests", extraRemaining);
+    setText("pro-current-plan-jobs", totalRemaining);
+    setText("pro-current-plan-duration", durationText);
+    setText("pro-current-plan-expiry", expiryText);
 }
 
 function renderApplyPlans(containerId, items) {
@@ -716,49 +737,53 @@ function renderApplyPlans(containerId, items) {
         return;
     }
 
-    container.innerHTML = items
-        .map((plan, index) => {
-            const isPopular = index === 1;
-            const bgStyle = isPopular
-                ? "background: rgba(138, 219, 174, 0.20); box-shadow: 0 8px 22px rgba(7, 19, 16, 0.14);"
-                : "background: rgba(255, 255, 255, 0.12);";
-            const planColor = isPopular ? "#effff4" : "#c8f0d6";
-            const popularBadge = isPopular
-                ? '<span class="small fw-bold px-2 py-1 rounded-pill" style="background: #e5f8ec; color: #1b4037;">Popular</span>'
-                : "";
-            const isMonthly = plan.plan_scope === "professional_monthly";
-            const lineOne = isMonthly
-                ? `${plan.apply_limit_monthly || 0} Applies / Month`
-                : `${plan.extra_apply_quantity || 0} Extra Applies`;
-            const lineTwo = isMonthly ? "Monthly Plan" : "One-time Extra Pack";
+    const sorted = [...items].sort((a, b) => Number(a.price || 0) - Number(b.price || 0));
 
-            return `
-                <div class="col-12 col-md-4">
-                    <div class="card border-0 rounded-4 h-100" style="${bgStyle}">
-                        <div class="card-body p-3">
-                            <div class="d-flex align-items-center justify-content-between mb-2">
-                                <h6 class="fw-bold text-uppercase mb-0" style="color: ${planColor}; letter-spacing: 0.08em;">${plan.name || "Plan"}</h6>
-                                ${popularBadge}
-                            </div>
-                            <h3 class="fw-bold text-white mb-0">Br${plan.price || 0}</h3>
-                            <div class="d-flex align-items-center justify-content-between mt-1">
-                                <p class="mb-0 small" style="color: rgba(255, 255, 255, 0.78);">${lineOne}</p>
-                            </div>
-                            <div class="d-flex align-items-center justify-content-between mt-1">
-                                <p class="mb-0 small" style="color: rgba(255, 255, 255, 0.78);">${lineTwo}</p>
-                            </div>
-                            <div class="d-flex align-items-center justify-content-between mt-1">
-                                <span></span>
-                                <button type="button" class="btn btn-light btn-sm rounded-pill fw-semibold px-3 py-1 pro-buy-apply-plan-btn" data-plan-id="${plan.id}">
-                                    Buy Now
-                                </button>
-                            </div>
+    container.innerHTML = sorted.map((plan, index) => {
+        const isPopular = index === 1 || /growth/i.test(plan.name || "");
+        const bgStyle = isPopular
+            ? "background: rgba(138, 219, 174, 0.20); box-shadow: 0 8px 22px rgba(7, 19, 16, 0.14);"
+            : "background: rgba(255, 255, 255, 0.12);";
+        const planColor = isPopular ? "#effff4" : "#c8f0d6";
+        const popularBadge = isPopular
+            ? '<span class="small fw-bold px-2 py-1 rounded-pill" style="background: #e5f8ec; color: #1b4037;">Recommended</span>'
+            : "";
+        const isMonthly = plan.plan_scope === "professional_monthly";
+        const lineOne = isMonthly
+            ? `${plan.apply_limit_monthly || 0} Job Applications`
+            : `+${plan.extra_apply_quantity || 0} Job Applications`;
+        const durationDays = Number(plan.duration_days || 0);
+        const lineTwo = isMonthly
+            ? `${durationDays > 0 ? durationDays : 30} Days`
+            : "Uses current expiry";
+        const buttonText = isMonthly ? "Buy Plan" : "Buy Extra";
+
+        return `
+            <div class="col-12 col-md-4">
+                <div class="card border-0 rounded-4 h-100" style="${bgStyle}">
+                    <div class="card-body p-3">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <h6 class="fw-bold text-uppercase mb-0" style="color: ${planColor}; letter-spacing: 0.08em;">${plan.name || "Plan"}</h6>
+                            ${popularBadge}
+                        </div>
+                        <h3 class="fw-bold text-white mb-0">${Math.round(Number(plan.price || 0))} ETB</h3>
+                        <div class="d-flex align-items-center justify-content-between mt-1">
+                            <p class="mb-0 small" style="color: rgba(255, 255, 255, 0.78);">${lineOne}</p>
+                        </div>
+                        <div class="d-flex align-items-center justify-content-between mt-1">
+                            <p class="mb-0 small" style="color: rgba(255, 255, 255, 0.78);">${lineTwo}</p>
+                        </div>
+                        <div class="d-flex align-items-center justify-content-between mt-1">
+                            <span></span>
+                            <button type="button" class="btn btn-light btn-sm rounded-pill fw-semibold px-3 py-1 pro-buy-apply-plan-btn" data-plan-id="${plan.id}">
+                                ${buttonText}
+                            </button>
                         </div>
                     </div>
                 </div>
-            `;
-        })
-        .join("");
+            </div>
+        `;
+    }).join("");
 }
 
 function bindApplyPlanBuyButtons() {
@@ -772,7 +797,7 @@ function bindApplyPlanBuyButtons() {
             const originalText = button.innerHTML;
             professionalApplyPlanLoading = true;
             button.disabled = true;
-            button.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>...';
+            button.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Processing...';
 
             postJson(`/api/pro/apply-plans/${planId}/buy`, {})
                 .then((payload) => {
@@ -817,8 +842,7 @@ function loadProfessionalApplyPlan() {
             summary.innerHTML = `
                 <div class="small">
                     <strong>Remaining:</strong> ${state.remaining_total ?? 0}
-                    (${state.monthly_remaining ?? 0} monthly + ${state.extra_remaining ?? 0} extra)
-                    <span class="ms-2"><strong>Reset:</strong> ${state.period_end || "N/A"}</span>
+                    <span class="ms-2"><strong>Days left:</strong> ${state.days_left ?? 0}</span>
                 </div>
             `;
 
@@ -830,7 +854,6 @@ function loadProfessionalApplyPlan() {
             setText("pro-current-plan-jobs", "--");
             setText("pro-current-plan-duration", "--");
             setText("pro-current-plan-expiry", "--");
-            setText("pro-current-plan-requests", "--");
             current.textContent = "Unavailable";
             summary.innerHTML = '<div class="small text-warning">Unable to load apply plan status.</div>';
             plansWrap.innerHTML = '<div class="col-12 text-center text-white-50 py-3">Unavailable.</div>';

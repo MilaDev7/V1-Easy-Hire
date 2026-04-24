@@ -1548,7 +1548,19 @@ function renderSubscription(subscription) {
     if (currentPlanExpiry) {
         const expiry = getSubscriptionExpiry(subscription);
         if (expiry && expiry !== "N/A") {
-            currentPlanExpiry.textContent = new Date(expiry).toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'});
+            const parsedExpiry = new Date(expiry);
+            if (!Number.isNaN(parsedExpiry.getTime())) {
+                const formatted = parsedExpiry.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const expiryDay = new Date(parsedExpiry);
+                expiryDay.setHours(0, 0, 0, 0);
+                const diffMs = expiryDay.getTime() - today.getTime();
+                const daysLeft = Math.max(Math.ceil(diffMs / (1000 * 60 * 60 * 24)), 0);
+                currentPlanExpiry.textContent = `${formatted} (${daysLeft} day${daysLeft === 1 ? "" : "s"} left)`;
+            } else {
+                currentPlanExpiry.textContent = expiry;
+            }
         } else {
             currentPlanExpiry.textContent = "--";
         }
