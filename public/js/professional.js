@@ -1064,6 +1064,7 @@ function loadProfessionalProfileForSettings() {
                 const d = data.data;
                 document.getElementById("professional-profile-name").value = d.name || "";
                 document.getElementById("professional-profile-email").value = d.email || "";
+                document.getElementById("professional-profile-phone").value = d.phone || "";
                 document.getElementById("professional-profile-location").value = d.location || "";
                 
                 const photoPreview = document.getElementById("professional-settings-profile-preview");
@@ -1144,6 +1145,7 @@ function bindProfessionalSettings() {
             const formData = new FormData();
             formData.append("name", document.getElementById("professional-profile-name").value);
             formData.append("email", document.getElementById("professional-profile-email").value);
+            formData.append("phone", document.getElementById("professional-profile-phone").value);
             formData.append("location", document.getElementById("professional-profile-location").value);
 
             if (photoInput && photoInput.files.length > 0) {

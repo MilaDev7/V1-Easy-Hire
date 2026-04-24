@@ -506,6 +506,17 @@
                             </div>
                             <input type="email" class="form-control bg-light" id="professional-profile-email" name="email" readonly>
                         </div>
+
+                        <!-- Phone -->
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <label class="form-label text-muted small mb-0">Phone</label>
+                                <button type="button" class="btn btn-sm btn-outline-secondary edit-field-btn py-0" data-field="professional-profile-phone">
+                                    <i class="fa-solid fa-pen fa-xs"></i>
+                                </button>
+                            </div>
+                            <input type="tel" class="form-control bg-light" id="professional-profile-phone" name="phone" maxlength="10" readonly>
+                        </div>
                         
                         <!-- Location -->
                         <div class="mb-3">

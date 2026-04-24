@@ -29,6 +29,7 @@ class ProfileController extends Controller
         $request->validate([
             'name' => 'nullable|string|min:2|max:255',
             'email' => 'nullable|email|unique:users,email,'.$user->id,
+            'phone' => 'nullable|digits:10|unique:users,phone,'.$user->id,
             'location' => 'nullable|string|max:255',
             'profile_photo' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp,svg|max:2048',
         ]);
@@ -41,6 +42,10 @@ class ProfileController extends Controller
 
         if ($request->has('email') && $request->email) {
             $updateData['email'] = $request->email;
+        }
+
+        if ($request->has('phone') && $request->phone !== null) {
+            $updateData['phone'] = $request->phone;
         }
 
         if ($request->has('location') && $request->location !== null) {
@@ -65,6 +70,7 @@ class ProfileController extends Controller
             'data' => [
                 'name' => $user->name,
                 'email' => $user->email,
+                'phone' => $user->phone,
                 'location' => $user->location,
                 'profile_photo' => $user->profile_photo ? asset('storage/'.$user->profile_photo) : null,
             ],
@@ -83,6 +89,7 @@ class ProfileController extends Controller
             'data' => [
                 'name' => $user->name,
                 'email' => $user->email,
+                'phone' => $user->phone,
                 'location' => $user->location ?? '',
                 'profile_photo' => $user->profile_photo ? asset('storage/'.$user->profile_photo) : null,
             ],
@@ -102,6 +109,7 @@ class ProfileController extends Controller
             'data' => [
                 'name' => $user->name,
                 'email' => $user->email,
+                'phone' => $user->phone,
                 'location' => $pro ? ($pro->location ?? '') : '',
                 'profile_photo' => $pro && $pro->profile_photo ? asset('storage/'.$pro->profile_photo) : ($user->profile_photo ? asset('storage/'.$user->profile_photo) : null),
             ],
@@ -125,6 +133,7 @@ class ProfileController extends Controller
         $request->validate([
             'name' => 'nullable|string|min:2|max:255',
             'email' => 'nullable|email|unique:users,email,'.$user->id,
+            'phone' => 'nullable|digits:10|unique:users,phone,'.$user->id,
             'location' => 'nullable|string|max:255',
             'profile_photo' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp,svg|max:2048',
         ]);
@@ -137,6 +146,10 @@ class ProfileController extends Controller
 
         if ($request->has('email') && $request->email) {
             $updateData['email'] = $request->email;
+        }
+
+        if ($request->has('phone') && $request->phone !== null) {
+            $updateData['phone'] = $request->phone;
         }
 
         $pro = Professional::where('user_id', $user->id)->first();
@@ -172,6 +185,7 @@ class ProfileController extends Controller
             'data' => [
                 'name' => $user->name,
                 'email' => $user->email,
+                'phone' => $user->phone,
                 'location' => $pro ? $pro->location : '',
                 'profile_photo' => $pro && $pro->profile_photo ? asset('storage/'.$pro->profile_photo) : ($user->profile_photo ? asset('storage/'.$user->profile_photo) : null),
             ],

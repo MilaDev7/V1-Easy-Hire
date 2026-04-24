@@ -2046,10 +2046,12 @@ function loadClientProfileForSettings() {
                 
                 const nameInput = document.getElementById("profile-name");
                 const emailInput = document.getElementById("profile-email");
+                const phoneInput = document.getElementById("profile-phone");
                 const photoPreview = document.getElementById("settings-profile-preview");
                 
                 if (nameInput) nameInput.value = d.name || "";
                 if (emailInput) emailInput.value = d.email || "";
+                if (phoneInput) phoneInput.value = d.phone || "";
                 if (photoPreview) {
                     photoPreview.src = d.profile_photo || "/images/user1.jpg";
                 }
@@ -2102,6 +2104,7 @@ function bindClientProfileForm() {
         const formData = new FormData();
         formData.append("name", document.getElementById("profile-name").value);
         formData.append("email", document.getElementById("profile-email").value);
+        formData.append("phone", document.getElementById("profile-phone").value);
 
         const photoInputForSave = document.getElementById("settings-photo-input");
         if (photoInputForSave && photoInputForSave.files.length > 0) {
