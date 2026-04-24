@@ -2354,15 +2354,113 @@ function loadProfessionalJobsView() {
     return loadProfessionalJobs();
 }
 
+function renderProNotifications(payload) {
+    const list = document.getElementById("pro-notification-list");
+    const badge = document.getElementById("pro-notification-badge");
+
+    if (!list || !badge) {
+        return;
+    }
+
+    const notifications = toArray(payload?.data);
+    const unreadCount = Number(payload?.unread_count ?? 0);
+
+    if (unreadCount > 0) {
+        badge.textContent = unreadCount > 99 ? "99+" : String(unreadCount);
+        badge.classList.remove("d-none");
+    } else {
+        badge.classList.add("d-none");
+    }
+
+    if (!notifications.length) {
+        list.innerHTML = '<div class="text-muted small p-3">No notifications yet.</div>';
+        return;
+    }
+
+    list.innerHTML = notifications
+        .map((item) => {
+            const isUnread = !item.read_at;
+            const actionUrl = item.action_url || "";
+            const createdAt = item.created_at ? new Date(item.created_at).toLocaleString() : "";
+
+            return `
+                <button
+                    type="button"
+                    class="w-100 text-start border-0 bg-transparent px-3 py-2 ${isUnread ? "bg-light" : ""} pro-notification-item"
+                    data-notification-id="${item.id}"
+                    data-action-url="${actionUrl}"
+                >
+                    <div class="fw-semibold small">${item.title || "Notification"}</div>
+                    <div class="small text-muted">${item.message || ""}</div>
+                    <div class="small text-muted mt-1">${createdAt}</div>
+                </button>
+            `;
+        })
+        .join("");
+
+    list.querySelectorAll(".pro-notification-item").forEach((button) => {
+        button.addEventListener("click", function () {
+            const id = button.dataset.notificationId;
+            const actionUrl = button.dataset.actionUrl || "";
+
+            if (!id) {
+                return;
+            }
+
+            postJson(`/api/notifications/${id}/read`, {}).finally(() => {
+                if (actionUrl) {
+                    window.location.href = actionUrl;
+                    return;
+                }
+
+                loadProNotifications();
+            });
+        });
+    });
+}
+
+function loadProNotifications() {
+    return fetchJson("/api/notifications")
+        .then((payload) => {
+            renderProNotifications(payload);
+        })
+        .catch(() => {
+            const list = document.getElementById("pro-notification-list");
+            if (list) {
+                list.innerHTML = '<div class="text-muted small p-3">Unable to load notifications.</div>';
+            }
+        });
+}
+
+function bindProNotifications() {
+    const markAllButton = document.getElementById("pro-notification-mark-all");
+    const bellButton = document.getElementById("pro-notification-bell");
+
+    if (markAllButton) {
+        markAllButton.addEventListener("click", function (event) {
+            event.preventDefault();
+            postJson("/api/notifications/read-all", {}).finally(() => loadProNotifications());
+        });
+    }
+
+    if (bellButton) {
+        bellButton.addEventListener("click", function () {
+            loadProNotifications();
+        });
+    }
+}
+
 function initializeProfessionalDashboard() {
     setProfessionalDashboardLoading(true);
     bindProfessionalSidebarNavigation();
     bindProfessionalSettings();
+    bindProNotifications();
 
     Promise.allSettled([
         loadProfessionalStats(),
         loadProfessionalJobsView(),
         loadProfessionalApplyPlan(),
+        loadProNotifications(),
         loadProfessionalIdentity(),
     ]).finally(() => {
         setProfessionalDashboardLoading(false);

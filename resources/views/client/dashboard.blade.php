@@ -132,16 +132,33 @@
                         <p class="text-muted small mb-0">Client Dashboard</p>
                         <h1 class="h4 mb-0">Overview</h1>
                     </div>
-                    <div class="dropdown">
-                        <button class="btn p-0 border-0 bg-transparent" data-bs-toggle="dropdown" aria-expanded="false">
-                            <img src="{{ asset('images/user1.jpg') }}" id="client-topbar-photo" alt="Profile" class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover; border: 2px solid rgba(0,0,0,0.1); display: none;">
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end shadow">
-                            <li><a class="dropdown-item" href="/client/dashboard"><i class="fa-solid fa-user me-2"></i>Account</a></li>
-                            <li><button type="button" class="dropdown-item" id="client-topbar-dark-mode"><i class="fa-solid fa-moon me-2"></i>Dark Mode</button></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item text-danger" href="#" onclick="logout(); return false;"><i class="fa-solid fa-right-from-bracket me-2"></i>Logout</a></li>
-                        </ul>
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="dropdown">
+                            <button class="btn btn-light border position-relative" data-bs-toggle="dropdown" aria-expanded="false" id="client-notification-bell">
+                                <i class="fa-solid fa-bell"></i>
+                                <span id="client-notification-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none">0</span>
+                            </button>
+                            <div class="dropdown-menu dropdown-menu-end shadow p-0" style="width: 340px;">
+                                <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
+                                    <strong class="small">Notifications</strong>
+                                    <button type="button" class="btn btn-sm btn-link text-decoration-none p-0" id="client-notification-mark-all">Mark all read</button>
+                                </div>
+                                <div id="client-notification-list" style="max-height: 320px; overflow-y: auto;">
+                                    <div class="text-muted small p-3">Loading...</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="dropdown">
+                            <button class="btn p-0 border-0 bg-transparent" data-bs-toggle="dropdown" aria-expanded="false">
+                                <img src="{{ asset('images/user1.jpg') }}" id="client-topbar-photo" alt="Profile" class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover; border: 2px solid rgba(0,0,0,0.1); display: none;">
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow">
+                                <li><a class="dropdown-item" href="/client/dashboard"><i class="fa-solid fa-user me-2"></i>Account</a></li>
+                                <li><button type="button" class="dropdown-item" id="client-topbar-dark-mode"><i class="fa-solid fa-moon me-2"></i>Dark Mode</button></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-danger" href="#" onclick="logout(); return false;"><i class="fa-solid fa-right-from-bracket me-2"></i>Logout</a></li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
             </div>
