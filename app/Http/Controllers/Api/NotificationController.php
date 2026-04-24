@@ -68,4 +68,11 @@ class NotificationController extends Controller
 
         return response()->json(['message' => 'All notifications marked as read']);
     }
+
+    public function clearAll()
+    {
+        UserNotification::where('user_id', auth()->id())->delete();
+
+        return response()->json(['message' => 'All notifications cleared']);
+    }
 }

@@ -128,7 +128,7 @@ class ApplicationController extends Controller
             'application_received',
             'New job application',
             'A professional applied to your job: '.$job->title,
-            '/client/dashboard',
+            '/client/dashboard?view=applications',
             ['job_id' => $job->id, 'application_id' => $application->id]
         );
 
@@ -244,7 +244,7 @@ class ApplicationController extends Controller
             'application_accepted',
             'Application accepted',
             'Your application was accepted for: '.$job->title,
-            '/pro/dashboard',
+            '/pro/dashboard?view=my-applications',
             ['job_id' => $job->id, 'application_id' => $application->id]
         );
 
@@ -254,7 +254,7 @@ class ApplicationController extends Controller
                 'application_rejected',
                 'Application update',
                 'Your application was not selected for: '.$job->title,
-                '/pro/dashboard',
+                '/pro/dashboard?view=my-applications',
                 ['job_id' => $job->id]
             );
         }
@@ -286,7 +286,7 @@ class ApplicationController extends Controller
             'application_rejected',
             'Application rejected',
             'Your application was rejected for: '.$job->title,
-            '/pro/dashboard',
+            '/pro/dashboard?view=my-applications',
             ['job_id' => $job->id, 'application_id' => $application->id]
         );
 

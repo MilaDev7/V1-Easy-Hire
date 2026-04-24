@@ -76,7 +76,7 @@ class ContractController extends Controller
             'completion_confirmed',
             'Completion confirmed',
             'Client confirmed completion: '.$title,
-            '/pro/dashboard',
+            '/pro/dashboard?view=my-contracts',
             ['contract_id' => $contract->id]
         );
 
@@ -113,7 +113,7 @@ class ContractController extends Controller
             'completion_rejected',
             'Completion rejected',
             'Client rejected completion request: '.$title,
-            '/pro/dashboard',
+            '/pro/dashboard?view=my-contracts',
             ['contract_id' => $contract->id]
         );
 

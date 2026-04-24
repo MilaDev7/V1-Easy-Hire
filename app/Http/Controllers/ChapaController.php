@@ -47,7 +47,7 @@ class ChapaController extends Controller
                     'plan_purchase_success',
                     'Plan activated',
                     'Your professional monthly plan is now active: '.$plan->name,
-                    '/pro/dashboard'
+                    '/pro/dashboard?view=browse-jobs'
                 );
 
                 return ['already_processed' => false];
@@ -60,7 +60,7 @@ class ChapaController extends Controller
                     'plan_purchase_success',
                     'Extra applies added',
                     'You purchased extra applies: '.$plan->name,
-                    '/pro/dashboard'
+                    '/pro/dashboard?view=browse-jobs'
                 );
 
                 return ['already_processed' => false];
@@ -93,7 +93,7 @@ class ChapaController extends Controller
                 'plan_purchase_success',
                 'Subscription activated',
                 'Your client subscription is active: '.$plan->name,
-                '/client/dashboard'
+                '/client/dashboard?view=job-posts'
             );
 
             return ['already_processed' => false];

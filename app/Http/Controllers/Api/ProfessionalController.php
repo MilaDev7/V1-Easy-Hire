@@ -502,7 +502,7 @@ class ProfessionalController extends Controller
             'completion_requested',
             'Work marked as completed',
             'Professional marked work as completed: '.$title,
-            '/client/dashboard',
+            '/client/dashboard?view=contracts',
             ['contract_id' => $contract->id]
         );
 

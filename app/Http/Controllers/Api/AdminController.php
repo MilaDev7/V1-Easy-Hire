@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Mail\ProfessionalStatusMail;
+use App\Models\Message;
 use App\Models\User;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
@@ -266,6 +268,58 @@ class AdminController extends Controller
             ->get();
 
         return response()->json($users);
+    }
+
+    public function contactUser(Request $request, $id)
+    {
+        $targetUser = User::withTrashed()->findOrFail($id);
+
+        $validated = $request->validate([
+            'subject' => 'nullable|string|max:160',
+            'message' => 'required|string|max:2000',
+            'send_email' => 'nullable|boolean',
+        ]);
+
+        $subject = trim((string) ($validated['subject'] ?? ''));
+        $messageBody = trim((string) $validated['message']);
+        $sendEmail = (bool) ($validated['send_email'] ?? false);
+
+        $message = Message::create([
+            'sender_id' => (int) $request->user()->id,
+            'receiver_id' => (int) $targetUser->id,
+            'subject' => $subject !== '' ? $subject : null,
+            'message' => $messageBody,
+            'email_requested' => $sendEmail,
+            'email_sent_at' => null,
+        ]);
+
+        app(NotificationService::class)->send(
+            (int) $targetUser->id,
+            'admin_message',
+            $subject !== '' ? $subject : 'Message from Admin',
+            $messageBody
+        );
+
+        if ($sendEmail && ! empty($targetUser->email)) {
+            try {
+                Mail::raw(
+                    ($subject !== '' ? ($subject."\n\n") : '').$messageBody,
+                    function ($mail) use ($targetUser, $subject) {
+                        $mail->to($targetUser->email)
+                            ->subject($subject !== '' ? $subject : 'EasyHire admin message');
+                    }
+                );
+                $message->email_sent_at = now();
+                $message->save();
+            } catch (\Throwable $exception) {
+                \Log::error('Failed to send admin message email: '.$exception->getMessage());
+            }
+        }
+
+        return response()->json([
+            'message' => 'Message sent successfully',
+            'data' => $message,
+        ]);
     }
 
     // View all jobs

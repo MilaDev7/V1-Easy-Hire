@@ -139,7 +139,7 @@ class DirectRequestController extends Controller
             'direct_request_received',
             'New direct request',
             'You received a direct request: '.$directRequest->title,
-            '/pro/dashboard',
+            '/pro/dashboard?view=direct-requests',
             ['direct_request_id' => $directRequest->id]
         );
 
@@ -343,7 +343,7 @@ class DirectRequestController extends Controller
                 'direct_request_accepted',
                 'Direct request accepted',
                 'Your direct request was accepted: '.$directRequest->title,
-                '/client/dashboard',
+                '/client/dashboard?view=requests',
                 ['direct_request_id' => $directRequest->id, 'contract_id' => $contractId]
             );
 
@@ -386,7 +386,7 @@ class DirectRequestController extends Controller
             'direct_request_rejected',
             'Direct request rejected',
             'Your direct request was rejected: '.$directRequest->title,
-            '/client/dashboard',
+            '/client/dashboard?view=requests',
             ['direct_request_id' => $directRequest->id]
         );
 
