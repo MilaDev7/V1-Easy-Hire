@@ -881,6 +881,17 @@ function bindProfessionalSearch() {
         loadProfessionalJobs();
     };
 
+    const handleEnter = (event) => {
+        const isEnter = event.key === "Enter" || event.code === "Enter" || event.keyCode === 13;
+        if (!isEnter) return;
+        event.preventDefault();
+        triggerSearch();
+    };
+
+    skillInput.addEventListener("keydown", handleEnter);
+    skillInput.addEventListener("keypress", handleEnter);
+    locationInput.addEventListener("keydown", handleEnter);
+    locationInput.addEventListener("keypress", handleEnter);
     skillInput.addEventListener("input", triggerSearch);
     locationInput.addEventListener("input", triggerSearch);
     searchButton.addEventListener("click", triggerSearch);

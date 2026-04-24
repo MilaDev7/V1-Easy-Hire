@@ -391,6 +391,25 @@ function renderProfessionalsSection() {
     window.loadClientPros = loadClientPros;
 
     // Bind search button
+    const skillInput = document.getElementById("professional-skill");
+    const locationInput = document.getElementById("professional-location");
+    const triggerSearchByEnter = function (event) {
+        const isEnter = event.key === "Enter" || event.code === "Enter" || event.keyCode === 13;
+        if (!isEnter) return;
+        event.preventDefault();
+        loadClientPros();
+    };
+
+    if (skillInput) {
+        skillInput.addEventListener("keydown", triggerSearchByEnter);
+        skillInput.addEventListener("keypress", triggerSearchByEnter);
+    }
+
+    if (locationInput) {
+        locationInput.addEventListener("keydown", triggerSearchByEnter);
+        locationInput.addEventListener("keypress", triggerSearchByEnter);
+    }
+
     let searchBtn = document.getElementById("professional-search-button");
     if (searchBtn) {
         searchBtn.addEventListener("click", loadClientPros);
@@ -1679,6 +1698,15 @@ function bindProfessionalSearch() {
         loadProfessionalsResults(skillInput.value, locationInput.value);
     };
 
+    const handleEnter = (event) => {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            triggerSearch();
+        }
+    };
+
+    skillInput.addEventListener("keydown", handleEnter);
+    locationInput.addEventListener("keydown", handleEnter);
     skillInput.addEventListener("input", triggerSearch);
     locationInput.addEventListener("input", triggerSearch);
     searchButton.addEventListener("click", triggerSearch);
