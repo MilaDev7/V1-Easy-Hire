@@ -44,8 +44,7 @@
                     <label class="form-label fw-bold"><i class="fa-solid fa-layer-group me-2 text-secondary"></i>Plan Type</label>
                     <select class="form-select" id="plan-scope">
                         <option value="client">Client Plan</option>
-                        <option value="professional_monthly">Professional Monthly Plan</option>
-                        <option value="professional_extra">Professional Extra Pack</option>
+                        <option value="professional">Professional Plan</option>
                     </select>
                 </div>
                 <div class="row">
@@ -71,13 +70,13 @@
                 </div>
                 <div class="row d-none" id="plan-apply-monthly-wrap">
                     <div class="col-md-6 mb-3">
-                        <label class="form-label fw-bold"><i class="fa-solid fa-calendar-check me-2 text-success"></i>Apply Limit / Month</label>
+                        <label class="form-label fw-bold" id="plan-apply-monthly-label"><i class="fa-solid fa-calendar-check me-2 text-success"></i>Apply Limit / Month</label>
                         <input type="number" class="form-control" id="plan-apply-monthly" placeholder="e.g., 20" min="0">
                     </div>
                 </div>
                 <div class="row d-none" id="plan-extra-apply-wrap">
                     <div class="col-md-6 mb-3">
-                        <label class="form-label fw-bold"><i class="fa-solid fa-plus-circle me-2 text-primary"></i>Extra Applies Quantity</label>
+                        <label class="form-label fw-bold" id="plan-extra-apply-label"><i class="fa-solid fa-plus-circle me-2 text-primary"></i>Extra Applies Quantity</label>
                         <input type="number" class="form-control" id="plan-extra-apply" placeholder="e.g., 10" min="0">
                     </div>
                 </div>
