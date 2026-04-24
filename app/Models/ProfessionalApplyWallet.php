@@ -10,19 +10,14 @@ class ProfessionalApplyWallet extends Model
         'user_id',
         'current_plan_id',
         'monthly_limit',
-        'monthly_remaining',
-        'extra_remaining',
-        'period_start',
-        'period_end',
-        'last_reset_at',
+        'remaining_applies',
+        'expiry_date',
     ];
 
     protected function casts(): array
     {
         return [
-            'period_start' => 'datetime',
-            'period_end' => 'datetime',
-            'last_reset_at' => 'datetime',
+            'expiry_date' => 'datetime',
         ];
     }
 

@@ -522,9 +522,9 @@ class AdminController extends Controller
 
         $now = now();
         $defaults = [
-            ['name' => 'Pro Starter', 'price' => 199, 'plan_scope' => 'professional_monthly', 'apply_limit_monthly' => 20, 'extra_apply_quantity' => 0, 'duration_days' => 30],
-            ['name' => 'Pro Growth', 'price' => 399, 'plan_scope' => 'professional_monthly', 'apply_limit_monthly' => 50, 'extra_apply_quantity' => 0, 'duration_days' => 30],
-            ['name' => 'Extra Apply Pack 10', 'price' => 99, 'plan_scope' => 'professional_extra', 'apply_limit_monthly' => 0, 'extra_apply_quantity' => 10, 'duration_days' => 30],
+            ['name' => 'Pro Starter', 'price' => 200, 'plan_scope' => 'professional_monthly', 'apply_limit_monthly' => 20, 'extra_apply_quantity' => 0, 'duration_days' => 30],
+            ['name' => 'Pro Growth', 'price' => 400, 'plan_scope' => 'professional_monthly', 'apply_limit_monthly' => 50, 'extra_apply_quantity' => 0, 'duration_days' => 30],
+            ['name' => 'Extra Apply Pack', 'price' => 100, 'plan_scope' => 'professional_extra', 'apply_limit_monthly' => 0, 'extra_apply_quantity' => 10, 'duration_days' => 30],
         ];
 
         foreach ($defaults as $row) {

@@ -45,8 +45,8 @@ class ChapaController extends Controller
                 $this->notificationService->send(
                     $userId,
                     'plan_purchase_success',
-                    'Plan activated',
-                    'Your professional monthly plan is now active: '.$plan->name,
+                    'Applies added',
+                    'Your professional plan added applies: '.$plan->name,
                     '/pro/dashboard?view=browse-jobs'
                 );
 

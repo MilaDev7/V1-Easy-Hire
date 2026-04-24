@@ -528,11 +528,11 @@ class ProfessionalController extends Controller
         return response()->json([
             'active_contracts' => $active,
             'completed_jobs' => $completed,
-            'remaining_apply' => $wallet['remaining_total'] ?? 0,
-            'monthly_limit' => $wallet['monthly_limit'] ?? ApplyCreditService::FREE_MONTHLY_LIMIT,
-            'monthly_remaining' => $wallet['monthly_remaining'] ?? 0,
-            'extra_remaining' => $wallet['extra_remaining'] ?? 0,
-            'period_end' => $wallet['period_end'] ?? null,
+            'remaining_apply' => $wallet['remaining_applies'] ?? ($wallet['remaining_total'] ?? 0),
+            'remaining_applies' => $wallet['remaining_applies'] ?? ($wallet['remaining_total'] ?? 0),
+            'monthly_limit' => $wallet['monthly_limit'] ?? 0,
+            'expiry_date' => $wallet['expiry_date'] ?? null,
+            'days_left' => $wallet['days_left'] ?? 0,
         ]);
     }
 
@@ -543,12 +543,12 @@ class ProfessionalController extends Controller
         return response()->json([
             'current_plan_id' => $wallet['current_plan_id'],
             'current_plan_name' => $wallet['current_plan_name'] ?? 'Free Plan',
-            'monthly_limit' => $wallet['monthly_limit'] ?? ApplyCreditService::FREE_MONTHLY_LIMIT,
-            'monthly_remaining' => $wallet['monthly_remaining'] ?? 0,
-            'extra_remaining' => $wallet['extra_remaining'] ?? 0,
+            'current_plan_duration_days' => $wallet['current_plan_duration_days'] ?? null,
+            'monthly_limit' => $wallet['monthly_limit'] ?? 0,
+            'remaining_applies' => $wallet['remaining_applies'] ?? ($wallet['remaining_total'] ?? 0),
             'remaining_total' => $wallet['remaining_total'] ?? 0,
-            'period_start' => $wallet['period_start'] ?? null,
-            'period_end' => $wallet['period_end'] ?? null,
+            'expiry_date' => $wallet['expiry_date'] ?? null,
+            'days_left' => $wallet['days_left'] ?? 0,
         ]);
     }
 

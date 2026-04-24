@@ -17,22 +17,13 @@ class ApplyCreditService
     /**
      * Default monthly apply limit for free professionals.
      */
-    public const FREE_MONTHLY_LIMIT = 5;
+    public const FREE_MONTHLY_LIMIT = 0;
 
     public function walletState(int $professionalId): array
     {
-        $wallet = $this->resetAndGetLockedWallet($professionalId);
+        $wallet = $this->getOrCreateLockedWallet($professionalId);
 
-        return [
-            'monthly_limit' => (int) $wallet->monthly_limit,
-            'monthly_remaining' => (int) $wallet->monthly_remaining,
-            'extra_remaining' => (int) $wallet->extra_remaining,
-            'remaining_total' => (int) $wallet->monthly_remaining + (int) $wallet->extra_remaining,
-            'period_start' => optional($wallet->period_start)->toDateString(),
-            'period_end' => optional($wallet->period_end)->toDateString(),
-            'current_plan_id' => $wallet->current_plan_id,
-            'current_plan_name' => $wallet->currentPlan?->name,
-        ];
+        return $this->stateFromWallet($wallet);
     }
 
     public function canApply(int $professionalId): bool
@@ -45,13 +36,10 @@ class ApplyCreditService
     public function consumeApply(int $professionalId): array
     {
         return DB::transaction(function () use ($professionalId) {
-            $wallet = $this->resetAndGetLockedWallet($professionalId);
+            $wallet = $this->getOrCreateLockedWallet($professionalId);
+            $this->expireWalletIfNeeded($wallet, now());
 
-            if ((int) $wallet->monthly_remaining > 0) {
-                $wallet->monthly_remaining = (int) $wallet->monthly_remaining - 1;
-            } elseif ((int) $wallet->extra_remaining > 0) {
-                $wallet->extra_remaining = (int) $wallet->extra_remaining - 1;
-            } else {
+            if ((int) $wallet->remaining_applies <= 0) {
                 return [
                     'success' => false,
                     'message' => 'Apply limit reached',
@@ -59,6 +47,7 @@ class ApplyCreditService
                 ];
             }
 
+            $wallet->remaining_applies = (int) $wallet->remaining_applies - 1;
             $wallet->save();
 
             return [
@@ -71,17 +60,15 @@ class ApplyCreditService
     public function activateMonthlyPlan(int $professionalId, Plan $plan): array
     {
         $planLimit = max((int) $plan->apply_limit_monthly, 0);
+        $durationDays = max((int) ($plan->duration_days ?? 30), 1);
 
-        return DB::transaction(function () use ($professionalId, $plan, $planLimit) {
-            $wallet = $this->resetAndGetLockedWallet($professionalId);
-
-            $oldLimit = max((int) $wallet->monthly_limit, 0);
-            $oldRemaining = max((int) $wallet->monthly_remaining, 0);
-            $alreadyUsed = max($oldLimit - $oldRemaining, 0);
+        return DB::transaction(function () use ($professionalId, $plan, $planLimit, $durationDays) {
+            $wallet = $this->getOrCreateLockedWallet($professionalId);
 
             $wallet->current_plan_id = $plan->id;
             $wallet->monthly_limit = $planLimit;
-            $wallet->monthly_remaining = max($planLimit - $alreadyUsed, 0);
+            $wallet->remaining_applies = $planLimit;
+            $wallet->expiry_date = now()->addDays($durationDays)->endOfDay();
             $wallet->save();
 
             return $this->stateFromWallet($wallet->fresh('currentPlan'));
@@ -93,8 +80,15 @@ class ApplyCreditService
         $safeQuantity = max($quantity, 0);
 
         return DB::transaction(function () use ($professionalId, $safeQuantity) {
-            $wallet = $this->resetAndGetLockedWallet($professionalId);
-            $wallet->extra_remaining = (int) $wallet->extra_remaining + $safeQuantity;
+            $wallet = $this->getOrCreateLockedWallet($professionalId);
+            $now = now();
+            $this->expireWalletIfNeeded($wallet, $now);
+
+            if (! $wallet->expiry_date || $now->greaterThan($wallet->expiry_date)) {
+                $wallet->expiry_date = $now->copy()->addDays(30)->endOfDay();
+            }
+
+            $wallet->remaining_applies = max((int) $wallet->remaining_applies, 0) + $safeQuantity;
             $wallet->save();
 
             return $this->stateFromWallet($wallet->fresh('currentPlan'));
@@ -104,32 +98,15 @@ class ApplyCreditService
     public function resetExpiredWallets(): int
     {
         $now = now();
-        $updated = 0;
 
-        ProfessionalApplyWallet::where('period_end', '<', $now)
-            ->orderBy('id')
-            ->chunkById(200, function ($wallets) use (&$updated) {
-                foreach ($wallets as $wallet) {
-                    $changed = DB::transaction(function () use ($wallet) {
-                        $locked = ProfessionalApplyWallet::where('id', $wallet->id)->lockForUpdate()->first();
-
-                        if (! $locked) {
-                            return false;
-                        }
-
-                        return $this->resetPeriodIfNeeded($locked, now());
-                    });
-
-                    if ($changed) {
-                        $updated++;
-                    }
-                }
-            });
-
-        return $updated;
+        return ProfessionalApplyWallet::query()
+            ->whereNotNull('expiry_date')
+            ->where('expiry_date', '<', $now)
+            ->where('remaining_applies', '>', 0)
+            ->update(['remaining_applies' => 0]);
     }
 
-    private function resetAndGetLockedWallet(int $professionalId): ProfessionalApplyWallet
+    private function getOrCreateLockedWallet(int $professionalId): ProfessionalApplyWallet
     {
         return DB::transaction(function () use ($professionalId) {
             $wallet = ProfessionalApplyWallet::where('user_id', $professionalId)
@@ -137,64 +114,68 @@ class ApplyCreditService
                 ->first();
 
             if (! $wallet) {
-                [$periodStart, $periodEnd] = $this->monthlyWindow(now());
-
                 $wallet = ProfessionalApplyWallet::create([
                     'user_id' => $professionalId,
                     'monthly_limit' => self::FREE_MONTHLY_LIMIT,
-                    'monthly_remaining' => self::FREE_MONTHLY_LIMIT,
-                    'extra_remaining' => 0,
-                    'period_start' => $periodStart,
-                    'period_end' => $periodEnd,
-                    'last_reset_at' => now(),
+                    'remaining_applies' => self::FREE_MONTHLY_LIMIT,
+                    'expiry_date' => null,
                 ]);
 
                 return $wallet->fresh('currentPlan');
             }
 
-            $this->resetPeriodIfNeeded($wallet, now());
+            if ((int) $wallet->remaining_applies < 0) {
+                $wallet->remaining_applies = 0;
+                $wallet->save();
+            }
+
+            // Legacy wallets may have applies without expiry; normalize once.
+            if ((int) $wallet->remaining_applies > 0 && ! $wallet->expiry_date) {
+                $wallet->expiry_date = now()->addDays(30)->endOfDay();
+                $wallet->save();
+            }
+
+            $this->expireWalletIfNeeded($wallet, now());
 
             return $wallet->fresh('currentPlan');
         });
     }
 
-    private function resetPeriodIfNeeded(ProfessionalApplyWallet $wallet, Carbon $now): bool
+    private function expireWalletIfNeeded(ProfessionalApplyWallet $wallet, Carbon $now): void
     {
-        $periodEnd = $wallet->period_end;
-
-        if (! $periodEnd || $now->greaterThan($periodEnd)) {
-            [$periodStart, $newPeriodEnd] = $this->monthlyWindow($now);
-            $wallet->period_start = $periodStart;
-            $wallet->period_end = $newPeriodEnd;
-            $wallet->monthly_remaining = (int) $wallet->monthly_limit;
-            $wallet->last_reset_at = $now;
-            $wallet->save();
-
-            return true;
+        if (! $wallet->expiry_date) {
+            return;
         }
 
-        return false;
-    }
-
-    private function monthlyWindow(Carbon $now): array
-    {
-        $start = $now->copy()->startOfMonth()->startOfDay();
-        $end = $now->copy()->endOfMonth()->endOfDay();
-
-        return [$start, $end];
+        if ($now->greaterThan($wallet->expiry_date) && (int) $wallet->remaining_applies > 0) {
+            $wallet->remaining_applies = 0;
+            $wallet->save();
+        }
     }
 
     private function stateFromWallet(ProfessionalApplyWallet $wallet): array
     {
+        $remainingApplies = max((int) ($wallet->remaining_applies ?? 0), 0);
+        $expiryDate = $wallet->expiry_date ? $wallet->expiry_date->toDateString() : null;
+        $daysLeft = 0;
+
+        if ($wallet->expiry_date && now()->lessThanOrEqualTo($wallet->expiry_date)) {
+            $daysLeft = max(now()->startOfDay()->diffInDays($wallet->expiry_date->copy()->startOfDay(), false), 0);
+        }
+
         return [
             'monthly_limit' => (int) $wallet->monthly_limit,
-            'monthly_remaining' => (int) $wallet->monthly_remaining,
-            'extra_remaining' => (int) $wallet->extra_remaining,
-            'remaining_total' => (int) $wallet->monthly_remaining + (int) $wallet->extra_remaining,
-            'period_start' => optional($wallet->period_start)->toDateString(),
-            'period_end' => optional($wallet->period_end)->toDateString(),
+            'remaining_applies' => $remainingApplies,
+            'monthly_remaining' => 0,
+            'extra_remaining' => 0,
+            'remaining_total' => $remainingApplies,
+            'period_start' => null,
+            'period_end' => $expiryDate,
+            'expiry_date' => $expiryDate,
+            'days_left' => $daysLeft,
             'current_plan_id' => $wallet->current_plan_id,
             'current_plan_name' => $wallet->currentPlan?->name,
+            'current_plan_duration_days' => $wallet->currentPlan?->duration_days ? (int) $wallet->currentPlan->duration_days : null,
         ];
     }
 }
