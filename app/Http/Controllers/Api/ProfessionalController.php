@@ -6,11 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Models\Application;
 use App\Models\Contract;
 use App\Models\JobPost;
+use App\Models\Plan;
 use App\Models\Professional;
 use App\Models\ProfessionalPortfolioItem;
 use App\Models\Report;
 use App\Models\Review;
 use App\Services\ApplyCreditService;
+use App\Services\Chapa;
 use Illuminate\Http\Request;
 
 class ProfessionalController extends Controller
@@ -345,10 +347,6 @@ class ProfessionalController extends Controller
             return response()->json(['message' => 'Already applied'], 400);
         }
 
-        if ($this->applyCreditService->usedApplyCredits($userId) >= ApplyCreditService::MAX_APPLY_CREDITS) {
-            return response()->json(['message' => 'Apply limit reached'], 400);
-        }
-
         $professional = Professional::where('user_id', $userId)->first();
 
         if (! $professional) {
@@ -372,6 +370,11 @@ class ProfessionalController extends Controller
 
         if (! str_contains(strtolower($professional->skill), strtolower($job->skill))) {
             return response()->json(['message' => 'Skill mismatch'], 403);
+        }
+
+        $consumeResult = $this->applyCreditService->consumeApply($userId);
+        if (! ($consumeResult['success'] ?? false)) {
+            return response()->json(['message' => 'Apply limit reached'], 400);
         }
 
         Application::create([
@@ -506,15 +509,106 @@ class ProfessionalController extends Controller
             ->where('status', 'completed')
             ->count();
 
-        $remainingApply = max(
-            ApplyCreditService::MAX_APPLY_CREDITS - $this->applyCreditService->usedApplyCredits($userId),
-            0
-        );
+        $wallet = $this->applyCreditService->walletState($userId);
 
         return response()->json([
             'active_contracts' => $active,
             'completed_jobs' => $completed,
-            'remaining_apply' => $remainingApply,
+            'remaining_apply' => $wallet['remaining_total'] ?? 0,
+            'monthly_limit' => $wallet['monthly_limit'] ?? ApplyCreditService::FREE_MONTHLY_LIMIT,
+            'monthly_remaining' => $wallet['monthly_remaining'] ?? 0,
+            'extra_remaining' => $wallet['extra_remaining'] ?? 0,
+            'period_end' => $wallet['period_end'] ?? null,
+        ]);
+    }
+
+    public function applyPlanSummary()
+    {
+        $wallet = $this->applyCreditService->walletState(auth()->id());
+
+        return response()->json([
+            'current_plan_id' => $wallet['current_plan_id'],
+            'current_plan_name' => $wallet['current_plan_name'] ?? 'Free Plan',
+            'monthly_limit' => $wallet['monthly_limit'] ?? ApplyCreditService::FREE_MONTHLY_LIMIT,
+            'monthly_remaining' => $wallet['monthly_remaining'] ?? 0,
+            'extra_remaining' => $wallet['extra_remaining'] ?? 0,
+            'remaining_total' => $wallet['remaining_total'] ?? 0,
+            'period_start' => $wallet['period_start'] ?? null,
+            'period_end' => $wallet['period_end'] ?? null,
+        ]);
+    }
+
+    public function applyPlans()
+    {
+        $plans = Plan::query()
+            ->where('is_active', true)
+            ->whereIn('plan_scope', ['professional_monthly', 'professional_extra'])
+            ->where(function ($query) {
+                $query->where('plan_scope', '!=', 'professional_extra')
+                    ->orWhere('name', '!=', 'Extra Apply Pack 25');
+            })
+            ->orderBy('price')
+            ->get()
+            ->map(function (Plan $plan) {
+                return [
+                    'id' => $plan->id,
+                    'name' => $plan->name,
+                    'price' => (float) $plan->price,
+                    'plan_scope' => $plan->plan_scope,
+                    'apply_limit_monthly' => (int) $plan->apply_limit_monthly,
+                    'extra_apply_quantity' => (int) $plan->extra_apply_quantity,
+                    'duration_days' => (int) ($plan->duration_days ?? 30),
+                ];
+            });
+
+        return response()->json(['data' => $plans]);
+    }
+
+    public function buyApplyPlan(Request $request, $id)
+    {
+        $user = auth()->user();
+        $plan = Plan::where('id', $id)
+            ->where('is_active', true)
+            ->whereIn('plan_scope', ['professional_monthly', 'professional_extra'])
+            ->first();
+
+        if (! $plan) {
+            return response()->json(['message' => 'Plan not found'], 404);
+        }
+
+        $namePrefix = strtolower(trim((string) $user->name));
+        $namePrefix = preg_replace('/[^a-z0-9]+/', '_', $namePrefix);
+        $namePrefix = trim((string) $namePrefix, '_');
+        if ($namePrefix === '') {
+            $namePrefix = 'user_'.$user->id;
+        }
+
+        $txRef = Chapa::generateReference($namePrefix);
+        $chapa = new Chapa;
+
+        $response = $chapa->initializePayment([
+            'amount' => $plan->price,
+            'currency' => 'ETB',
+            'email' => $user->email,
+            'first_name' => $user->name,
+            'tx_ref' => $txRef,
+            'callback_url' => url('/api/chapa/payment-success'),
+            'return_url' => url('/payment-success?tx_ref='.$txRef),
+            'meta' => [
+                'plan_id' => $plan->id,
+                'user_id' => $user->id,
+            ],
+        ]);
+
+        if (! is_array($response) || ($response['status'] ?? null) !== 'success') {
+            return response()->json([
+                'message' => $response['message'] ?? 'Payment initialization failed',
+            ], 500);
+        }
+
+        return response()->json([
+            'redirect_url' => $response['data']['checkout_url'] ?? null,
+            'tx_ref' => $txRef,
         ]);
     }
 }

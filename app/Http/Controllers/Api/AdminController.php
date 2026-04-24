@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Schema;
 
 class AdminController extends Controller
 {
@@ -385,12 +386,42 @@ class AdminController extends Controller
         $request->validate([
             'name' => 'required|string',
             'price' => 'required|numeric',
-            'job_posts_limit' => 'required|integer',
-            'direct_requests_limit' => 'nullable|integer|min=0',
-            'duration_days' => 'required|integer|min=1',
+            'plan_scope' => 'nullable|in:client,professional_monthly,professional_extra',
+            'job_posts_limit' => 'nullable|integer|min:0',
+            'direct_requests_limit' => 'nullable|integer|min:0',
+            'duration_days' => 'nullable|integer|min:1',
+            'apply_limit_monthly' => 'nullable|integer|min:0',
+            'extra_apply_quantity' => 'nullable|integer|min:0',
+            'is_active' => 'nullable|boolean',
         ]);
 
-        $plan = \App\Models\Plan::create($request->all());
+        $data = $request->all();
+        $scope = $data['plan_scope'] ?? 'client';
+        $data['plan_scope'] = $scope;
+
+        if ($scope === 'professional_monthly') {
+            $data['job_posts_limit'] = 0;
+            $data['direct_requests_limit'] = 0;
+            $data['apply_limit_monthly'] = max((int) ($data['apply_limit_monthly'] ?? 0), 0);
+            $data['extra_apply_quantity'] = 0;
+            $data['duration_days'] = max((int) ($data['duration_days'] ?? 30), 1);
+        } elseif ($scope === 'professional_extra') {
+            $data['job_posts_limit'] = 0;
+            $data['direct_requests_limit'] = 0;
+            $data['apply_limit_monthly'] = 0;
+            $data['extra_apply_quantity'] = max((int) ($data['extra_apply_quantity'] ?? 0), 0);
+            $data['duration_days'] = max((int) ($data['duration_days'] ?? 30), 1);
+        } else {
+            $data['job_posts_limit'] = max((int) ($data['job_posts_limit'] ?? 0), 0);
+            $data['direct_requests_limit'] = max((int) ($data['direct_requests_limit'] ?? 0), 0);
+            $data['apply_limit_monthly'] = 0;
+            $data['extra_apply_quantity'] = 0;
+            $data['duration_days'] = max((int) ($data['duration_days'] ?? 30), 1);
+        }
+
+        $data['is_active'] = array_key_exists('is_active', $data) ? (bool) $data['is_active'] : true;
+
+        $plan = \App\Models\Plan::create($data);
 
         return response()->json([
             'message' => 'Plan created',
@@ -399,11 +430,79 @@ class AdminController extends Controller
     }
 
     // View plan
-    public function plans()
+    public function publicPlans()
     {
-        $plans = \App\Models\Plan::all();
+        $plans = \App\Models\Plan::query()
+            ->where('is_active', true)
+            ->where('plan_scope', 'client')
+            ->get();
 
         return response()->json($plans);
+    }
+
+    // View plan (admin)
+    public function plans()
+    {
+        $plans = \App\Models\Plan::query()
+            ->where(function ($query) {
+                $query->whereNull('plan_scope')
+                    ->orWhere('plan_scope', '!=', 'professional_extra')
+                    ->orWhere('name', '!=', 'Extra Apply Pack 25');
+            })
+            ->get();
+
+        return response()->json($plans);
+    }
+
+    public function seedProfessionalPlans()
+    {
+        $requiredColumns = ['plan_scope', 'apply_limit_monthly', 'extra_apply_quantity', 'is_active'];
+
+        foreach ($requiredColumns as $column) {
+            if (! Schema::hasColumn('plans', $column)) {
+                return response()->json([
+                    'message' => "Missing '{$column}' on plans table. Please run php artisan migrate first.",
+                ], 400);
+            }
+        }
+
+        $now = now();
+        $defaults = [
+            ['name' => 'Pro Starter', 'price' => 199, 'plan_scope' => 'professional_monthly', 'apply_limit_monthly' => 20, 'extra_apply_quantity' => 0, 'duration_days' => 30],
+            ['name' => 'Pro Growth', 'price' => 399, 'plan_scope' => 'professional_monthly', 'apply_limit_monthly' => 50, 'extra_apply_quantity' => 0, 'duration_days' => 30],
+            ['name' => 'Extra Apply Pack 10', 'price' => 99, 'plan_scope' => 'professional_extra', 'apply_limit_monthly' => 0, 'extra_apply_quantity' => 10, 'duration_days' => 30],
+        ];
+
+        foreach ($defaults as $row) {
+            $exists = \App\Models\Plan::query()
+                ->where('name', $row['name'])
+                ->where('plan_scope', $row['plan_scope'])
+                ->exists();
+
+            if (! $exists) {
+                \App\Models\Plan::create([
+                    'name' => $row['name'],
+                    'price' => $row['price'],
+                    'plan_scope' => $row['plan_scope'],
+                    'job_posts_limit' => 0,
+                    'direct_requests_limit' => 0,
+                    'duration_days' => $row['duration_days'],
+                    'apply_limit_monthly' => $row['apply_limit_monthly'],
+                    'extra_apply_quantity' => $row['extra_apply_quantity'],
+                    'is_active' => true,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ]);
+            }
+        }
+
+        // Keep only 3 default professional variations.
+        \App\Models\Plan::query()
+            ->where('name', 'Extra Apply Pack 25')
+            ->where('plan_scope', 'professional_extra')
+            ->delete();
+
+        return response()->json(['message' => 'Professional plans added successfully.']);
     }
 
     // Updata plan
@@ -411,7 +510,47 @@ class AdminController extends Controller
     {
         $plan = \App\Models\Plan::findOrFail($id);
 
-        $plan->update($request->all());
+        $request->validate([
+            'name' => 'sometimes|string',
+            'price' => 'sometimes|numeric',
+            'plan_scope' => 'sometimes|in:client,professional_monthly,professional_extra',
+            'job_posts_limit' => 'sometimes|integer|min:0',
+            'direct_requests_limit' => 'sometimes|integer|min:0',
+            'duration_days' => 'sometimes|integer|min:1',
+            'apply_limit_monthly' => 'sometimes|integer|min:0',
+            'extra_apply_quantity' => 'sometimes|integer|min:0',
+            'is_active' => 'sometimes|boolean',
+        ]);
+
+        $data = $request->all();
+        $scope = $data['plan_scope'] ?? $plan->plan_scope ?? 'client';
+        $data['plan_scope'] = $scope;
+
+        if ($scope === 'professional_monthly') {
+            $data['job_posts_limit'] = 0;
+            $data['direct_requests_limit'] = 0;
+            $data['apply_limit_monthly'] = max((int) ($data['apply_limit_monthly'] ?? $plan->apply_limit_monthly ?? 0), 0);
+            $data['extra_apply_quantity'] = 0;
+            $data['duration_days'] = max((int) ($data['duration_days'] ?? $plan->duration_days ?? 30), 1);
+        } elseif ($scope === 'professional_extra') {
+            $data['job_posts_limit'] = 0;
+            $data['direct_requests_limit'] = 0;
+            $data['apply_limit_monthly'] = 0;
+            $data['extra_apply_quantity'] = max((int) ($data['extra_apply_quantity'] ?? $plan->extra_apply_quantity ?? 0), 0);
+            $data['duration_days'] = max((int) ($data['duration_days'] ?? $plan->duration_days ?? 30), 1);
+        } else {
+            $data['job_posts_limit'] = max((int) ($data['job_posts_limit'] ?? $plan->job_posts_limit ?? 0), 0);
+            $data['direct_requests_limit'] = max((int) ($data['direct_requests_limit'] ?? $plan->direct_requests_limit ?? 0), 0);
+            $data['apply_limit_monthly'] = 0;
+            $data['extra_apply_quantity'] = 0;
+            $data['duration_days'] = max((int) ($data['duration_days'] ?? $plan->duration_days ?? 30), 1);
+        }
+
+        if (array_key_exists('is_active', $data)) {
+            $data['is_active'] = (bool) $data['is_active'];
+        }
+
+        $plan->update($data);
 
         return response()->json([
             'message' => 'Plan updated',

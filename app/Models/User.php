@@ -63,4 +63,9 @@ public function subscription()
 {
     return $this->hasOne(Subscription::class);
 }
+
+public function professionalApplyWallet()
+{
+    return $this->hasOne(ProfessionalApplyWallet::class);
+}
 }

@@ -28,7 +28,7 @@
                     <p class="text-muted text-uppercase small mb-2 fw-bold">Remaining Applies</p>
                     <div class="d-flex align-items-end justify-content-center">
                         <h2 class="mb-0 fw-bold" id="pro-remaining-applies-count">Loading...</h2>
-                        <span class="badge text-bg-light border ms-2">Max 5</span>
+                        <span class="badge text-bg-light border ms-2" id="pro-apply-limit-badge">Monthly</span>
                     </div>
                 </div>
             </div>

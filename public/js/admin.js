@@ -1606,25 +1606,86 @@ function loadPlans() {
         });
 }
 
-function renderPlansTable(plans) {
-    const area = document.getElementById('plans-table-area');
-    if (!area) return;
+function seedProfessionalPlans() {
+    postJson('/api/admin/plans/seed-professional', {})
+        .then((payload) => {
+            alert(payload?.message || 'Professional plans added.');
+            loadPlans();
+        })
+        .catch((error) => {
+            alert(error?.message || 'Unable to add professional plans.');
+        });
+}
 
-    if (!plans.length) {
-        area.innerHTML = '<div class="alert alert-light border mb-0">No plans found.</div>';
+let adminPlansCache = [];
+let adminPlanViewFilter = 'client';
+
+function getPlanScopeLabel(scope) {
+    if (scope === 'professional_monthly') return 'Pro Monthly';
+    if (scope === 'professional_extra') return 'Pro Extra';
+    return 'Client';
+}
+
+function syncPlanScopeFields() {
+    const scope = document.getElementById('plan-scope')?.value || 'client';
+
+    const clientJobWrap = document.getElementById('plan-job-limit-wrap');
+    const clientDurationWrap = document.getElementById('plan-duration-wrap');
+    const clientRequestWrap = document.getElementById('plan-direct-requests-wrap');
+    const monthlyWrap = document.getElementById('plan-apply-monthly-wrap');
+    const extraWrap = document.getElementById('plan-extra-apply-wrap');
+
+    if (!clientJobWrap || !clientDurationWrap || !clientRequestWrap || !monthlyWrap || !extraWrap) {
         return;
     }
 
-    const rows = plans.map(plan => `
+    const isClient = scope === 'client';
+    const isProMonthly = scope === 'professional_monthly';
+    const isProExtra = scope === 'professional_extra';
+
+    clientJobWrap.classList.toggle('d-none', !isClient);
+    clientRequestWrap.classList.toggle('d-none', !isClient);
+    clientDurationWrap.classList.remove('d-none');
+    monthlyWrap.classList.toggle('d-none', !isProMonthly);
+    extraWrap.classList.toggle('d-none', !isProExtra);
+}
+
+function renderPlansTable(plans) {
+    const area = document.getElementById('plans-table-area');
+    if (!area) return;
+    adminPlansCache = plans;
+    const selected = (document.getElementById('admin-plan-view')?.value || adminPlanViewFilter || 'client');
+    adminPlanViewFilter = selected;
+
+    const filteredPlans = plans.filter((plan) => {
+        const scope = plan.plan_scope || 'client';
+        const isPro = scope === 'professional_monthly' || scope === 'professional_extra';
+
+        if (selected === 'professional') return isPro;
+        if (selected === 'client') return !isPro;
+        return true;
+    });
+
+    if (!filteredPlans.length) {
+        area.innerHTML = '<div class="alert alert-light border mb-0">No plans found for selected type.</div>';
+        return;
+    }
+
+    const rows = filteredPlans.map(plan => `
         <tr data-plan-id="${plan.id}">
             <td class="fw-semibold">${plan.name || 'N/A'}</td>
-            <td><span class="badge bg-success px-3 py-2">$${plan.price ?? 0}</span></td>
-            <td><span class="badge bg-warning text-dark px-3 py-2">${plan.job_posts_limit ?? 0} posts</span></td>
-            <td><span class="badge ${plan.direct_requests_limit > 0 ? 'bg-primary' : 'bg-secondary'} px-3 py-2">${plan.direct_requests_limit ?? 0} requests</span></td>
+            <td><span class="badge bg-dark px-3 py-2">${getPlanScopeLabel(plan.plan_scope)}</span></td>
+            <td><span class="badge bg-success px-3 py-2">Br${plan.price ?? 0}</span></td>
+            <td>
+                <span class="badge bg-warning text-dark px-3 py-2">${plan.job_posts_limit ?? 0} posts</span>
+                <span class="badge ${plan.direct_requests_limit > 0 ? 'bg-primary' : 'bg-secondary'} px-3 py-2">${plan.direct_requests_limit ?? 0} requests</span>
+                ${plan.apply_limit_monthly > 0 ? `<span class="badge bg-success px-3 py-2">${plan.apply_limit_monthly} applies/mo</span>` : ''}
+                ${plan.extra_apply_quantity > 0 ? `<span class="badge bg-info px-3 py-2">${plan.extra_apply_quantity} extra applies</span>` : ''}
+            </td>
             <td><span class="badge bg-info px-3 py-2">${plan.duration_days ?? 0} days</span></td>
             <td>
                 <div class="d-flex gap-2">
-                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="showEditPlanModal(${plan.id}, '${plan.name}', ${plan.price}, ${plan.job_posts_limit}, ${plan.duration_days}, ${plan.direct_requests_limit || 0})">
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="showEditPlanModal(${plan.id})">
                         <i class="fa-solid fa-edit me-1"></i>Edit
                     </button>
                     <button type="button" class="btn btn-sm btn-outline-danger" onclick="showDeletePlanModal(${plan.id})">
@@ -1641,9 +1702,9 @@ function renderPlansTable(plans) {
                 <thead class="table-light">
                     <tr>
                         <th scope="col">Name</th>
+                        <th scope="col">Type</th>
                         <th scope="col">Price</th>
-                        <th scope="col">Job Posts</th>
-                        <th scope="col">Direct Requests</th>
+                        <th scope="col">Limits</th>
                         <th scope="col">Duration</th>
                         <th scope="col">Actions</th>
                     </tr>
@@ -1662,45 +1723,84 @@ function renderPlansTableError() {
 function showCreatePlanModal() {
     document.getElementById('plan-id').value = '';
     document.getElementById('plan-name').value = '';
+    document.getElementById('plan-scope').value = 'client';
     document.getElementById('plan-price').value = '';
     document.getElementById('plan-job-limit').value = '';
     document.getElementById('plan-duration').value = '';
     document.getElementById('plan-direct-requests').value = '0';
+    document.getElementById('plan-apply-monthly').value = '';
+    document.getElementById('plan-extra-apply').value = '';
     document.getElementById('plan-modal-title').innerHTML = '<i class="fa-solid fa-layer-group me-2"></i>Create Plan';
+    syncPlanScopeFields();
     new bootstrap.Modal(document.getElementById('plan-modal')).show();
 }
 
-function showEditPlanModal(id, name, price, jobLimit, duration, directRequests) {
-    document.getElementById('plan-id').value = id;
-    document.getElementById('plan-name').value = name;
-    document.getElementById('plan-price').value = price;
-    document.getElementById('plan-job-limit').value = jobLimit;
-    document.getElementById('plan-duration').value = duration;
-    document.getElementById('plan-direct-requests').value = directRequests || 0;
+function showEditPlanModal(id) {
+    const plan = adminPlansCache.find((item) => String(item.id) === String(id));
+    if (!plan) return;
+
+    document.getElementById('plan-id').value = plan.id;
+    document.getElementById('plan-name').value = plan.name || '';
+    document.getElementById('plan-scope').value = plan.plan_scope || 'client';
+    document.getElementById('plan-price').value = plan.price ?? '';
+    document.getElementById('plan-job-limit').value = plan.job_posts_limit ?? 0;
+    document.getElementById('plan-duration').value = plan.duration_days ?? 30;
+    document.getElementById('plan-direct-requests').value = plan.direct_requests_limit ?? 0;
+    document.getElementById('plan-apply-monthly').value = plan.apply_limit_monthly ?? 0;
+    document.getElementById('plan-extra-apply').value = plan.extra_apply_quantity ?? 0;
     document.getElementById('plan-modal-title').innerHTML = '<i class="fa-solid fa-edit me-2"></i>Edit Plan';
+    syncPlanScopeFields();
     new bootstrap.Modal(document.getElementById('plan-modal')).show();
 }
 
 function savePlan() {
     const id = document.getElementById('plan-id').value;
     const name = document.getElementById('plan-name').value;
+    const plan_scope = document.getElementById('plan-scope').value;
     const price = parseFloat(document.getElementById('plan-price').value);
-    const job_posts_limit = parseInt(document.getElementById('plan-job-limit').value);
-    const duration_days = parseInt(document.getElementById('plan-duration').value);
+    const duration_days = parseInt(document.getElementById('plan-duration').value) || 30;
+    const job_posts_limit = parseInt(document.getElementById('plan-job-limit').value) || 0;
     const direct_requests_limit = parseInt(document.getElementById('plan-direct-requests').value) || 0;
+    const apply_limit_monthly = parseInt(document.getElementById('plan-apply-monthly').value) || 0;
+    const extra_apply_quantity = parseInt(document.getElementById('plan-extra-apply').value) || 0;
 
-    if (!name || !price || !job_posts_limit || !duration_days) {
+    if (!name || Number.isNaN(price) || price < 0) {
         alert('Please fill all fields');
+        return;
+    }
+
+    if (plan_scope === 'client' && (job_posts_limit <= 0 || duration_days <= 0)) {
+        alert('Client plan requires Job Posts limit and Duration.');
+        return;
+    }
+
+    if (plan_scope === 'professional_monthly' && apply_limit_monthly <= 0) {
+        alert('Professional monthly plan requires Apply limit per month.');
+        return;
+    }
+
+    if (plan_scope === 'professional_extra' && extra_apply_quantity <= 0) {
+        alert('Professional extra plan requires Extra applies quantity.');
         return;
     }
 
     const url = id ? `/api/admin/plans/${id}` : '/api/admin/plans';
     const method = id ? 'PUT' : 'POST';
+    const payload = {
+        name,
+        price,
+        plan_scope,
+        duration_days,
+        job_posts_limit,
+        direct_requests_limit,
+        apply_limit_monthly,
+        extra_apply_quantity,
+    };
 
     fetch(url, {
         method: method,
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('token') },
-        body: JSON.stringify({ name, price, job_posts_limit, duration_days, direct_requests_limit })
+        body: JSON.stringify(payload)
     })
     .then(res => res.json())
     .then(data => {
@@ -1738,6 +1838,19 @@ function confirmDeletePlan() {
     // Admin dashboard entrypoint (called after DOM is ready).
     function init() {
         setAdminDashboardLoading(true);
+        const planViewSelect = document.getElementById('admin-plan-view');
+        if (planViewSelect) {
+            planViewSelect.value = adminPlanViewFilter;
+            planViewSelect.addEventListener('change', function () {
+                adminPlanViewFilter = this.value || 'client';
+                renderPlansTable(adminPlansCache);
+            });
+        }
+        const planScopeSelect = document.getElementById('plan-scope');
+        if (planScopeSelect) {
+            planScopeSelect.addEventListener('change', syncPlanScopeFields);
+            syncPlanScopeFields();
+        }
         initializeAdminSidebar();
         loadAdminDarkModePreference();
         Promise.allSettled([
@@ -1779,6 +1892,7 @@ function confirmDeletePlan() {
     window.viewReport = viewReport;
     window.openResolveModal = openResolveModal;
     window.loadPlans = loadPlans;
+    window.seedProfessionalPlans = seedProfessionalPlans;
     window.showCreatePlanModal = showCreatePlanModal;
     window.showEditPlanModal = showEditPlanModal;
     window.savePlan = savePlan;

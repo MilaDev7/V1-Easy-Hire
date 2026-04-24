@@ -26,13 +26,6 @@ class ApplicationController extends Controller
 
         // ✅ 1. check approval (you already have probably)
 
-        // Enforce fixed apply-credit budget.
-        if ($this->applyCreditService->usedApplyCredits($user->id) >= ApplyCreditService::MAX_APPLY_CREDITS) {
-            return response()->json([
-                'message' => 'Apply credit limit reached',
-            ], 403);
-        }
-
         // 1. Count only ACTIVE accepted jobs
         // We check applications where status is 'accepted'
         // AND the linked job status is NOT 'completed' and NOT 'cancelled'
@@ -109,6 +102,13 @@ class ApplicationController extends Controller
         $request->validate([
             'cover_letter' => 'required|string|min:20',
         ]);
+
+        $consumeResult = $this->applyCreditService->consumeApply($user->id);
+        if (! ($consumeResult['success'] ?? false)) {
+            return response()->json([
+                'message' => 'Apply credit limit reached',
+            ], 403);
+        }
 
         // 8. Create the Application
         $application = Application::create([

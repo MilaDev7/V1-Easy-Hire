@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Plan;
 use App\Models\Subscription;
+use App\Services\ApplyCreditService;
 use App\Services\Chapa;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -12,6 +13,8 @@ use Illuminate\Support\Facades\Log;
 
 class ChapaController extends Controller
 {
+    public function __construct(private ApplyCreditService $applyCreditService) {}
+
     /**
      * Apply subscription credit exactly once per tx_ref.
      */
@@ -33,6 +36,18 @@ class ChapaController extends Controller
             }
 
             $plan = Plan::findOrFail($planId);
+            if ($plan->plan_scope === 'professional_monthly') {
+                $this->applyCreditService->activateMonthlyPlan($userId, $plan);
+
+                return ['already_processed' => false];
+            }
+
+            if ($plan->plan_scope === 'professional_extra') {
+                $this->applyCreditService->addExtraApplies($userId, (int) $plan->extra_apply_quantity);
+
+                return ['already_processed' => false];
+            }
+
             $subscription = Subscription::where('user_id', $userId)->lockForUpdate()->first();
 
             if ($subscription) {

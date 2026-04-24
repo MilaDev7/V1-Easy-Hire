@@ -79,6 +79,7 @@ function getProfessionalContentArea() {
 
 let professionalJobsMode = "recommended";
 let professionalJobsCache = [];
+let professionalApplyPlanLoading = false;
 
 function setProfessionalJobsTabState() {
     const recommendedTab = document.getElementById("pro-jobs-tab-recommended");
@@ -671,11 +672,149 @@ function loadProfessionalStats() {
             setText("pro-active-contracts-count", payload.active_contracts ?? 0);
             setText("pro-completed-jobs-count", payload.completed_jobs ?? 0);
             setText("pro-remaining-applies-count", payload.remaining_apply ?? 0);
+            setText("pro-apply-limit-badge", `Monthly ${payload.monthly_limit ?? 0}`);
         })
         .catch(() => {
             setText("pro-active-contracts-count", "--");
             setText("pro-completed-jobs-count", "--");
             setText("pro-remaining-applies-count", "--");
+            setText("pro-apply-limit-badge", "Monthly --");
+        });
+}
+
+function setApplyPlanFeedback(type, message) {
+    const feedback = document.getElementById("pro-apply-plan-feedback");
+    if (!feedback) {
+        return;
+    }
+
+    feedback.classList.remove("d-none");
+    feedback.innerHTML = `<div class="alert alert-${type} mb-0">${message}</div>`;
+}
+
+function renderApplyPlans(containerId, items) {
+    const container = document.getElementById(containerId);
+    if (!container) {
+        return;
+    }
+
+    if (!items.length) {
+        container.innerHTML = '<div class="col-12 text-center text-white-50 py-3">No professional plans configured yet. Ask admin to add Pro plans.</div>';
+        return;
+    }
+
+    container.innerHTML = items
+        .map((plan, index) => {
+            const isPopular = index === 1;
+            const bgStyle = isPopular
+                ? "background: rgba(138, 219, 174, 0.20); box-shadow: 0 8px 22px rgba(7, 19, 16, 0.14);"
+                : "background: rgba(255, 255, 255, 0.12);";
+            const planColor = isPopular ? "#effff4" : "#c8f0d6";
+            const popularBadge = isPopular
+                ? '<span class="small fw-bold px-2 py-1 rounded-pill" style="background: #e5f8ec; color: #1b4037;">Popular</span>'
+                : "";
+            const isMonthly = plan.plan_scope === "professional_monthly";
+            const lineOne = isMonthly
+                ? `${plan.apply_limit_monthly || 0} Applies / Month`
+                : `${plan.extra_apply_quantity || 0} Extra Applies`;
+            const lineTwo = isMonthly ? "Monthly Plan" : "One-time Extra Pack";
+
+            return `
+                <div class="col-12 col-md-4">
+                    <div class="card border-0 rounded-4 h-100" style="${bgStyle}">
+                        <div class="card-body p-3">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <h6 class="fw-bold text-uppercase mb-0" style="color: ${planColor}; letter-spacing: 0.08em;">${plan.name || "Plan"}</h6>
+                                ${popularBadge}
+                            </div>
+                            <h3 class="fw-bold text-white mb-0">Br${plan.price || 0}</h3>
+                            <div class="d-flex align-items-center justify-content-between mt-1">
+                                <p class="mb-0 small" style="color: rgba(255, 255, 255, 0.78);">${lineOne}</p>
+                            </div>
+                            <div class="d-flex align-items-center justify-content-between mt-1">
+                                <p class="mb-0 small" style="color: rgba(255, 255, 255, 0.78);">${lineTwo}</p>
+                            </div>
+                            <div class="d-flex align-items-center justify-content-between mt-1">
+                                <span></span>
+                                <button type="button" class="btn btn-light btn-sm rounded-pill fw-semibold px-3 py-1 pro-buy-apply-plan-btn" data-plan-id="${plan.id}">
+                                    Buy Now
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        })
+        .join("");
+}
+
+function bindApplyPlanBuyButtons() {
+    document.querySelectorAll(".pro-buy-apply-plan-btn").forEach((button) => {
+        button.addEventListener("click", function () {
+            const planId = Number(button.dataset.planId);
+            if (!Number.isInteger(planId) || planId <= 0 || professionalApplyPlanLoading) {
+                return;
+            }
+
+            const originalText = button.innerHTML;
+            professionalApplyPlanLoading = true;
+            button.disabled = true;
+            button.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>...';
+
+            postJson(`/api/pro/apply-plans/${planId}/buy`, {})
+                .then((payload) => {
+                    if (payload?.redirect_url) {
+                        window.location.href = payload.redirect_url;
+                        return;
+                    }
+
+                    setApplyPlanFeedback("warning", "Payment link was not returned.");
+                })
+                .catch((error) => {
+                    setApplyPlanFeedback("danger", error?.message || "Unable to start payment.");
+                })
+                .finally(() => {
+                    professionalApplyPlanLoading = false;
+                    button.disabled = false;
+                    button.innerHTML = originalText;
+                });
+        });
+    });
+}
+
+function loadProfessionalApplyPlan() {
+    const summary = document.getElementById("pro-apply-plan-summary");
+    const current = document.getElementById("pro-apply-plan-current");
+    const plansWrap = document.getElementById("pro-plans-container");
+
+    if (!summary || !current || !plansWrap) {
+        return Promise.resolve();
+    }
+
+    summary.textContent = "Loading apply plan...";
+    plansWrap.innerHTML = '<div class="col-12 text-center text-white-50 py-3">Loading plans...</div>';
+
+    return Promise.all([fetchJson("/api/pro/apply-plan"), fetchJson("/api/pro/apply-plans")])
+        .then(([state, plansPayload]) => {
+            const plans = toArray(plansPayload?.data);
+            const sortedPlans = plans.sort((a, b) => Number(a.price || 0) - Number(b.price || 0));
+
+            current.textContent = state.current_plan_name || "Free Plan";
+            summary.innerHTML = `
+                <div class="small">
+                    <strong>Remaining:</strong> ${state.remaining_total ?? 0}
+                    (${state.monthly_remaining ?? 0} monthly + ${state.extra_remaining ?? 0} extra)
+                    <span class="ms-2"><strong>Reset:</strong> ${state.period_end || "N/A"}</span>
+                </div>
+            `;
+
+            renderApplyPlans("pro-plans-container", sortedPlans);
+            bindApplyPlanBuyButtons();
+        })
+        .catch(() => {
+            current.textContent = "Unavailable";
+            summary.innerHTML = '<div class="small text-warning">Unable to load apply plan status.</div>';
+            plansWrap.innerHTML = '<div class="col-12 text-center text-white-50 py-3">Unavailable.</div>';
         });
 }
 
@@ -887,6 +1026,7 @@ function bindProfessionalApplicationActions() {
 
                     showProfessionalFeedback("success", "Application withdrawn successfully.");
                     loadProfessionalStats();
+                    loadProfessionalApplyPlan();
 
                     if (typeof loadProfessionalJobs === "function") {
                         loadProfessionalJobs();
@@ -1135,6 +1275,7 @@ function bindProfessionalContractActions() {
 
                     showProfessionalFeedback("success", "Contract marked as pending completion.");
                     loadProfessionalStats();
+                    loadProfessionalApplyPlan();
                 })
                 .catch((error) => {
                     button.disabled = false;
@@ -1742,6 +1883,7 @@ window.acceptDirectRequest = function(id, title, clientName, budget) {
                 }
                 loadDirectRequests();
                 loadProfessionalStats();
+                loadProfessionalApplyPlan();
             })
             .catch((err) => {
                 const messageEl = document.getElementById('action-modal-message');
@@ -2190,6 +2332,7 @@ function initializeProfessionalDashboard() {
     Promise.allSettled([
         loadProfessionalStats(),
         loadProfessionalJobsView(),
+        loadProfessionalApplyPlan(),
         loadProfessionalIdentity(),
     ]).finally(() => {
         setProfessionalDashboardLoading(false);
@@ -2248,6 +2391,7 @@ if (coverLetterForm && submitBtn) {
                 
                 showProfessionalFeedback("success", "Application submitted successfully.");
                 loadProfessionalStats();
+                loadProfessionalApplyPlan();
                 window.pendingApplyJobId = null;
                 window.pendingApplyButton = null;
             })

@@ -18,7 +18,7 @@
 
         .professional-dashboard-shell {
             min-height: 100vh;
-            padding: 24px 24px 140px;
+            padding: 24px 24px 24px;
             margin-left: 300px;
         }
 
@@ -138,6 +138,7 @@
             border-radius: 20px;
         }
 
+
         .professional-job-meta {
             font-size: 0.95rem;
         }
@@ -225,8 +226,9 @@
 
             .professional-dashboard-shell {
                 margin-left: 0;
-                padding: 24px 16px 64px;
+                padding: 24px 16px 24px;
             }
+
         }
 
         .professional-topbar {
@@ -459,6 +461,7 @@
                 <div>
                     @include('professional.components.stats')
                     @include('professional.components.jobs-list')
+                    @include('professional.components.apply-plan')
                 </div>
             </div>
         </div>
@@ -647,10 +650,16 @@
     <script src="/assets/bootstrap/js/bootstrap.bundle.min.js"></script>
     <script src="{{ asset('js/api.js') }}"></script>
     <script src="{{ asset('js/utils.js') }}"></script>
-    <script src="{{ asset('js/professional.js') }}"></script>
+    <script src="{{ asset('js/professional.js') }}?v={{ @filemtime(public_path('js/professional.js')) }}"></script>
     <script src="{{ asset('js/auth.js') }}"></script>
     <script src="{{ asset('app.js') }}"></script>
     <script>
+        window.addEventListener('pageshow', function (event) {
+            if (event.persisted) {
+                window.location.reload();
+            }
+        });
+
         document.addEventListener("DOMContentLoaded", function () {
             if (typeof window.requireRole === "function") {
                 window.requireRole("professional");

@@ -12,6 +12,10 @@ class Plan extends Model
         'job_posts_limit',
         'direct_requests_limit',
         'duration_days',
+        'plan_scope',
+        'apply_limit_monthly',
+        'extra_apply_quantity',
+        'is_active',
     ];
 
     public function subscriptions()

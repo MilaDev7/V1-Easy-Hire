@@ -330,15 +330,20 @@
     <script src="/assets/bootstrap/js/bootstrap.bundle.min.js"></script>
     <script src="{{ asset('js/api.js') }}"></script>
     <script src="{{ asset('js/utils.js') }}"></script>
-    <script src="{{ asset('js/admin.js') }}"></script>
+    <script src="{{ asset('js/admin.js') }}?v={{ @filemtime(public_path('js/admin.js')) }}"></script>
     <script src="{{ asset('js/auth.js') }}"></script>
     <script src="{{ asset('app.js') }}"></script>
     <script>
+        window.addEventListener('pageshow', function (event) {
+            if (event.persisted) {
+                window.location.reload();
+            }
+        });
+
         document.addEventListener("DOMContentLoaded", function () {
             console.log("Admin dashboard loading...");
             console.log("Token:", localStorage.getItem("token"));
             console.log("Role:", localStorage.getItem("role"));
-            
             if (typeof window.requireRole === "function") {
                 window.requireRole("admin");
             }

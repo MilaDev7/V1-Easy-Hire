@@ -22,7 +22,7 @@ Route::post('/register/professional', [AuthController::class, 'registerProfessio
 Route::post('/login', [AuthController::class, 'login']);
 
 // Public plans endpoint (no auth required)
-Route::get('/plans', [AdminController::class, 'plans']);
+Route::get('/plans', [AdminController::class, 'publicPlans']);
 
 // Chapa Payment Callback (public)
 Route::get('/chapa/payment-success', [ChapaController::class, 'verifyPayment']);
@@ -146,6 +146,9 @@ Route::middleware(['auth:sanctum', 'check_status'])->group(function () {
         Route::post('/pro/complete', [ProfessionalController::class, 'completeContract']);
 
         Route::get('/pro/stats', [ProfessionalController::class, 'stats']);
+        Route::get('/pro/apply-plan', [ProfessionalController::class, 'applyPlanSummary']);
+        Route::get('/pro/apply-plans', [ProfessionalController::class, 'applyPlans']);
+        Route::post('/pro/apply-plans/{id}/buy', [ProfessionalController::class, 'buyApplyPlan']);
     });
 
     // Admin routes used by frontend
@@ -179,6 +182,7 @@ Route::middleware(['auth:sanctum', 'check_status'])->group(function () {
 
         // 🔥 PLANS
         Route::get('/admin/plans', [AdminController::class, 'plans']);
+        Route::post('/admin/plans/seed-professional', [AdminController::class, 'seedProfessionalPlans']);
         Route::post('/admin/plans', [AdminController::class, 'createPlan']);
         Route::put('/admin/plans/{id}', [AdminController::class, 'updatePlan']);
         Route::delete('/admin/plans/{id}', [AdminController::class, 'deletePlan']);
