@@ -87,7 +87,7 @@
       const authSection = document.getElementById('auth-section');
       if (!authSection) return;
 
-      const user = await initAuth();
+      const user = await window.initAuth();
       const isDark = isSiteDarkModeEnabled();
 
       if (user) {
@@ -143,6 +143,15 @@
   // Initialize on page load
   document.addEventListener('DOMContentLoaded', function () {
       applySiteTheme();
+      renderAuthSection();
+  });
+
+  // Keep header in sync after back/forward restores and auth changes.
+  window.addEventListener('pageshow', function () {
+      renderAuthSection();
+  });
+
+  window.addEventListener('auth:changed', function () {
       renderAuthSection();
   });
   </script>

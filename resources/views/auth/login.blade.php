@@ -60,6 +60,7 @@
                     // Check for redirect URL from search page
                     const urlParams = new URLSearchParams(window.location.search);
                     const redirectUrl = urlParams.get('redirect');
+                    const intendedUrl = data.intended_url;
                     
                     // Check if there's a pending professional ID to view
                     const pendingProId = localStorage.getItem('pending_pro_id');
@@ -67,7 +68,9 @@
                     // ✅ 3. Redirect Logic
                     // IMPORTANT: Use replace to avoid login page in browser history
                     let redirectTarget;
-                    if (role === 'admin') {
+                    if (intendedUrl) {
+                        redirectTarget = intendedUrl;
+                    } else if (role === 'admin') {
                         redirectTarget = "/admin/dashboard";
                     } else if (role === 'professional') {
                         if (status === 'pending') {

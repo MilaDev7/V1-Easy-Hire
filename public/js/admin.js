@@ -685,7 +685,12 @@ function setAdminDashboardLoading(isLoading) {
     }
 }
 
+let currentUsersViewType = 'all';
+let usersTableData = [];
+const userStatusActionLoading = new Set();
+
 function loadUsers() {
+    currentUsersViewType = 'all';
     fetchJson("/api/admin/users")
         .then((payload) => {
             renderUsersTable(toArray(payload), 'all');
@@ -696,6 +701,7 @@ function loadUsers() {
 }
 
 function loadSuspendedUsers() {
+    currentUsersViewType = 'suspended';
     fetchJson("/api/admin/users/suspended")
         .then((payload) => {
             renderUsersTable(toArray(payload), 'suspended');
@@ -706,6 +712,7 @@ function loadSuspendedUsers() {
 }
 
 function loadDeletedUsers() {
+    currentUsersViewType = 'deleted';
     fetchJson("/api/admin/users/deleted")
         .then((payload) => {
             renderUsersTable(toArray(payload), 'deleted');
@@ -715,9 +722,67 @@ function loadDeletedUsers() {
         });
 }
 
+function setUsersFeedback(type, message) {
+    const feedback = document.getElementById('users-feedback');
+    if (!feedback) return;
+
+    if (!message) {
+        feedback.className = 'mb-3 d-none';
+        feedback.innerHTML = '';
+        return;
+    }
+
+    feedback.className = `mb-3 alert alert-${type}`;
+    feedback.innerHTML = message;
+}
+
+function actionLoadingKey(userId, action) {
+    return `${action}:${userId}`;
+}
+
+function getUserActionButton(user, type) {
+    if (type === 'deleted') {
+        return `<button type="button" class="btn btn-sm btn-info" onclick="restoreUser(${user.id})"><i class="fa-solid fa-trash-restore me-1"></i>Restore</button>`;
+    }
+
+    const canSuspend = type === 'all' && !user.deleted_at && !user.is_suspended;
+    const canUnsuspend = (type === 'all' || type === 'suspended') && user.is_suspended && !user.deleted_at;
+
+    if (!canSuspend && !canUnsuspend) {
+        return '';
+    }
+
+    const action = canSuspend ? 'suspend' : 'unsuspend';
+    const loading = userStatusActionLoading.has(actionLoadingKey(user.id, action));
+    const baseClass = canSuspend ? 'btn-warning' : 'btn-success';
+    const icon = canSuspend ? 'fa-ban' : 'fa-check';
+    const label = canSuspend ? 'Suspend' : 'Unsuspend';
+    const loadingLabel = canSuspend ? 'Suspending...' : 'Unsuspending...';
+    const clickHandler = canSuspend ? `suspendUser(${user.id})` : `unsuspendUser(${user.id})`;
+    const loadingMarkup = `
+        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>${loadingLabel}
+    `;
+    const defaultMarkup = `<i class="fa-solid ${icon} me-1"></i>${label}`;
+
+    return `
+        <button
+            type="button"
+            class="btn btn-sm ${baseClass}"
+            onclick="${clickHandler}"
+            data-testid="admin-${action}-user-${user.id}"
+            ${loading ? 'disabled aria-disabled="true"' : ''}
+        >
+            ${loading ? loadingMarkup : defaultMarkup}
+        </button>
+    `;
+}
+
 function renderUsersTable(users, type) {
     const area = document.getElementById('users-table-area');
     if (!area) return;
+
+    currentUsersViewType = type || currentUsersViewType || 'all';
+    usersTableData = Array.isArray(users) ? users : [];
 
     if (!users.length) {
         area.innerHTML = '<div class="alert alert-light border mb-0">No users found.</div>';
@@ -739,15 +804,11 @@ function renderUsersTable(users, type) {
 
         let actionBtn = '';
         if (type === 'all') {
-            if (!user.deleted_at && !user.is_suspended) {
-                actionBtn = `<button type="button" class="btn btn-sm btn-warning" onclick="suspendUser(${user.id})" data-testid="admin-suspend-user-${user.id}"><i class="fa-solid fa-ban me-1"></i>Suspend</button>`;
-            } else if (user.is_suspended && !user.deleted_at) {
-                actionBtn = `<button type="button" class="btn btn-sm btn-success" onclick="unsuspendUser(${user.id})" data-testid="admin-unsuspend-user-${user.id}"><i class="fa-solid fa-check me-1"></i>Unsuspend</button>`;
-            }
+            actionBtn = getUserActionButton(user, type);
         } else if (type === 'suspended') {
-            actionBtn = `<button type="button" class="btn btn-sm btn-success" onclick="unsuspendUser(${user.id})" data-testid="admin-unsuspend-user-${user.id}"><i class="fa-solid fa-check me-1"></i>Unsuspend</button>`;
+            actionBtn = getUserActionButton(user, type);
         } else if (type === 'deleted') {
-            actionBtn = `<button type="button" class="btn btn-sm btn-info" onclick="restoreUser(${user.id})"><i class="fa-solid fa-trash-restore me-1"></i>Restore</button>`;
+            actionBtn = getUserActionButton(user, type);
         }
 
         return `
@@ -817,12 +878,7 @@ function suspendUser(id) {
         'Are you sure you want to suspend this user?',
         'warning',
         () => {
-            postJson(`/api/admin/users/${id}/suspend`)
-                .then(() => {
-                    removeUserRow(id);
-                    loadAdminStats();
-                })
-                .catch(err => alert(err.message || 'Failed to suspend user.'));
+            updateUserSuspensionOptimistically(id, true);
         }
     );
 }
@@ -833,14 +889,50 @@ function unsuspendUser(id) {
         'Are you sure you want to unsuspend this user?',
         'success',
         () => {
-            postJson(`/api/admin/users/${id}/unsuspend`)
-                .then(() => {
-                    removeUserRow(id);
-                    loadAdminStats();
-                })
-                .catch(err => alert(err.message || 'Failed to unsuspend user.'));
+            updateUserSuspensionOptimistically(id, false);
         }
     );
+}
+
+function updateUserSuspensionOptimistically(id, suspend) {
+    const action = suspend ? 'suspend' : 'unsuspend';
+    const loadingKey = actionLoadingKey(id, action);
+    if (userStatusActionLoading.has(loadingKey)) {
+        return;
+    }
+
+    const previousUsers = usersTableData.map((user) => ({ ...user }));
+    const target = usersTableData.find((user) => Number(user.id) === Number(id));
+
+    if (!target) {
+        setUsersFeedback('danger', 'User not found in current table.');
+        return;
+    }
+
+    userStatusActionLoading.add(loadingKey);
+    setUsersFeedback('', '');
+
+    // Optimistic state update.
+    target.is_suspended = suspend ? 1 : 0;
+    if (currentUsersViewType === 'suspended' && !suspend) {
+        usersTableData = usersTableData.filter((user) => Number(user.id) !== Number(id));
+    }
+    renderUsersTable(usersTableData, currentUsersViewType);
+
+    postJson(`/api/admin/users/${id}/${action}`)
+        .then(() => {
+            setUsersFeedback('success', `User ${suspend ? 'suspended' : 'unsuspended'} successfully.`);
+            loadAdminStats();
+        })
+        .catch((err) => {
+            usersTableData = previousUsers;
+            setUsersFeedback('danger', err.message || `Failed to ${action} user.`);
+            renderUsersTable(usersTableData, currentUsersViewType);
+        })
+        .finally(() => {
+            userStatusActionLoading.delete(loadingKey);
+            renderUsersTable(usersTableData, currentUsersViewType);
+        });
 }
 
 function restoreUser(id) {

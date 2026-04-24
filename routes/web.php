@@ -49,7 +49,7 @@ Route::get('/payment-success', [ChapaController::class, 'handlePaymentSuccess'])
 
 Route::get('/payment-failed', [ChapaController::class, 'paymentFailed']);
 
-Route::get('/professional/{id}', function ($id) {
+Route::middleware('auth')->get('/professional/{id}', function ($id) {
     $professional = Professional::with('user')->findOrFail($id);
     $reviewTargetIds = array_values(array_unique([
         (int) $professional->user_id,

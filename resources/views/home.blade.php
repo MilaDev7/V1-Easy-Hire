@@ -332,10 +332,20 @@ document.addEventListener('DOMContentLoaded', function() {
         const btn = document.getElementById('home-get-started-btn');
         if (btn) btn.style.display = 'none';
     }
+
+    // Keep browser "Back" inactive on Home page.
+    const homeStateKey = '__home_lock__';
+    window.history.replaceState({ [homeStateKey]: true }, '', window.location.href);
+    window.history.pushState({ [homeStateKey]: true }, '', window.location.href);
+
+    window.addEventListener('popstate', function () {
+        if (window.location.pathname === '/') {
+            window.history.pushState({ [homeStateKey]: true }, '', window.location.href);
+        }
+    });
     
     loadHomePlans();
 });
 </script>
 
 @endsection
-

@@ -1,6 +1,8 @@
 // Auth initialization and state management
 
 let currentUser = null;
+let authReadyPromise = null;
+const AUTH_USER_CACHE_KEY = "auth_user_cache";
 
 function getToken() {
     return localStorage.getItem("token");
@@ -14,44 +16,110 @@ function getCurrentUser() {
     return currentUser;
 }
 
-// Initialize auth - must be called before rendering UI
-async function initAuth() {
-    const token = getToken();
-    const role = getStoredRole();
-    
-    // If no token, return null (not logged in)
-    if (!token) {
+function getCachedUser() {
+    try {
+        const raw = localStorage.getItem(AUTH_USER_CACHE_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        return parsed && typeof parsed === "object" ? parsed : null;
+    } catch (error) {
+        localStorage.removeItem(AUTH_USER_CACHE_KEY);
         return null;
     }
-    
-    try {
-        const response = await fetch("/api/me", {
-            headers: {
-                "Authorization": "Bearer " + token,
-                "Accept": "application/json"
-            }
-        });
-        
-        if (!response.ok) {
-            // Token invalid, clear storage
-            localStorage.removeItem("token");
-            localStorage.removeItem("role");
+}
+
+function setCurrentUser(user) {
+    currentUser = user || null;
+
+    if (!user) {
+        localStorage.removeItem(AUTH_USER_CACHE_KEY);
+        return;
+    }
+
+    localStorage.setItem(AUTH_USER_CACHE_KEY, JSON.stringify(user));
+    localStorage.setItem("role", user.role || "");
+}
+
+function clearAuthStorage() {
+    localStorage.removeItem("token");
+    localStorage.removeItem("role");
+    localStorage.removeItem(AUTH_USER_CACHE_KEY);
+    currentUser = null;
+}
+
+function getDashboardUrlFromUser(user) {
+    if (!user) return "/";
+
+    if (user.role === "admin") return "/admin/dashboard";
+    if (user.role === "professional") return "/pro/dashboard";
+    return "/client/dashboard";
+}
+
+function isGuestOnlyRoute() {
+    const pathname = (window.location.pathname || "").replace(/\/+$/, "") || "/";
+    return pathname === "/login" || pathname === "/register";
+}
+
+function redirectAuthenticatedAwayFromGuestPages(user) {
+    if (!user || !isGuestOnlyRoute()) return;
+    window.location.replace(getDashboardUrlFromUser(user));
+}
+
+function emitAuthChanged() {
+    window.dispatchEvent(new CustomEvent("auth:changed", { detail: { user: currentUser } }));
+}
+
+// Initialize auth - must be called before rendering UI
+async function initAuth(options = {}) {
+    const force = options.force === true;
+
+    if (!force && authReadyPromise) {
+        return authReadyPromise;
+    }
+
+    authReadyPromise = (async () => {
+        const token = getToken();
+
+        // Token is the source of truth for auth state.
+        if (!token) {
+            setCurrentUser(null);
             return null;
         }
-        
-        const user = await response.json();
-        currentUser = user;
-        
-        // Also store role if not already stored
-        if (role !== user.role) {
-            localStorage.setItem("role", user.role || "");
+
+        if (!currentUser) {
+            currentUser = getCachedUser();
         }
-        
-        return user;
-    } catch (error) {
-        console.error("Auth init failed:", error);
-        return null;
-    }
+
+        try {
+            const response = await fetch("/api/me", {
+                headers: {
+                    "Authorization": "Bearer " + token,
+                    "Accept": "application/json"
+                }
+            });
+
+            // Only clear token on true auth failures.
+            if (response.status === 401 || response.status === 403) {
+                clearAuthStorage();
+                return null;
+            }
+
+            if (!response.ok) {
+                return currentUser;
+            }
+
+            const user = await response.json();
+            setCurrentUser(user);
+            return user;
+        } catch (error) {
+            console.error("Auth init failed:", error);
+            return currentUser;
+        }
+    })();
+
+    const user = await authReadyPromise;
+    redirectAuthenticatedAwayFromGuestPages(user);
+    return user;
 }
 
 // Check if user is logged in
@@ -61,12 +129,7 @@ function isLoggedIn() {
 
 // Get dashboard URL based on role
 function getDashboardUrl() {
-    if (!currentUser) return "/";
-    
-    const role = currentUser.role;
-    if (role === 'admin') return "/admin/dashboard";
-    if (role === 'professional') return "/pro/dashboard";
-    return "/client/dashboard";
+    return getDashboardUrlFromUser(currentUser);
 }
 
 function requireAuth() {
@@ -80,19 +143,18 @@ function requireAuth() {
 
 function requireRole(expectedRole) {
     const token = getToken();
-    const storedRole = getStoredRole();
+    const role = (currentUser && currentUser.role) || getStoredRole();
 
     if (!token) {
         window.location.href = "/login";
         return;
     }
 
-    if (storedRole && storedRole.toLowerCase() === expectedRole.toLowerCase()) {
+    if (role && role.toLowerCase() === expectedRole.toLowerCase()) {
         return;
     }
 
-    localStorage.removeItem("token");
-    localStorage.removeItem("role");
+    clearAuthStorage();
     window.location.href = "/login";
 }
 
@@ -119,9 +181,8 @@ function logout() {
         });
 
         Promise.allSettled([apiLogout, webLogout]).finally(() => {
-            localStorage.removeItem("token");
-            localStorage.removeItem("role");
-            currentUser = null;
+            clearAuthStorage();
+            emitAuthChanged();
             window.location.href = "/login";
         });
     } else {
@@ -132,10 +193,40 @@ function logout() {
                 "X-CSRF-TOKEN": csrfToken || ""
             }
         }).finally(() => {
-        localStorage.removeItem("token");
-        localStorage.removeItem("role");
-        currentUser = null;
-        window.location.href = "/login";
+            clearAuthStorage();
+            emitAuthChanged();
+            window.location.href = "/login";
         });
     }
 }
+
+// Run once as early as possible on every page load.
+initAuth().then(() => {
+    emitAuthChanged();
+});
+
+// Handle browser back/forward cache restores.
+window.addEventListener("pageshow", function () {
+    initAuth({ force: true }).then(() => {
+        emitAuthChanged();
+    });
+});
+
+// Keep tabs/windows in sync.
+window.addEventListener("storage", function (event) {
+    if (event.key !== "token" && event.key !== "role" && event.key !== AUTH_USER_CACHE_KEY) {
+        return;
+    }
+
+    initAuth({ force: true }).then(() => {
+        emitAuthChanged();
+    });
+});
+
+// Expose helpers for page-level scripts.
+window.initAuth = initAuth;
+window.getCurrentUser = getCurrentUser;
+window.getDashboardUrl = getDashboardUrl;
+window.requireAuth = requireAuth;
+window.requireRole = requireRole;
+window.logout = logout;

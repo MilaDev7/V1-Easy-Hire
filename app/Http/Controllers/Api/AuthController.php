@@ -182,6 +182,7 @@ class AuthController extends Controller
 
         $token = $user->createToken('auth_token')->plainTextToken;
         $professional = Professional::where('user_id', $user->id)->first();
+        $intendedUrl = $request->session()->pull('url.intended');
 
         return response()->json([
             'message' => 'Login successful',
@@ -189,6 +190,7 @@ class AuthController extends Controller
             'role' => $user->getRoleNames()->first(),
             'approval_status' => $professional ? $professional->status : null,
             'user_name' => $user->name,
+            'intended_url' => $intendedUrl,
         ]);
     }
 
