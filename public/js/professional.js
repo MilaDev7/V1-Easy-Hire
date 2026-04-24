@@ -692,6 +692,19 @@ function setApplyPlanFeedback(type, message) {
     feedback.innerHTML = `<div class="alert alert-${type} mb-0">${message}</div>`;
 }
 
+function renderProfessionalTopPlanCard(state) {
+    const totalRemaining = Number(state?.remaining_total ?? 0);
+    const monthlyLimit = Number(state?.monthly_limit ?? 0);
+    const periodEnd = state?.period_end || "";
+    const extraRemaining = Number(state?.extra_remaining ?? 0);
+
+    setText("pro-current-plan-name", state?.current_plan_name || "Free Plan");
+    setText("pro-current-plan-jobs", `${totalRemaining}/${monthlyLimit}`);
+    setText("pro-current-plan-duration", "Monthly");
+    setText("pro-current-plan-expiry", periodEnd || "N/A");
+    setText("pro-current-plan-requests", extraRemaining);
+}
+
 function renderApplyPlans(containerId, items) {
     const container = document.getElementById(containerId);
     if (!container) {
@@ -799,6 +812,7 @@ function loadProfessionalApplyPlan() {
             const plans = toArray(plansPayload?.data);
             const sortedPlans = plans.sort((a, b) => Number(a.price || 0) - Number(b.price || 0));
 
+            renderProfessionalTopPlanCard(state);
             current.textContent = state.current_plan_name || "Free Plan";
             summary.innerHTML = `
                 <div class="small">
@@ -812,6 +826,11 @@ function loadProfessionalApplyPlan() {
             bindApplyPlanBuyButtons();
         })
         .catch(() => {
+            setText("pro-current-plan-name", "Plan Unavailable");
+            setText("pro-current-plan-jobs", "--");
+            setText("pro-current-plan-duration", "--");
+            setText("pro-current-plan-expiry", "--");
+            setText("pro-current-plan-requests", "--");
             current.textContent = "Unavailable";
             summary.innerHTML = '<div class="small text-warning">Unable to load apply plan status.</div>';
             plansWrap.innerHTML = '<div class="col-12 text-center text-white-50 py-3">Unavailable.</div>';

@@ -12,7 +12,7 @@
             </span>
         </div>
 
-        <div id="pro-apply-plan-summary" class="mb-3 small" style="color: rgba(255,255,255,0.86);">Loading apply plan...</div>
+        <div id="pro-apply-plan-summary" class="d-none mb-3 small" style="color: rgba(255,255,255,0.86);"></div>
         <div id="pro-apply-plan-feedback" class="d-none mb-3"></div>
 
         <div id="pro-plans-container" class="row g-2">

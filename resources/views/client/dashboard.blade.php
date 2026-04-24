@@ -147,39 +147,17 @@
             </div>
         </div>
 
-        <div class="card border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, #2d665b, #1e4a42); border-top: 4px solid #28a745 !important;">
-            <div class="card-body py-3">
-                <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
-                    <div class="d-flex align-items-center gap-3">
-                        <div class="bg-white bg-opacity-25 rounded p-2">
-                            <i class="fa-solid fa-crown text-warning fs-4"></i>
-                        </div>
-                        <div>
-                            <p class="text-white-50 small mb-0 text-uppercase">Current Plan</p>
-                            <h5 class="text-white mb-0 fw-bold" id="current-plan-name">Loading...</h5>
-                        </div>
-                    </div>
-                    <div class="d-flex align-items-center gap-4">
-                        <div class="text-center" style="min-width: 110px;">
-                            <p class="text-white-50 small mb-0 text-uppercase">Plan Capacity</p>
-                            <p class="text-white mb-0 fw-semibold" id="current-plan-jobs">--</p>
-                        </div>
-                        <div class="text-center" style="min-width: 80px;">
-                            <p class="text-white-50 small mb-0 text-uppercase">Duration</p>
-                            <p class="text-white mb-0 fw-semibold" id="current-plan-duration">--</p>
-                        </div>
-                        <div class="text-center" style="min-width: 100px;">
-                            <p class="text-white-50 small mb-0 text-uppercase">Expires</p>
-                            <p class="text-white mb-0 fw-semibold" id="current-plan-expiry">--</p>
-                        </div>
-                        <div class="text-center" style="min-width: 130px;">
-                            <p class="text-white-50 small mb-0 text-uppercase">Direct Requests</p>
-                            <p class="text-white mb-0 fw-semibold" id="current-plan-requests">--</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        @include('components.dashboard-plan-card', [
+            'idPrefix' => '',
+            'planTitle' => 'Current Plan',
+            'capacityLabel' => 'Plan Capacity',
+            'durationLabel' => 'Duration',
+            'expiryLabel' => 'Expires',
+            'requestsLabel' => 'Direct Requests',
+            'gradientStart' => '#3b4f8a',
+            'gradientEnd' => '#2c3e73',
+            'borderColor' => '#5b7cfa',
+        ])
 
         @include('client.components.stats')
 

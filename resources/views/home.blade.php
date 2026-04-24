@@ -343,6 +343,20 @@ document.addEventListener('DOMContentLoaded', function() {
             window.history.pushState({ [homeStateKey]: true }, '', window.location.href);
         }
     });
+
+    const locationInput = document.getElementById('location');
+    const serviceInput = document.getElementById('service');
+    const bindEnterSearch = function (input) {
+        if (!input) return;
+        input.addEventListener('keydown', function (event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                searchExperts();
+            }
+        });
+    };
+    bindEnterSearch(locationInput);
+    bindEnterSearch(serviceInput);
     
     loadHomePlans();
 });

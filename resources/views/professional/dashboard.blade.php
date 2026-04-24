@@ -459,6 +459,17 @@
                 </aside>
 
                 <div>
+                    @include('components.dashboard-plan-card', [
+                        'idPrefix' => 'pro',
+                        'planTitle' => 'My Plan',
+                        'capacityLabel' => 'Apply Capacity',
+                        'durationLabel' => 'Cycle',
+                        'expiryLabel' => 'Reset Date',
+                        'requestsLabel' => 'Extra Applies',
+                        'gradientStart' => '#2d665b',
+                        'gradientEnd' => '#1e4a42',
+                        'borderColor' => '#28a745',
+                    ])
                     @include('professional.components.stats')
                     @include('professional.components.jobs-list')
                     @include('professional.components.apply-plan')
