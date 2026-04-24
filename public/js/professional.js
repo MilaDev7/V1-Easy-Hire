@@ -77,6 +77,49 @@ function getProfessionalContentArea() {
     return document.getElementById("professional-content-area");
 }
 
+let professionalJobsMode = "recommended";
+let professionalJobsCache = [];
+
+function setProfessionalJobsTabState() {
+    const recommendedTab = document.getElementById("pro-jobs-tab-recommended");
+    const allTab = document.getElementById("pro-jobs-tab-all");
+
+    if (recommendedTab) {
+        const active = professionalJobsMode === "recommended";
+        recommendedTab.classList.toggle("btn-dark", active);
+        recommendedTab.classList.toggle("text-white", active);
+        recommendedTab.classList.toggle("btn-outline-dark", !active);
+    }
+
+    if (allTab) {
+        const active = professionalJobsMode === "all";
+        allTab.classList.toggle("btn-dark", active);
+        allTab.classList.toggle("text-white", active);
+        allTab.classList.toggle("btn-outline-dark", !active);
+    }
+}
+
+function bindProfessionalJobsTabs() {
+    const recommendedTab = document.getElementById("pro-jobs-tab-recommended");
+    const allTab = document.getElementById("pro-jobs-tab-all");
+
+    if (recommendedTab) {
+        recommendedTab.addEventListener("click", function () {
+            professionalJobsMode = "recommended";
+            setProfessionalJobsTabState();
+            renderProfessionalJobs(professionalJobsCache);
+        });
+    }
+
+    if (allTab) {
+        allTab.addEventListener("click", function () {
+            professionalJobsMode = "all";
+            setProfessionalJobsTabState();
+            renderProfessionalJobs(professionalJobsCache);
+        });
+    }
+}
+
 function renderProfessionalJobsSection() {
     const contentArea = getProfessionalContentArea();
 
@@ -128,12 +171,21 @@ function renderProfessionalJobsSection() {
                 </div>
             </div>
 
+            <div class="d-flex gap-2 mb-3">
+                <button type="button" id="pro-jobs-tab-recommended" class="btn btn-sm btn-dark">Recommended Jobs</button>
+                <button type="button" id="pro-jobs-tab-all" class="btn btn-sm btn-outline-dark">All Jobs</button>
+            </div>
+
             <div id="professional-jobs-results">
                 <div class="text-muted">Loading jobs...</div>
             </div>
         </section>
     `;
 
+    professionalJobsMode = "recommended";
+    professionalJobsCache = [];
+    setProfessionalJobsTabState();
+    bindProfessionalJobsTabs();
     bindProfessionalSearch();
 }
 
@@ -144,17 +196,26 @@ function renderProfessionalJobs(jobs) {
         return;
     }
 
-    if (!jobs.length) {
+    professionalJobsCache = Array.isArray(jobs) ? jobs : [];
+
+    const filteredJobs = professionalJobsMode === "recommended"
+        ? professionalJobsCache.filter((job) => Boolean(job.skill_match))
+        : professionalJobsCache;
+
+    if (!filteredJobs.length) {
         results.innerHTML =
-            '<div class="alert alert-light border mb-0">No open jobs matched your filters.</div>';
+            professionalJobsMode === "recommended"
+                ? '<div class="alert alert-light border mb-0">No recommended jobs matched your skill and filters.</div>'
+                : '<div class="alert alert-light border mb-0">No open jobs matched your filters.</div>';
         return;
     }
 
-    const totalJobs = jobs.length;
-    const matchedJobs = jobs.filter((job) => Boolean(job.skill_match)).length;
-    const appliedJobs = jobs.filter((job) => Boolean(job.has_applied)).length;
+    const totalJobs = filteredJobs.length;
+    const allJobsCount = professionalJobsCache.length;
+    const matchedJobs = professionalJobsCache.filter((job) => Boolean(job.skill_match)).length;
+    const appliedJobs = filteredJobs.filter((job) => Boolean(job.has_applied)).length;
 
-    const cards = jobs
+    const cards = filteredJobs
         .map((job) => {
             const skills = job.skills || job.skill || "N/A";
             const status = job.status || "open";
@@ -247,7 +308,8 @@ function renderProfessionalJobs(jobs) {
 
     results.innerHTML = `
         <div class="d-flex flex-wrap gap-2 mb-3">
-            <span class="badge text-bg-light border">Total: ${totalJobs}</span>
+            <span class="badge text-bg-light border">${professionalJobsMode === "recommended" ? "Recommended" : "Visible"}: ${totalJobs}</span>
+            <span class="badge text-bg-light border">All Jobs: ${allJobsCount}</span>
             <span class="badge text-bg-success-subtle border text-success">Skill Match: ${matchedJobs}</span>
             <span class="badge text-bg-secondary">Applied: ${appliedJobs}</span>
         </div>
