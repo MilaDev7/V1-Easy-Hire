@@ -7,12 +7,15 @@ use App\Models\Contract;
 use App\Models\DirectRequest;
 use App\Models\Subscription;
 use App\Models\User;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class DirectRequestController extends Controller
 {
+    public function __construct(private NotificationService $notificationService) {}
+
     private const REQUEST_EXPIRY_HOURS = 48;
 
     private function expirePendingRequestsForProfessional(int $professionalId): void
@@ -130,6 +133,15 @@ class DirectRequestController extends Controller
             'status' => 'pending',
             'expires_at' => now()->addHours(self::REQUEST_EXPIRY_HOURS),
         ]);
+
+        $this->notificationService->send(
+            (int) $proUserId,
+            'direct_request_received',
+            'New direct request',
+            'You received a direct request: '.$directRequest->title,
+            '/pro/dashboard',
+            ['direct_request_id' => $directRequest->id]
+        );
 
         return response()->json([
             'success' => true,
@@ -326,6 +338,15 @@ class DirectRequestController extends Controller
 
             \Log::info('Contract created successfully', ['contract_id' => $contractId]);
 
+            $this->notificationService->send(
+                (int) $directRequest->client_id,
+                'direct_request_accepted',
+                'Direct request accepted',
+                'Your direct request was accepted: '.$directRequest->title,
+                '/client/dashboard',
+                ['direct_request_id' => $directRequest->id, 'contract_id' => $contractId]
+            );
+
             return response()->json([
                 'success' => true,
                 'message' => 'Request accepted! Contract created.',
@@ -359,6 +380,15 @@ class DirectRequestController extends Controller
         // Update status
         $directRequest->status = 'rejected';
         $directRequest->save();
+
+        $this->notificationService->send(
+            (int) $directRequest->client_id,
+            'direct_request_rejected',
+            'Direct request rejected',
+            'Your direct request was rejected: '.$directRequest->title,
+            '/client/dashboard',
+            ['direct_request_id' => $directRequest->id]
+        );
 
         return response()->json([
             'message' => 'Request rejected',

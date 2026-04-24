@@ -12,12 +12,16 @@ use App\Models\ProfessionalPortfolioItem;
 use App\Models\Report;
 use App\Models\Review;
 use App\Services\ApplyCreditService;
+use App\Services\NotificationService;
 use App\Services\Chapa;
 use Illuminate\Http\Request;
 
 class ProfessionalController extends Controller
 {
-    public function __construct(private ApplyCreditService $applyCreditService) {}
+    public function __construct(
+        private ApplyCreditService $applyCreditService,
+        private NotificationService $notificationService
+    ) {}
 
     public function me()
     {
@@ -491,6 +495,16 @@ class ProfessionalController extends Controller
 
         $contract->status = 'pending_completion';
         $contract->save();
+
+        $title = $contract->job?->title ?? $contract->directRequest?->title ?? 'Contract Work';
+        $this->notificationService->send(
+            (int) $contract->client_id,
+            'completion_requested',
+            'Work marked as completed',
+            'Professional marked work as completed: '.$title,
+            '/client/dashboard',
+            ['contract_id' => $contract->id]
+        );
 
         return response()->json(['message' => 'Marked as pending completion']);
     }

@@ -6,6 +6,7 @@ use App\Models\Plan;
 use App\Models\Subscription;
 use App\Services\ApplyCreditService;
 use App\Services\Chapa;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -13,7 +14,10 @@ use Illuminate\Support\Facades\Log;
 
 class ChapaController extends Controller
 {
-    public function __construct(private ApplyCreditService $applyCreditService) {}
+    public function __construct(
+        private ApplyCreditService $applyCreditService,
+        private NotificationService $notificationService
+    ) {}
 
     /**
      * Apply subscription credit exactly once per tx_ref.
@@ -38,12 +42,26 @@ class ChapaController extends Controller
             $plan = Plan::findOrFail($planId);
             if ($plan->plan_scope === 'professional_monthly') {
                 $this->applyCreditService->activateMonthlyPlan($userId, $plan);
+                $this->notificationService->send(
+                    $userId,
+                    'plan_purchase_success',
+                    'Plan activated',
+                    'Your professional monthly plan is now active: '.$plan->name,
+                    '/pro/dashboard'
+                );
 
                 return ['already_processed' => false];
             }
 
             if ($plan->plan_scope === 'professional_extra') {
                 $this->applyCreditService->addExtraApplies($userId, (int) $plan->extra_apply_quantity);
+                $this->notificationService->send(
+                    $userId,
+                    'plan_purchase_success',
+                    'Extra applies added',
+                    'You purchased extra applies: '.$plan->name,
+                    '/pro/dashboard'
+                );
 
                 return ['already_processed' => false];
             }
@@ -69,6 +87,14 @@ class ChapaController extends Controller
                     'tx_ref' => $txRef,
                 ]);
             }
+
+            $this->notificationService->send(
+                $userId,
+                'plan_purchase_success',
+                'Subscription activated',
+                'Your client subscription is active: '.$plan->name,
+                '/client/dashboard'
+            );
 
             return ['already_processed' => false];
         });

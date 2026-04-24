@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\ClientController;
 use App\Http\Controllers\Api\ContractController;
 use App\Http\Controllers\Api\DirectRequestController;
 use App\Http\Controllers\Api\JobPostController;
+use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\ProfessionalController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\ReportController;
@@ -59,6 +60,10 @@ Route::middleware(['auth:sanctum', 'check_status'])->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::delete('/account', [AuthController::class, 'deleteAccount']);
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
+    Route::post('/notifications/{id}/read', [NotificationController::class, 'markRead']);
+    Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead']);
     Route::post('/contracts/{id}/report', [ReportController::class, 'store']);
     Route::post('/contracts/{id}/review', [ReviewController::class, 'store']);
 

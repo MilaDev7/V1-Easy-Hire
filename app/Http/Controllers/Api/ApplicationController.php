@@ -8,11 +8,15 @@ use App\Models\JobPost;
 use App\Models\Professional;
 use App\Models\User;
 use App\Services\ApplyCreditService;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 
 class ApplicationController extends Controller
 {
-    public function __construct(private ApplyCreditService $applyCreditService) {}
+    public function __construct(
+        private ApplyCreditService $applyCreditService,
+        private NotificationService $notificationService
+    ) {}
 
     /**
      * Professional applies for a job
@@ -119,6 +123,15 @@ class ApplicationController extends Controller
             'source' => 'apply',
         ]);
 
+        $this->notificationService->send(
+            (int) $job->client_id,
+            'application_received',
+            'New job application',
+            'A professional applied to your job: '.$job->title,
+            '/client/dashboard',
+            ['job_id' => $job->id, 'application_id' => $application->id]
+        );
+
         return response()->json([
             'message' => 'Application submitted successfully',
             'application' => $application,
@@ -199,6 +212,11 @@ class ApplicationController extends Controller
         $application->status = 'accepted';
         $application->save();
 
+        $rejectedProfessionalIds = Application::where('job_id', $job->id)
+            ->where('id', '!=', $application->id)
+            ->pluck('professional_id')
+            ->all();
+
         // 5. Automatically Reject all other applicants for this job
         Application::where('job_id', $job->id)
             ->where('id', '!=', $application->id)
@@ -221,6 +239,26 @@ class ApplicationController extends Controller
         $job->status = 'assigned';
         $job->save();
 
+        $this->notificationService->send(
+            (int) $application->professional_id,
+            'application_accepted',
+            'Application accepted',
+            'Your application was accepted for: '.$job->title,
+            '/pro/dashboard',
+            ['job_id' => $job->id, 'application_id' => $application->id]
+        );
+
+        foreach ($rejectedProfessionalIds as $professionalId) {
+            $this->notificationService->send(
+                (int) $professionalId,
+                'application_rejected',
+                'Application update',
+                'Your application was not selected for: '.$job->title,
+                '/pro/dashboard',
+                ['job_id' => $job->id]
+            );
+        }
+
         return response()->json([
             'message' => 'Professional assigned successfully',
             'application' => $application,
@@ -242,6 +280,15 @@ class ApplicationController extends Controller
 
         $application->status = 'rejected';
         $application->save();
+
+        $this->notificationService->send(
+            (int) $application->professional_id,
+            'application_rejected',
+            'Application rejected',
+            'Your application was rejected for: '.$job->title,
+            '/pro/dashboard',
+            ['job_id' => $job->id, 'application_id' => $application->id]
+        );
 
         return response()->json([
             'message' => 'Application rejected successfully',

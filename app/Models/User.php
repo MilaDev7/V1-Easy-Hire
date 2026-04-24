@@ -68,4 +68,9 @@ public function professionalApplyWallet()
 {
     return $this->hasOne(ProfessionalApplyWallet::class);
 }
+
+public function notifications()
+{
+    return $this->hasMany(UserNotification::class);
+}
 }

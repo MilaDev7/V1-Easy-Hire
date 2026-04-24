@@ -5,10 +5,13 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Contract;
 use App\Models\JobPost;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 
 class ContractController extends Controller
 {
+    public function __construct(private NotificationService $notificationService) {}
+
     // PROFESSIONAL MARKS COMPLETED
     public function markCompleted($id)
     {
@@ -67,6 +70,16 @@ class ContractController extends Controller
             $contract->job->save();
         }
 
+        $title = $contract->job?->title ?? $contract->directRequest?->title ?? 'Contract Work';
+        $this->notificationService->send(
+            (int) $contract->professional_id,
+            'completion_confirmed',
+            'Completion confirmed',
+            'Client confirmed completion: '.$title,
+            '/pro/dashboard',
+            ['contract_id' => $contract->id]
+        );
+
         return response()->json([
             'message' => 'Job completed successfully',
         ]);
@@ -93,6 +106,16 @@ class ContractController extends Controller
 
         $contract->status = 'active';
         $contract->save();
+
+        $title = $contract->job?->title ?? $contract->directRequest?->title ?? 'Contract Work';
+        $this->notificationService->send(
+            (int) $contract->professional_id,
+            'completion_rejected',
+            'Completion rejected',
+            'Client rejected completion request: '.$title,
+            '/pro/dashboard',
+            ['contract_id' => $contract->id]
+        );
 
         return response()->json([
             'message' => 'Completion rejected. Contract set back to active',
