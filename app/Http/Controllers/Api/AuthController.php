@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Professional;
 use App\Models\User;
+use App\Services\AdminNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -76,6 +77,12 @@ class AuthController extends Controller
         });
 
         $token = $user->createToken('auth_token')->plainTextToken;
+
+        app(AdminNotificationService::class)->send(
+            'pro_signup',
+            'New professional registration: '.$user->name,
+            '/admin/dashboard?view=pending-professionals'
+        );
 
         return response()->json([
             'message' => 'Professional registered',

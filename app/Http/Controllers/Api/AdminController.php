@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\AdminNotification;
+use App\Models\ContactMessage;
 use App\Mail\ProfessionalStatusMail;
 use App\Models\Message;
 use App\Models\User;
@@ -319,6 +321,114 @@ class AdminController extends Controller
         return response()->json([
             'message' => 'Message sent successfully',
             'data' => $message,
+        ]);
+    }
+
+    public function contactMessages(Request $request)
+    {
+        $filter = strtolower((string) $request->query('filter', 'all'));
+
+        $query = ContactMessage::query()->latest();
+        if ($filter === 'unread') {
+            $query->where('status', 'unread');
+        }
+
+        return response()->json(
+            $query->get()->map(function (ContactMessage $message) {
+                return [
+                    'id' => $message->id,
+                    'name' => $message->name,
+                    'email' => $message->email,
+                    'message' => $message->message,
+                    'status' => $message->status ?? 'unread',
+                    'created_at' => $message->created_at,
+                ];
+            })
+        );
+    }
+
+    public function contactMessageUnreadCount()
+    {
+        return response()->json([
+            'unread_count' => ContactMessage::query()->where('status', 'unread')->count(),
+        ]);
+    }
+
+    public function viewContactMessage($id)
+    {
+        $message = ContactMessage::query()->findOrFail($id);
+
+        return response()->json([
+            'id' => $message->id,
+            'name' => $message->name,
+            'email' => $message->email,
+            'message' => $message->message,
+            'status' => $message->status ?? 'unread',
+            'created_at' => $message->created_at,
+        ]);
+    }
+
+    public function markContactMessageRead($id)
+    {
+        $message = ContactMessage::query()->findOrFail($id);
+        $message->status = 'read';
+        $message->save();
+
+        return response()->json([
+            'message' => 'Contact message marked as read.',
+        ]);
+    }
+
+    public function deleteContactMessage($id)
+    {
+        $message = ContactMessage::query()->findOrFail($id);
+        $message->delete();
+
+        return response()->json([
+            'message' => 'Contact message deleted.',
+        ]);
+    }
+
+    public function notifications(Request $request)
+    {
+        $limit = (int) $request->query('limit', 10);
+        $limit = max(1, min($limit, 50));
+
+        $notifications = AdminNotification::query()
+            ->latest()
+            ->limit($limit)
+            ->get()
+            ->map(function (AdminNotification $notification) {
+                return [
+                    'id' => $notification->id,
+                    'type' => $notification->type,
+                    'message' => $notification->message,
+                    'link' => $notification->link,
+                    'is_read' => (bool) $notification->is_read,
+                    'created_at' => $notification->created_at,
+                ];
+            });
+
+        return response()->json($notifications);
+    }
+
+    public function notificationsUnreadCount()
+    {
+        return response()->json([
+            'unread_count' => AdminNotification::query()
+                ->where('is_read', false)
+                ->count(),
+        ]);
+    }
+
+    public function markNotificationRead($id)
+    {
+        $notification = AdminNotification::query()->findOrFail($id);
+        $notification->is_read = true;
+        $notification->save();
+
+        return response()->json([
+            'message' => 'Notification marked as read.',
         ]);
     }
 

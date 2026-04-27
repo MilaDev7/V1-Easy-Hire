@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Report;
 use App\Models\Contract;
+use App\Services\AdminNotificationService;
 
 class ReportController extends Controller
 {
@@ -56,6 +57,13 @@ class ReportController extends Controller
             'reported_id' => $reportedId,
             'reason' => $reportReason,
         ]);
+
+        $reporterName = (string) ($request->user()->name ?? 'A user');
+        app(AdminNotificationService::class)->send(
+            'report',
+            'New report submitted by '.$reporterName,
+            '/admin/dashboard?view=reports'
+        );
 
         return response()->json([
             'message' => 'Report submitted',

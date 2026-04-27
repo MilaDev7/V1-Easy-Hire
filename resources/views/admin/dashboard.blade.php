@@ -211,6 +211,23 @@
             background: rgba(255, 255, 255, 0.92);
             backdrop-filter: blur(2px);
         }
+
+        .admin-notification-list {
+            max-height: 360px;
+            overflow-y: auto;
+        }
+
+        .admin-notification-item {
+            display: block;
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .admin-notification-item:hover {
+            background: rgba(111, 66, 193, 0.08);
+        }
     </style>
 </head>
 <body class="bg-light">
@@ -271,6 +288,11 @@
                 <div class="admin-sidebar-child" data-view="resolved-reports">Resolved Reports</div>
             </div>
 
+            <div class="admin-sidebar-item" data-view="contact-messages">
+                <i class="fa-solid fa-envelope-open-text me-2"></i> Contact Messages
+                <span class="badge rounded-pill text-bg-danger float-end" id="admin-contact-unread-badge" style="display: none;">0</span>
+            </div>
+
             <div class="admin-sidebar-item" data-toggle="payments-menu">
                 <i class="fa-solid fa-credit-card me-2"></i> Payments
                 <i class="fa-solid fa-chevron-down float-end admin-collapse-icon"></i>
@@ -299,16 +321,40 @@
                         <p class="text-muted small mb-0">Admin Dashboard</p>
                         <h1 class="h4 mb-0">Overview</h1>
                     </div>
-                    <div class="dropdown">
-                        <button class="btn p-0 border-0 bg-transparent" data-bs-toggle="dropdown" aria-expanded="false">
-                            <img src="{{ asset('images/user1.jpg') }}" id="admin-topbar-photo" alt="Profile" class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover; border: 2px solid rgba(0,0,0,0.1);">
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end shadow">
-                            <li><a class="dropdown-item" href="/admin/dashboard"><i class="fa-solid fa-user me-2"></i>Account</a></li>
-                            <li><button type="button" class="dropdown-item" onclick="toggleAdminDarkMode()"><i class="fa-solid fa-moon me-2"></i>Dark Mode</button></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item text-danger" href="#" onclick="logout(); return false;"><i class="fa-solid fa-right-from-bracket me-2"></i>Logout</a></li>
-                        </ul>
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="dropdown">
+                            <button
+                                type="button"
+                                class="btn btn-light border position-relative"
+                                id="admin-notifications-toggle"
+                                data-bs-toggle="dropdown"
+                                aria-expanded="false"
+                                style="width: 40px; height: 40px;"
+                            >
+                                <i class="fa-solid fa-bell"></i>
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none" id="admin-notifications-unread-badge">0</span>
+                            </button>
+                            <div class="dropdown-menu dropdown-menu-end p-0 shadow" style="min-width: 360px;">
+                                <div class="px-3 py-2 border-bottom d-flex justify-content-between align-items-center">
+                                    <strong>Notifications</strong>
+                                    <small class="text-muted" id="admin-notifications-unread-text">0 unread</small>
+                                </div>
+                                <div id="admin-notifications-list" class="admin-notification-list">
+                                    <div class="px-3 py-3 text-muted small">Loading notifications...</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="dropdown">
+                            <button class="btn p-0 border-0 bg-transparent" data-bs-toggle="dropdown" aria-expanded="false">
+                                <img src="{{ asset('images/user1.jpg') }}" id="admin-topbar-photo" alt="Profile" class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover; border: 2px solid rgba(0,0,0,0.1);">
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow">
+                                <li><a class="dropdown-item" href="/admin/dashboard"><i class="fa-solid fa-user me-2"></i>Account</a></li>
+                                <li><button type="button" class="dropdown-item" onclick="toggleAdminDarkMode()"><i class="fa-solid fa-moon me-2"></i>Dark Mode</button></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-danger" href="#" onclick="logout(); return false;"><i class="fa-solid fa-right-from-bracket me-2"></i>Logout</a></li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -322,6 +368,7 @@
             @include('admin.components.jobs')
             @include('admin.components.contracts')
             @include('admin.components.reports')
+            @include('admin.components.contact-messages')
             @include('admin.components.payments')
             @include('admin.components.plans')
         </div>

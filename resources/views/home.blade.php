@@ -230,6 +230,7 @@
 
 @section('scripts')
 
+<script src="{{ asset('js/utils.js') }}"></script>
 <script>
 function searchExperts() {
     const location = document.getElementById("location")?.value || "";
@@ -346,6 +347,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const locationInput = document.getElementById('location');
     const serviceInput = document.getElementById('service');
+    if (window.EasyHireUtils?.enhanceSearchableInput) {
+        window.EasyHireUtils.enhanceSearchableInput("location", window.EasyHireUtils.ETHIOPIAN_CITIES || []);
+        window.EasyHireUtils.enhanceSearchableInput("service", window.EasyHireUtils.SKILL_OPTIONS || []);
+    }
     const bindEnterSearch = function (input) {
         if (!input) return;
         input.addEventListener('keydown', function (event) {

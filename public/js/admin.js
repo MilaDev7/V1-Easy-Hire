@@ -302,6 +302,7 @@ function loadAdminSection(view) {
     const jobsSection = document.getElementById('jobs-section');
     const contractsSection = document.getElementById('contracts-section');
     const reportsSection = document.getElementById('reports-section');
+    const contactMessagesSection = document.getElementById('contact-messages-section');
     const paymentsSection = document.getElementById('payments-section');
     const plansSection = document.getElementById('plans-section');
     const allProfessionalsSection = document.getElementById('all-professionals-section');
@@ -318,6 +319,7 @@ function loadAdminSection(view) {
         'contracts-view': { title: 'Contracts', fetch: loadContracts },
         'reports': { title: 'All Reports', fetch: loadReports },
         'resolved-reports': { title: 'Resolved Reports', fetch: loadResolvedReports },
+        'contact-messages': { title: 'Contact Messages', fetch: loadAdminContactMessages },
         'all-payments': { title: 'All Payments', fetch: loadAllPayments },
         'pending-payments': { title: 'Pending Payments', fetch: loadPendingPayments },
         'plans': { title: 'Subscription Plans', fetch: loadPlans },
@@ -341,6 +343,8 @@ function loadAdminSection(view) {
             contractsSection.style.display = 'block';
         } else if (['reports', 'resolved-reports'].includes(view) && reportsSection) {
             reportsSection.style.display = 'block';
+        } else if (['contact-messages'].includes(view) && contactMessagesSection) {
+            contactMessagesSection.style.display = 'block';
         } else if (['all-payments', 'pending-payments'].includes(view) && paymentsSection) {
             paymentsSection.style.display = 'block';
             const titleEl = document.getElementById('payments-section-title');
@@ -400,6 +404,9 @@ function renderProfessionalsTableError() {
 function loadResolvedReports() { fetchJson("/api/admin/reports?status=resolved").then(p => { reportsData = Array.isArray(p) ? p : []; renderReportsTable(reportsData, true); }).catch(renderReportsTableError); }
 let currentPaymentsView = 'all-payments';
 let paymentFilterState = { q: '', plan_id: '', date_from: '', date_to: '' };
+let contactMessagesFilter = 'unread';
+let contactMessagesData = [];
+let adminNotificationsData = [];
 
 function formatPaymentMoney(value, currency = 'ETB') {
     const amount = Number(value || 0);
@@ -627,6 +634,332 @@ function reloadAdminPaymentsView() {
     }
     return loadAllPayments();
 }
+
+function setAdminContactMessagesFeedback(type, message) {
+    const feedback = document.getElementById('admin-contact-messages-feedback');
+    if (!feedback) return;
+
+    if (!message) {
+        feedback.className = 'mb-3 d-none';
+        feedback.innerHTML = '';
+        return;
+    }
+
+    feedback.className = `mb-3 alert alert-${type}`;
+    feedback.innerHTML = message;
+}
+
+function truncateMessage(text, max = 80) {
+    const value = String(text || '').trim();
+    if (value.length <= max) {
+        return value;
+    }
+    return `${value.slice(0, max)}...`;
+}
+
+function updateAdminContactUnreadBadge(unreadCount) {
+    const badge = document.getElementById('admin-contact-unread-badge');
+    if (!badge) return;
+
+    const count = Number(unreadCount || 0);
+    if (count > 0) {
+        badge.textContent = String(count);
+        badge.style.display = '';
+    } else {
+        badge.textContent = '0';
+        badge.style.display = 'none';
+    }
+}
+
+function loadAdminContactUnreadCount() {
+    return fetchJson('/api/admin/contact-messages/unread-count')
+        .then((payload) => {
+            updateAdminContactUnreadBadge(payload?.unread_count ?? 0);
+        })
+        .catch(() => {
+            updateAdminContactUnreadBadge(0);
+        });
+}
+
+function renderAdminContactMessagesTable(messages) {
+    const area = document.getElementById('admin-contact-messages-table-area');
+    if (!area) return;
+
+    if (!messages.length) {
+        area.innerHTML = '<div class="alert alert-light border mb-0">No contact messages found.</div>';
+        return;
+    }
+
+    const rows = messages.map((item) => {
+        const isUnread = String(item.status || '').toLowerCase() !== 'read';
+        const statusBadge = isUnread
+            ? '<span class="badge bg-warning text-dark">Unread</span>'
+            : '<span class="badge bg-success">Read</span>';
+        const createdAt = item.created_at ? new Date(item.created_at).toLocaleString() : 'N/A';
+        const replySubject = encodeURIComponent('Re: EasyHire Contact Message');
+        const replyBody = encodeURIComponent('Hello,\n\nThanks for contacting EasyHire.\n\n');
+
+        return `
+            <tr data-contact-message-id="${item.id}">
+                <td class="fw-semibold">${item.name || 'N/A'}</td>
+                <td>${item.email || 'N/A'}</td>
+                <td>${truncateMessage(item.message)}</td>
+                <td>${statusBadge}</td>
+                <td>${createdAt}</td>
+                <td>
+                    <div class="d-flex flex-wrap gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="viewAdminContactMessage(${item.id})">
+                            <i class="fa-solid fa-eye me-1"></i>View
+                        </button>
+                        ${isUnread ? `
+                            <button type="button" class="btn btn-sm btn-outline-success" onclick="markAdminContactMessageRead(${item.id})">
+                                <i class="fa-solid fa-check me-1"></i>Mark as Read
+                            </button>
+                        ` : ''}
+                        <a class="btn btn-sm btn-outline-dark" href="mailto:${encodeURIComponent(item.email || '')}?subject=${replySubject}&body=${replyBody}">
+                            <i class="fa-solid fa-reply me-1"></i>Reply
+                        </a>
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteAdminContactMessage(${item.id})">
+                            <i class="fa-solid fa-trash me-1"></i>Delete
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+
+    area.innerHTML = `
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th scope="col">Name</th>
+                        <th scope="col">Email</th>
+                        <th scope="col">Message</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Date</th>
+                        <th scope="col">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>
+    `;
+}
+
+function loadAdminContactMessages() {
+    const filterEl = document.getElementById('admin-contact-filter');
+    if (filterEl) {
+        contactMessagesFilter = filterEl.value || contactMessagesFilter || 'unread';
+    }
+
+    setAdminContactMessagesFeedback('', '');
+    const query = new URLSearchParams({ filter: contactMessagesFilter });
+    return fetchJson(`/api/admin/contact-messages?${query.toString()}`)
+        .then((payload) => {
+            contactMessagesData = toArray(payload);
+            renderAdminContactMessagesTable(contactMessagesData);
+            return loadAdminContactUnreadCount();
+        })
+        .catch(() => {
+            const area = document.getElementById('admin-contact-messages-table-area');
+            if (area) area.innerHTML = '<div class="alert alert-danger mb-0">Unable to load contact messages.</div>';
+        });
+}
+
+function viewAdminContactMessage(id) {
+    return fetchJson(`/api/admin/contact-messages/${id}`)
+        .then((message) => {
+            setText('admin-contact-message-view-name', message?.name || 'N/A');
+            setText('admin-contact-message-view-email', message?.email || 'N/A');
+            setText('admin-contact-message-view-date', message?.created_at ? new Date(message.created_at).toLocaleString() : 'N/A');
+            setText('admin-contact-message-view-message', message?.message || '');
+            const modal = new bootstrap.Modal(document.getElementById('admin-contact-message-view-modal'));
+            modal.show();
+
+            // Auto-mark as read when admin opens the message.
+            if (String(message?.status || '').toLowerCase() === 'unread') {
+                postJson(`/api/admin/contact-messages/${id}/read`)
+                    .then(() => {
+                        contactMessagesData = contactMessagesData
+                            .map((item) => (Number(item.id) === Number(id) ? { ...item, status: 'read' } : item))
+                            .filter((item) => !(contactMessagesFilter === 'unread' && Number(item.id) === Number(id)));
+                        renderAdminContactMessagesTable(contactMessagesData);
+                        loadAdminContactUnreadCount();
+                    })
+                    .catch(() => {});
+            }
+        })
+        .catch((error) => {
+            setAdminContactMessagesFeedback('danger', error?.message || 'Unable to load contact message.');
+        });
+}
+
+function markAdminContactMessageRead(id) {
+    postJson(`/api/admin/contact-messages/${id}/read`)
+        .then(() => {
+            setAdminContactMessagesFeedback('success', 'Message marked as read.');
+            loadAdminContactMessages();
+        })
+        .catch((error) => {
+            setAdminContactMessagesFeedback('danger', error?.message || 'Failed to mark message as read.');
+        });
+}
+
+function deleteAdminContactMessage(id) {
+    if (!window.confirm('Delete this contact message?')) {
+        return;
+    }
+
+    fetch(`/api/admin/contact-messages/${id}`, {
+        method: 'DELETE',
+        headers: {
+            'Authorization': 'Bearer ' + localStorage.getItem('token'),
+            'Accept': 'application/json'
+        }
+    })
+        .then((response) => response.json().then((payload) => ({ ok: response.ok, payload })))
+        .then(({ ok, payload }) => {
+            if (!ok) {
+                throw new Error(payload?.message || 'Failed to delete contact message.');
+            }
+            setAdminContactMessagesFeedback('success', 'Message deleted successfully.');
+            loadAdminContactMessages();
+        })
+        .catch((error) => {
+            setAdminContactMessagesFeedback('danger', error?.message || 'Failed to delete contact message.');
+        });
+}
+
+function bindAdminContactFilter() {
+    const filterEl = document.getElementById('admin-contact-filter');
+    if (!filterEl) return;
+
+    filterEl.value = contactMessagesFilter;
+    filterEl.addEventListener('change', function () {
+        contactMessagesFilter = this.value || 'unread';
+        loadAdminContactMessages();
+    });
+}
+
+function adminNotificationTypeBadge(type) {
+    if (type === 'contact') return '<span class="badge text-bg-primary">Contact</span>';
+    if (type === 'report') return '<span class="badge text-bg-danger">Report</span>';
+    if (type === 'pro_signup') return '<span class="badge text-bg-warning text-dark">Pro Signup</span>';
+    if (type === 'payment') return '<span class="badge text-bg-success">Payment</span>';
+    return '<span class="badge text-bg-secondary">Info</span>';
+}
+
+function escapeHtml(value) {
+    return String(value || '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+}
+
+function updateAdminNotificationsBadge(unreadCount) {
+    const badge = document.getElementById('admin-notifications-unread-badge');
+    const text = document.getElementById('admin-notifications-unread-text');
+    const count = Number(unreadCount || 0);
+
+    if (text) {
+        text.textContent = `${count} unread`;
+    }
+
+    if (!badge) return;
+
+    if (count > 0) {
+        badge.textContent = String(count);
+        badge.classList.remove('d-none');
+    } else {
+        badge.textContent = '0';
+        badge.classList.add('d-none');
+    }
+}
+
+function renderAdminNotificationsDropdown(items) {
+    const list = document.getElementById('admin-notifications-list');
+    if (!list) return;
+
+    if (!items.length) {
+        list.innerHTML = '<div class="px-3 py-3 text-muted small">No notifications yet.</div>';
+        return;
+    }
+
+    list.innerHTML = items.map((item) => {
+        const itemClass = item.is_read ? '' : 'fw-semibold';
+        const message = escapeHtml(item.message);
+        const createdAt = item.created_at ? new Date(item.created_at).toLocaleString() : 'N/A';
+        const link = item.link || '/admin/dashboard';
+        const encodedLink = encodeURIComponent(link);
+
+        return `
+            <a href="#" class="admin-notification-item ${itemClass}" onclick="handleAdminNotificationClick(event, ${item.id}, '${encodedLink}')">
+                <div class="d-flex justify-content-between align-items-start gap-2">
+                    <div>${adminNotificationTypeBadge(item.type)}</div>
+                    <small class="text-muted">${createdAt}</small>
+                </div>
+                <div class="small mt-2">${message}</div>
+            </a>
+        `;
+    }).join('');
+}
+
+function loadAdminNotifications(limit = 10) {
+    return fetchJson(`/api/admin/notifications?limit=${limit}`)
+        .then((payload) => {
+            adminNotificationsData = toArray(payload);
+            renderAdminNotificationsDropdown(adminNotificationsData);
+            const unread = adminNotificationsData.filter((item) => !item.is_read).length;
+            updateAdminNotificationsBadge(unread);
+        })
+        .catch(() => {
+            const list = document.getElementById('admin-notifications-list');
+            if (list) {
+                list.innerHTML = '<div class="px-3 py-3 text-danger small">Unable to load notifications.</div>';
+            }
+        });
+}
+
+function loadAdminNotificationsUnreadCount() {
+    return fetchJson('/api/admin/notifications/unread-count')
+        .then((payload) => {
+            updateAdminNotificationsBadge(payload?.unread_count ?? 0);
+        })
+        .catch(() => {
+            updateAdminNotificationsBadge(0);
+        });
+}
+
+function handleAdminNotificationClick(event, notificationId, encodedLink) {
+    if (event) {
+        event.preventDefault();
+    }
+    let link = '/admin/dashboard';
+    try {
+        link = encodedLink ? decodeURIComponent(encodedLink) : '/admin/dashboard';
+    } catch (error) {
+        link = '/admin/dashboard';
+    }
+
+    postJson(`/api/admin/notifications/${notificationId}/read`)
+        .catch(() => {})
+        .finally(() => {
+            window.location.href = link;
+        });
+}
+
+function bindAdminNotifications() {
+    const toggle = document.getElementById('admin-notifications-toggle');
+    if (!toggle) return;
+
+    toggle.addEventListener('click', function () {
+        loadAdminNotifications(12);
+    });
+}
+
 function loadGeneralSettings() { 
     const area = document.getElementById('users-table-area');
     if (area) area.innerHTML = '<div class="alert alert-info mb-0">General settings section coming soon.</div>';
@@ -660,6 +993,26 @@ function hideAllAdminSections() {
 }
 
 function setDefaultAdminSection() {
+    const allowedViews = new Set([
+        'all-users',
+        'suspended-users',
+        'deleted-users',
+        'all-professionals',
+        'pending-professionals',
+        'jobs-view',
+        'contracts-view',
+        'reports',
+        'resolved-reports',
+        'contact-messages',
+        'all-payments',
+        'pending-payments',
+        'plans',
+    ]);
+    const requestedView = new URLSearchParams(window.location.search).get('view');
+    if (requestedView && allowedViews.has(requestedView)) {
+        return loadAdminSection(requestedView);
+    }
+
     const defaultMenu = document.getElementById('professionals-menu');
     const defaultToggle = document.querySelector('.admin-sidebar-item[data-toggle="professionals-menu"]');
 
@@ -2015,9 +2368,13 @@ function confirmDeletePlan() {
         }
         initializeAdminSidebar();
         bindContactUserForm();
+        bindAdminContactFilter();
+        bindAdminNotifications();
         loadAdminDarkModePreference();
         Promise.allSettled([
             loadAdminStats(),
+            loadAdminContactUnreadCount(),
+            loadAdminNotificationsUnreadCount(),
             setDefaultAdminSection(),
         ]).finally(() => {
             setAdminDashboardLoading(false);
@@ -2053,6 +2410,11 @@ function confirmDeletePlan() {
     window.loadAllPayments = loadAllPayments;
     window.loadPendingPayments = loadPendingPayments;
     window.reloadAdminPaymentsView = reloadAdminPaymentsView;
+    window.loadAdminContactMessages = loadAdminContactMessages;
+    window.viewAdminContactMessage = viewAdminContactMessage;
+    window.markAdminContactMessageRead = markAdminContactMessageRead;
+    window.deleteAdminContactMessage = deleteAdminContactMessage;
+    window.handleAdminNotificationClick = handleAdminNotificationClick;
     window.viewReport = viewReport;
     window.openResolveModal = openResolveModal;
     window.loadPlans = loadPlans;

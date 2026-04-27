@@ -168,6 +168,42 @@ document.addEventListener("DOMContentLoaded", function () {
         return stars;
     }
 
+    // Reusable searchable dropdown (autocomplete) helper.
+    function enhanceSearchableInput(inputOrId, options, config = {}) {
+        const input = typeof inputOrId === "string"
+            ? document.getElementById(inputOrId)
+            : inputOrId;
+
+        if (!input) {
+            return;
+        }
+
+        const rawOptions = Array.isArray(options) ? options : [];
+        const normalizedOptions = Array.from(
+            new Set(
+                rawOptions
+                    .map((item) => (item ?? "").toString().trim())
+                    .filter(Boolean)
+            )
+        );
+
+        const listId = config.listId || `${input.id || "searchable-input"}-options`;
+        let dataList = document.getElementById(listId);
+
+        if (!dataList) {
+            dataList = document.createElement("datalist");
+            dataList.id = listId;
+            input.insertAdjacentElement("afterend", dataList);
+        }
+
+        dataList.innerHTML = normalizedOptions
+            .map((value) => `<option value="${String(value).replace(/"/g, "&quot;")}"></option>`)
+            .join("");
+
+        input.setAttribute("list", listId);
+        input.setAttribute("autocomplete", "off");
+    }
+
     window.EasyHireUtils = {
         ETHIOPIAN_CITIES,
         SKILL_OPTIONS,
@@ -178,6 +214,7 @@ document.addEventListener("DOMContentLoaded", function () {
         shortText,
         formatDate,
         renderStars,
+        enhanceSearchableInput,
     };
 })();
 });

@@ -178,6 +178,18 @@ Route::middleware(['auth:sanctum', 'check_status'])->group(function () {
         Route::post('/admin/users/{id}/restore', [AdminController::class, 'restoreUser']);
         Route::post('/admin/users/{id}/contact', [AdminController::class, 'contactUser']);
 
+        // 🔥 CONTACT MESSAGES
+        Route::get('/admin/contact-messages', [AdminController::class, 'contactMessages']);
+        Route::get('/admin/contact-messages/unread-count', [AdminController::class, 'contactMessageUnreadCount']);
+        Route::get('/admin/contact-messages/{id}', [AdminController::class, 'viewContactMessage']);
+        Route::post('/admin/contact-messages/{id}/read', [AdminController::class, 'markContactMessageRead']);
+        Route::delete('/admin/contact-messages/{id}', [AdminController::class, 'deleteContactMessage']);
+
+        // 🔔 ADMIN NOTIFICATIONS
+        Route::get('/admin/notifications', [AdminController::class, 'notifications']);
+        Route::get('/admin/notifications/unread-count', [AdminController::class, 'notificationsUnreadCount']);
+        Route::post('/admin/notifications/{id}/read', [AdminController::class, 'markNotificationRead']);
+
         // 🔥 JOBS & CONTRACTS
         Route::get('/admin/jobs', [AdminController::class, 'jobs']);
         Route::post('/admin/jobs/{id}/cancel', [AdminController::class, 'cancelJob']);

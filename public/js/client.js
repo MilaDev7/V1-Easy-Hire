@@ -8,6 +8,7 @@ document.addEventListener("DOMContentLoaded", function () {
         toArray,
         extractCount,
         setText,
+        enhanceSearchableInput,
     } = window.EasyHireUtils;
     let requestCountdownInterval = null;
 
@@ -297,6 +298,9 @@ function renderProfessionalsSection() {
             </div>
         </section>
     `;
+
+    enhanceSearchableInput("professional-skill", SKILL_OPTIONS);
+    enhanceSearchableInput("professional-location", ETHIOPIAN_CITIES);
 
     // Load professionals from API
     function loadClientPros() {

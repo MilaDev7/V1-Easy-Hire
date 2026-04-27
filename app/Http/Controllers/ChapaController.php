@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Plan;
 use App\Models\Subscription;
+use App\Models\User;
 use App\Services\ApplyCreditService;
+use App\Services\AdminNotificationService;
 use App\Services\Chapa;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
@@ -40,6 +42,7 @@ class ChapaController extends Controller
             }
 
             $plan = Plan::findOrFail($planId);
+            $payerName = User::query()->where('id', $userId)->value('name') ?? ('User #'.$userId);
             if ($plan->plan_scope === 'professional_monthly') {
                 $this->applyCreditService->activateMonthlyPlan($userId, $plan);
                 $this->notificationService->send(
@@ -48,6 +51,11 @@ class ChapaController extends Controller
                     'Applies added',
                     'Your professional plan added applies: '.$plan->name,
                     '/pro/dashboard?view=browse-jobs'
+                );
+                app(AdminNotificationService::class)->send(
+                    'payment',
+                    'New plan purchase: '.$payerName.' bought '.$plan->name,
+                    '/admin/dashboard?view=all-payments'
                 );
 
                 return ['already_processed' => false];
@@ -61,6 +69,11 @@ class ChapaController extends Controller
                     'Extra applies added',
                     'You purchased extra applies: '.$plan->name,
                     '/pro/dashboard?view=browse-jobs'
+                );
+                app(AdminNotificationService::class)->send(
+                    'payment',
+                    'New plan purchase: '.$payerName.' bought '.$plan->name,
+                    '/admin/dashboard?view=all-payments'
                 );
 
                 return ['already_processed' => false];
@@ -94,6 +107,11 @@ class ChapaController extends Controller
                 'Subscription activated',
                 'Your client subscription is active: '.$plan->name,
                 '/client/dashboard?view=job-posts'
+            );
+            app(AdminNotificationService::class)->send(
+                'payment',
+                'New plan purchase: '.$payerName.' bought '.$plan->name,
+                '/admin/dashboard?view=all-payments'
             );
 
             return ['already_processed' => false];

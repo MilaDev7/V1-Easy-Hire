@@ -2,7 +2,7 @@ document.addEventListener("DOMContentLoaded", function () {
 (function () {
     // Professional dashboard module.
     const { fetchJson, postJson, deleteJson, buildHeaders } = window.EasyHireApi;
-    const { toArray, setText, formatPrice, shortText, formatDate } = window.EasyHireUtils;
+    const { toArray, setText, formatPrice, shortText, formatDate, ETHIOPIAN_CITIES, SKILL_OPTIONS, enhanceSearchableInput } = window.EasyHireUtils;
 
     // Professional UI rendering and actions.
 function setProfessionalStatus(status) {
@@ -187,6 +187,8 @@ function renderProfessionalJobsSection() {
     professionalJobsCache = [];
     setProfessionalJobsTabState();
     bindProfessionalJobsTabs();
+    enhanceSearchableInput("pro-job-skill-search", SKILL_OPTIONS);
+    enhanceSearchableInput("pro-job-location-search", ETHIOPIAN_CITIES);
     bindProfessionalSearch();
 }
 

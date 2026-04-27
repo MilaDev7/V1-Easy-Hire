@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ChapaController;
+use App\Http\Controllers\PageController;
 use App\Http\Controllers\Api\AuthController;
 use App\Models\Application;
 use App\Models\Professional;
@@ -12,6 +13,10 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return view('home');
 });
+
+Route::get('/about', [PageController::class, 'about'])->name('about');
+Route::get('/contact', [PageController::class, 'contact'])->name('contact');
+Route::post('/contact', [PageController::class, 'submitContact'])->name('contact.submit');
 
 Route::get('/search', function () {
     $location = trim(request('location', ''));
