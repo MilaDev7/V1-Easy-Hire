@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ChapaController;
+use App\Http\Controllers\ForgotPasswordController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\Api\AuthController;
 use App\Models\Application;
@@ -49,6 +50,13 @@ Route::post('/logout', [AuthController::class, 'webLogout'])->name('logout');
 Route::get('/register', function () {
     return view('auth.register');
 });
+
+Route::get('/forgot-password', [ForgotPasswordController::class, 'showForgotForm'])->name('password.forgot.form');
+Route::post('/forgot-password', [ForgotPasswordController::class, 'sendOtp'])->name('password.send.otp');
+Route::get('/verify-otp', [ForgotPasswordController::class, 'showVerifyForm'])->name('password.verify.form');
+Route::post('/verify-otp', [ForgotPasswordController::class, 'verifyOtp'])->name('password.verify.otp');
+Route::get('/reset-password', [ForgotPasswordController::class, 'showResetForm'])->name('password.reset.form');
+Route::post('/reset-password', [ForgotPasswordController::class, 'resetPassword'])->name('password.reset.submit');
 
 Route::get('/payment-success', [ChapaController::class, 'handlePaymentSuccess']);
 
@@ -125,3 +133,37 @@ Route::middleware(['auth', 'check_status', 'role:admin'])->group(function () {
         return view('admin.dashboard');
     });
 });
+
+if (app()->environment('local')) {
+    Route::post('/_test/seed-otp', function (\Illuminate\Http\Request $request) {
+        $validated = $request->validate([
+            'email' => 'required|email',
+            'otp' => 'required|string|size:6',
+        ]);
+
+        \App\Models\PasswordOtp::create([
+            'email' => $validated['email'],
+            'otp' => \Illuminate\Support\Facades\Hash::make($validated['otp']),
+            'expires_at' => now()->addMinutes(10),
+            'used' => false,
+        ]);
+
+        return response()->json(['success' => true]);
+    });
+
+    Route::post('/_test/seed-expired-otp', function (\Illuminate\Http\Request $request) {
+        $validated = $request->validate([
+            'email' => 'required|email',
+            'otp' => 'required|string|size:6',
+        ]);
+
+        \App\Models\PasswordOtp::create([
+            'email' => $validated['email'],
+            'otp' => \Illuminate\Support\Facades\Hash::make($validated['otp']),
+            'expires_at' => now()->subMinutes(5),
+            'used' => false,
+        ]);
+
+        return response()->json(['success' => true]);
+    });
+}
