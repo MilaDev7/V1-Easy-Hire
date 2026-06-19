@@ -362,7 +362,7 @@
                         </div>
                         <div class="dropdown">
                             <button class="btn p-0 border-0 bg-transparent" data-bs-toggle="dropdown" aria-expanded="false">
-                                <img src="{{ asset('images/user1.jpg') }}" id="professional-topbar-photo" alt="Profile" class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover; border: 2px solid rgba(0,0,0,0.1);">
+                                <img id="professional-topbar-photo" alt="Profile" class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover; border: 2px solid rgba(0,0,0,0.1); display: none;">
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end shadow">
                                 <li><a class="dropdown-item" href="/pro/dashboard"><i class="fa-solid fa-user me-2"></i>Account</a></li>
@@ -387,10 +387,10 @@
                             <span class="fw-bold" style="background: linear-gradient(135deg, #198754, #20c997); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">EasyHire</span>
                         </a>
                         <img
-                            src="{{ asset('images/user1.jpg') }}"
                             alt="Professional Photo"
                             id="professional-dashboard-photo"
                             class="professional-sidebar-photo rounded border mb-3"
+                            style="display: none;"
                         >
                         <h1 class="h4 mb-1" id="professional-dashboard-name">Loading...</h1>
                         <p class="text-muted mb-2" id="professional-sidebar-skill">Loading...</p>
@@ -634,8 +634,8 @@
                             <label for="cover-letter-input" class="form-label fw-semibold">Cover Letter</label>
                             <textarea class="form-control" id="cover-letter-input" rows="5" 
                                 placeholder="Describe your experience and why you're perfect for this job..." 
-                                maxlength="1000"></textarea>
-                            <div class="form-text text-end"><span id="cover-letter-count">0</span>/1000</div>
+                                maxlength="2000"></textarea>
+                            <div class="form-text text-end"><span id="cover-letter-count">0</span>/2000</div>
                         </div>
                     </div>
                     <div class="modal-footer border-top">

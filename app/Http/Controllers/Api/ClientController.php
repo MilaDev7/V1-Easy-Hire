@@ -122,6 +122,7 @@ class ClientController extends Controller
                     'professional_profile_id' => optional($app->professional->professional)->id,
                     'date_applied' => $app->created_at->format('Y-m-d'),
                     'status' => $app->status,
+                    'cover_letter' => $app->cover_letter,
                 ];
             });
 

@@ -104,7 +104,7 @@ class ApplicationController extends Controller
 
         // 6. Validation
         $request->validate([
-            'cover_letter' => 'required|string|min:20',
+            'cover_letter' => 'required|string|min:20|max:2000',
         ]);
 
         $consumeResult = $this->applyCreditService->consumeApply($user->id);

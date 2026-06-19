@@ -1207,6 +1207,7 @@ function renderApplications(applications) {
                     application.date_applied
             );
             const profileId = application.professional_profile_id || "";
+            const hasCoverLetter = application.cover_letter && application.cover_letter.length > 0;
             const actionButtons =
                 status === "pending"
                     ? `
@@ -1242,7 +1243,14 @@ function renderApplications(applications) {
                     <td>${appliedDate}</td>
                     <td><span class="badge text-bg-light border">${status}</span></td>
                     <td>${professionalName}</td>
-                    <td>${actionButtons}</td>
+                    <td>
+                        <div class="d-flex flex-wrap gap-2 align-items-center">
+                            ${hasCoverLetter ? `<button type="button" class="btn btn-sm btn-outline-info view-cover-letter-btn" data-application-id="${application.id}" data-testid="view-cover-letter-${application.id}">
+                                <i class="fa-solid fa-file-lines me-1"></i>Cover Letter
+                            </button>` : ''}
+                            ${actionButtons}
+                        </div>
+                    </td>
                 </tr>
             `;
         })
@@ -1267,6 +1275,7 @@ function renderApplications(applications) {
 
     bindApplicationActions();
     bindProfessionalProfileLinks();
+    bindCoverLetterButtons(applications);
 }
 
 function renderApplicationsError() {
@@ -2326,28 +2335,33 @@ function loadClientIdentity() {
     }
 
     function showProfileImageWhenReady(imageElement, rawUrl) {
-        if (!imageElement) {
-            return;
-        }
+        return new Promise((resolve) => {
+            if (!imageElement) {
+                resolve();
+                return;
+            }
 
-        imageElement.style.display = "none";
-        const fallbackUrl = "/images/user1.jpg";
-        const sourceUrl = rawUrl || fallbackUrl;
-        const withTimestamp =
-            sourceUrl + (sourceUrl.includes("?") ? "&" : "?") + "t=" + Date.now();
-        const loader = new Image();
+            imageElement.style.display = "none";
+            const fallbackUrl = "/images/user1.jpg";
+            const sourceUrl = rawUrl || fallbackUrl;
+            const withTimestamp =
+                sourceUrl + (sourceUrl.includes("?") ? "&" : "?") + "t=" + Date.now();
+            const loader = new Image();
 
-        loader.onload = function () {
-            imageElement.src = withTimestamp;
-            imageElement.style.display = "block";
-        };
+            loader.onload = function () {
+                imageElement.src = withTimestamp;
+                imageElement.style.display = "block";
+                resolve();
+            };
 
-        loader.onerror = function () {
-            imageElement.src = fallbackUrl;
-            imageElement.style.display = "block";
-        };
+            loader.onerror = function () {
+                imageElement.src = fallbackUrl;
+                imageElement.style.display = "block";
+                resolve();
+            };
 
-        loader.src = withTimestamp;
+            loader.src = withTimestamp;
+        });
     }
 
     return fetchJson("/api/client/me")
@@ -2356,16 +2370,20 @@ function loadClientIdentity() {
                 clientNameElement.textContent = client.name || "Loading...";
             }
 
-            showProfileImageWhenReady(sidebarPhotoElement, client.profile_photo);
-            showProfileImageWhenReady(topbarPhotoElement, client.profile_photo);
+            return Promise.all([
+                showProfileImageWhenReady(sidebarPhotoElement, client.profile_photo),
+                showProfileImageWhenReady(topbarPhotoElement, client.profile_photo),
+            ]);
         })
         .catch(() => {
             if (clientNameElement) {
                 clientNameElement.textContent = "Unavailable";
             }
 
-            showProfileImageWhenReady(sidebarPhotoElement, null);
-            showProfileImageWhenReady(topbarPhotoElement, null);
+            return Promise.all([
+                showProfileImageWhenReady(sidebarPhotoElement, null),
+                showProfileImageWhenReady(topbarPhotoElement, null),
+            ]);
         });
 }
 
@@ -2703,6 +2721,31 @@ function bindClientNotifications() {
             loadClientNotifications();
         });
     }
+}
+
+function bindCoverLetterButtons(applications) {
+    document.querySelectorAll(".view-cover-letter-btn").forEach((button) => {
+        button.addEventListener("click", function () {
+            const applicationId = Number(this.dataset.applicationId);
+            const app = applications.find((a) => Number(a.id) === applicationId);
+            if (!app) return;
+
+            const modalEl = document.getElementById("cover-letter-modal");
+            const titleEl = document.getElementById("cover-letter-modal-title");
+            const nameEl = document.getElementById("cover-letter-modal-name");
+            const jobEl = document.getElementById("cover-letter-modal-job");
+            const dateEl = document.getElementById("cover-letter-modal-date");
+            const bodyEl = document.getElementById("cover-letter-modal-body");
+
+            if (titleEl) titleEl.textContent = "Cover Letter";
+            if (nameEl) nameEl.textContent = getApplicationProfessionalName(app);
+            if (jobEl) jobEl.textContent = getApplicationJobTitle(app);
+            if (dateEl) dateEl.textContent = formatDate(app.date_applied || app.created_at);
+            if (bodyEl) bodyEl.textContent = app.cover_letter || "No cover letter provided.";
+
+            if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        });
+    });
 }
 
     // Client dashboard entrypoint (called after DOM is ready).

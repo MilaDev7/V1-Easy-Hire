@@ -153,7 +153,7 @@
                         </div>
                         <div class="dropdown">
                             <button class="btn p-0 border-0 bg-transparent" data-bs-toggle="dropdown" aria-expanded="false">
-                                <img src="{{ asset('images/user1.jpg') }}" id="client-topbar-photo" alt="Profile" class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover; border: 2px solid rgba(0,0,0,0.1); display: none;">
+                                <img id="client-topbar-photo" alt="Profile" class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover; border: 2px solid rgba(0,0,0,0.1); display: none;">
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end shadow">
                                 <li><a class="dropdown-item" href="/client/dashboard"><i class="fa-solid fa-user me-2"></i>Account</a></li>
@@ -238,6 +238,44 @@
                 </div>
                 <div class="modal-footer border-top justify-content-center">
                     <button type="button" class="btn btn-warning px-4" data-bs-dismiss="modal">OK</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cover Letter Modal -->
+    <div class="modal fade" id="cover-letter-modal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-success text-white border-0">
+                    <h5 class="modal-title fw-bold" id="cover-letter-modal-title">
+                        <i class="fa-solid fa-file-lines me-2"></i>Cover Letter
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="row mb-3">
+                        <div class="col-sm-6 mb-2 mb-sm-0">
+                            <small class="text-muted d-block">Professional</small>
+                            <strong id="cover-letter-modal-name" class="fs-6"></strong>
+                        </div>
+                        <div class="col-sm-6">
+                            <small class="text-muted d-block">Job</small>
+                            <strong id="cover-letter-modal-job" class="fs-6"></strong>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <small class="text-muted d-block">Applied</small>
+                        <strong id="cover-letter-modal-date" class="fs-6"></strong>
+                    </div>
+                    <hr>
+                    <div class="mt-3">
+                        <small class="text-muted d-block mb-2 fw-semibold">Cover Letter</small>
+                        <div id="cover-letter-modal-body" class="p-3 bg-light rounded" style="white-space: pre-wrap; word-break: break-word; line-height: 1.6;"></div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                 </div>
             </div>
         </div>

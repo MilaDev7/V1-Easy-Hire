@@ -413,28 +413,33 @@ function loadProfessionalIdentity() {
     const topbarPhotoElement = document.getElementById("professional-topbar-photo");
 
     function showProfileImageWhenReady(imageElement, rawUrl) {
-        if (!imageElement) {
-            return;
-        }
+        return new Promise((resolve) => {
+            if (!imageElement) {
+                resolve();
+                return;
+            }
 
-        imageElement.style.display = "none";
-        const fallbackUrl = "/images/user1.jpg";
-        const sourceUrl = rawUrl || fallbackUrl;
-        const withTimestamp =
-            sourceUrl + (sourceUrl.includes("?") ? "&" : "?") + "t=" + Date.now();
-        const loader = new Image();
+            imageElement.style.display = "none";
+            const fallbackUrl = "/images/user1.jpg";
+            const sourceUrl = rawUrl || fallbackUrl;
+            const withTimestamp =
+                sourceUrl + (sourceUrl.includes("?") ? "&" : "?") + "t=" + Date.now();
+            const loader = new Image();
 
-        loader.onload = function () {
-            imageElement.src = withTimestamp;
-            imageElement.style.display = "block";
-        };
+            loader.onload = function () {
+                imageElement.src = withTimestamp;
+                imageElement.style.display = "block";
+                resolve();
+            };
 
-        loader.onerror = function () {
-            imageElement.src = fallbackUrl;
-            imageElement.style.display = "block";
-        };
+            loader.onerror = function () {
+                imageElement.src = fallbackUrl;
+                imageElement.style.display = "block";
+                resolve();
+            };
 
-        loader.src = withTimestamp;
+            loader.src = withTimestamp;
+        });
     }
 
     return fetchJson("/api/pro/me")
@@ -461,8 +466,10 @@ function loadProfessionalIdentity() {
             }
             
             setProfessionalStatus(profile.approval_status);
-            showProfileImageWhenReady(dashboardPhotoElement, profile.profile_photo);
-            showProfileImageWhenReady(topbarPhotoElement, profile.profile_photo);
+            return Promise.all([
+                showProfileImageWhenReady(dashboardPhotoElement, profile.profile_photo),
+                showProfileImageWhenReady(topbarPhotoElement, profile.profile_photo),
+            ]);
         })
         .catch(() => {
             setText("professional-dashboard-name", "Unavailable");
@@ -473,8 +480,10 @@ function loadProfessionalIdentity() {
                 rateElement.innerHTML = '<span class="text-muted">Unavailable</span>';
             }
             setProfessionalStatus("pending");
-            showProfileImageWhenReady(dashboardPhotoElement, null);
-            showProfileImageWhenReady(topbarPhotoElement, null);
+            return Promise.all([
+                showProfileImageWhenReady(dashboardPhotoElement, null),
+                showProfileImageWhenReady(topbarPhotoElement, null),
+            ]);
         });
 }
 
@@ -2685,6 +2694,12 @@ if (coverLetterInput && coverLetterCount) {
     coverLetterInput.addEventListener("input", function() {
         coverLetterCount.textContent = this.value.length;
     });
+    coverLetterInput.addEventListener("blur", function() {
+        if (this.value.length > 2000) {
+            this.value = this.value.substring(0, 2000);
+            coverLetterCount.textContent = this.value.length;
+        }
+    });
 }
 
 if (coverLetterForm && submitBtn) {
@@ -2701,7 +2716,12 @@ if (coverLetterForm && submitBtn) {
         }
         
         if (!coverLetter || coverLetter.length < 20) {
-            alert("Please write a cover letter (at least 20 characters).");
+            showProfessionalApplyInvalidModal("Please write a cover letter (at least 20 characters).");
+            return;
+        }
+
+        if (coverLetter.length > 2000) {
+            showProfessionalApplyInvalidModal("Cover letter must not exceed 2000 characters.");
             return;
         }
         
