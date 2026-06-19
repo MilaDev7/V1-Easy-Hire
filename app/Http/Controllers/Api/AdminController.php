@@ -72,10 +72,14 @@ class AdminController extends Controller
         $professional->status = 'approved';
         $professional->save();
 
-        if ($professional->user) {
-            Mail::to($professional->user->email)->send(
-                new ProfessionalStatusMail('Your account has been approved. You can now start applying for jobs.')
-            );
+        if ($professional->user && $professional->user->email) {
+            try {
+                Mail::to($professional->user->email)->send(
+                    new ProfessionalStatusMail('Your account has been approved. You can now start applying for jobs.')
+                );
+            } catch (\Exception $e) {
+                \Log::error('Failed to send approval email: '.$e->getMessage());
+            }
         }
 
         return response()->json([
@@ -88,26 +92,24 @@ class AdminController extends Controller
 
     public function rejectProfessional($id)
     {
-
-        $professional = \App\Models\Professional::findOrFail($id);
-
-        if (! $professional) {
-            return response()->json(['message' => 'Not found'], 404);
-        }
+        $professional = \App\Models\Professional::with('user')->findOrFail($id);
 
         $professional->status = 'rejected';
         $professional->save();
-        // Mail
-        if ($professional->user) {
-            Mail::to($professional->user->email)->send(
-                new ProfessionalStatusMail('Your account has been rejected. Please contact support.')
-            );
+
+        if ($professional->user && $professional->user->email) {
+            try {
+                Mail::to($professional->user->email)->send(
+                    new ProfessionalStatusMail('Your account has been rejected. Please contact support.')
+                );
+            } catch (\Exception $e) {
+                \Log::error('Failed to send rejection email: '.$e->getMessage());
+            }
         }
 
         return response()->json([
             'message' => 'Professional rejected',
         ]);
-
     }
 
     // suspendUser
@@ -121,12 +123,14 @@ class AdminController extends Controller
 
         $user->tokens()->delete();
 
-        try {
-            Mail::to($user->email)->send(
-                new ProfessionalStatusMail('Your account has been suspended due to a violation of our terms. All active sessions have been closed.')
-            );
-        } catch (\Exception $e) {
-            \Log::error('Failed to send suspension email: '.$e->getMessage());
+        if ($user->email) {
+            try {
+                Mail::to($user->email)->send(
+                    new ProfessionalStatusMail('Your account has been suspended due to a violation of our terms. All active sessions have been closed.')
+                );
+            } catch (\Exception $e) {
+                \Log::error('Failed to send suspension email: '.$e->getMessage());
+            }
         }
 
         return response()->json([
@@ -145,22 +149,21 @@ class AdminController extends Controller
 
     public function unsuspendUser($id)
     {
-        // 1. Find the user
         $user = User::findOrFail($id);
 
         $user->is_suspended = false;
         $user->save();
 
-        // 2. Send Email (Make sure this is BEFORE the return)
-        try {
-            Mail::to($user->email)->send(
-                new ProfessionalStatusMail('Great news! Your account has been restored. You can now log back in and use the system.')
-            );
-        } catch (\Exception $e) {
-            \Log::error('Failed to send unsuspension email: '.$e->getMessage());
+        if ($user->email) {
+            try {
+                Mail::to($user->email)->send(
+                    new ProfessionalStatusMail('Great news! Your account has been restored. You can now log back in and use the system.')
+                );
+            } catch (\Exception $e) {
+                \Log::error('Failed to send unsuspension email: '.$e->getMessage());
+            }
         }
 
-        // 3. RETURN MUST BE LAST
         return response()->json([
             'message' => 'User unsuspended successfully',
         ]);
@@ -222,14 +225,22 @@ class AdminController extends Controller
 
         // 🔴 Suspend User
         if ($request->action === 'suspend_user') {
-            $user = \App\Models\User::find($report->reported_id);
+            $user = \App\Models\User::findOrFail($report->reported_id);
 
-            if ($user) {
-                $user->is_suspended = true;
-                $user->tokens()->delete();
-                $user->save();
+            $user->is_suspended = true;
+            $user->tokens()->delete();
+            $user->save();
 
-                $actionTaken = 'suspend_user';
+            $actionTaken = 'suspend_user';
+
+            if ($user->email) {
+                try {
+                    Mail::to($user->email)->send(
+                        new ProfessionalStatusMail('Your account has been suspended due to a violation of our terms. All active sessions have been closed.')
+                    );
+                } catch (\Exception $e) {
+                    \Log::error('Failed to send suspension email via report: '.$e->getMessage());
+                }
             }
         }
 

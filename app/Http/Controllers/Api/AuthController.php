@@ -10,6 +10,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Validation\ValidationException;
 use Spatie\Permission\PermissionRegistrar;
 use Spatie\Permission\Models\Role;
 
@@ -167,12 +169,26 @@ class AuthController extends Controller
     {
         $request->validate([
             'email' => 'required|email',
-            'password' => 'required',
+            'password' => 'required|string',
         ]);
 
-        if (! Auth::attempt($request->only('email', 'password'))) {
-            return response()->json(['message' => 'Invalid credentials'], 401);
+        $email = $request->string('email')->toString();
+        $throttleKey = 'login:' . mb_strtolower($email);
+
+        if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
+            $seconds = RateLimiter::availableIn($throttleKey);
+            return response()->json([
+                'message' => 'Too many login attempts. Please try again later.',
+                'retry_after' => $seconds,
+            ], 429);
         }
+
+        if (! Auth::attempt($request->only('email', 'password'))) {
+            RateLimiter::hit($throttleKey, 60);
+            return response()->json(['message' => 'Invalid email or password.'], 401);
+        }
+
+        RateLimiter::clear($throttleKey);
 
         $request->session()->regenerate();
         $user = Auth::user();
@@ -183,21 +199,30 @@ class AuthController extends Controller
             $request->session()->regenerateToken();
 
             return response()->json([
-                'message' => 'Your account is suspended',
+                'message' => 'Your account has been suspended.',
             ], 403);
         }
 
         $token = $user->createToken('auth_token')->plainTextToken;
         $professional = Professional::where('user_id', $user->id)->first();
         $intendedUrl = $request->session()->pull('url.intended');
+        $role = $user->getRoleNames()->first();
+
+        $needsSetup = false;
+        if ($role === 'client' && !$user->profile_photo) {
+            $needsSetup = true;
+        } elseif ($role === 'professional' && $professional && empty($professional->skill)) {
+            $needsSetup = true;
+        }
 
         return response()->json([
             'message' => 'Login successful',
             'token' => $token,
-            'role' => $user->getRoleNames()->first(),
+            'role' => $role,
             'approval_status' => $professional ? $professional->status : null,
             'user_name' => $user->name,
             'intended_url' => $intendedUrl,
+            'needs_setup' => $needsSetup,
         ]);
     }
 
