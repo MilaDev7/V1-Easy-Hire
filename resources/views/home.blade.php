@@ -20,12 +20,14 @@
                     <div class="col-md-4">
                         <div class="input-group">
                             <span class="input-group-text bg-white border-0 text-secondary"><i class="fa-solid fa-location-dot"></i></span>
-<input id="location" class="form-control form-control-lg border-0 ps-1" placeholder="City or Area (e.g., Addis)">                        </div>
+                            <input id="location" class="form-control form-control-lg border-0 ps-1" placeholder="City or Area (e.g., Addis)">
+                        </div>
                     </div>
                     <div class="col-md-5">
                         <div class="input-group">
                             <span class="input-group-text bg-white border-0 text-secondary"><i class="fa-solid fa-briefcase"></i></span>
-<input id="service" class="form-control form-control-lg border-0 ps-1" placeholder="What do you need? (e.g., Electrician)">                        </div>
+                            <input id="service" class="form-control form-control-lg border-0 ps-1" placeholder="What do you need? (e.g., Electrician)">
+                        </div>
                     </div>
                     <div class="col-md-3">
                         <button onclick="searchExperts()" class="btn btn-success btn-sm w-100 rounded-pill fw-bold h-100 d-flex align-items-center justify-content-center gap-2">
@@ -84,69 +86,72 @@
 <section class="py-5">
     <div class="container text-center">
 
-        <h2 class="fw-bold mb-5">What Our Clients Say</h2>
+        <h2 class="fw-bold mb-5">Trusted by Clients &amp; Professionals</h2>
 
         <div class="row g-4">
 
-            <!-- TESTIMONIAL 1 -->
+            <!-- TESTIMONIAL 1 -- Client -->
             <div class="col-md-4">
                 <div class="testimonial-card p-4 shadow-sm h-100">
-                    <img src="/images/user1.jpg" class="rounded-circle mb-3" width="80" height="80">
-                    
-                    <h6 class="fw-bold">Abel Tesfaye</h6>
+                    <img src="/storage/profiles/client%20one.jpeg" class="rounded-circle mb-3" width="80" height="80">
 
-                    <!-- STARS -->
-                <div class="text-warning mb-2">
-    <i class="fas fa-star"></i>
-    <i class="fas fa-star"></i>
-    <i class="fas fa-star"></i>
-    <i class="fas fa-star"></i>
-    <i class="fas fa-star"></i>
-</div>
+                    <h6 class="fw-bold mb-1">Abera Assefa</h6>
+                    <span class="badge bg-success bg-opacity-10 text-success mb-2">Client</span>
 
-                    <p class="text-muted">
-                        Found a professional in minutes. The process was smooth and fast.
+                    <div class="text-warning mb-2">
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                    </div>
+
+                    <p class="text-muted mb-0">
+                        &ldquo;I needed a plumber urgently and found one within hours. The verified profiles gave me confidence. EasyHire saved my day!&rdquo;
                     </p>
                 </div>
             </div>
 
-            <!-- TESTIMONIAL 2 -->
+            <!-- TESTIMONIAL 2 -- Professional (Electrician) -->
             <div class="col-md-4">
                 <div class="testimonial-card p-4 shadow-sm h-100">
-                    <img src="/images/user2.jpg" class="rounded-circle mb-3" width="80" height="80">
+                    <img src="/storage/profiles/Carpenter1.jpg" class="rounded-circle mb-3" width="80" height="80">
 
-                    <h6 class="fw-bold">Sara Mekonnen</h6>
+                    <h6 class="fw-bold mb-1">Hana Alemu</h6>
+                    <span class="badge bg-primary bg-opacity-10 text-primary mb-2">Carpenter</span>
 
-                 <div class="text-warning mb-2">
-    <i class="fas fa-star"></i>
-    <i class="fas fa-star"></i>
-    <i class="fas fa-star"></i>
-    <i class="fas fa-star"></i>
-    <i class="fas fa-star"></i>
-</div>
+                    <div class="text-warning mb-2">
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                    </div>
 
-                    <p class="text-muted">
-                        Very reliable platform. I hired a designer and the result was amazing.
+                    <p class="text-muted mb-0">
+                        &ldquo;EasyHire transformed my business. I get quality local leads without spending on ads. The direct request feature is a game changer.&rdquo;
                     </p>
                 </div>
             </div>
 
-            <!-- TESTIMONIAL 3 -->
+            <!-- TESTIMONIAL 3 -- Client -->
             <div class="col-md-4">
                 <div class="testimonial-card p-4 shadow-sm h-100">
-                    <img src="/images/user3.jpg" class="rounded-circle mb-3" width="80" height="80">
+                    <img src="/storage/profiles/client%20two.jpeg" class="rounded-circle mb-3" width="80" height="80">
 
-                    <h6 class="fw-bold">Daniel Girma</h6>
-<div class="text-warning mb-2">
-    <i class="fas fa-star"></i>
-    <i class="fas fa-star"></i>
-    <i class="fas fa-star"></i>
-    <i class="fas fa-star"></i>
-    <i class="fas fa-star"></i>
-</div>
+                    <h6 class="fw-bold mb-1">mola Tadese</h6>
+                    <span class="badge bg-success bg-opacity-10 text-success mb-2">Client</span>
 
-                    <p class="text-muted">
-                        EasyHire saved my time. Great professionals and fast communication.
+                    <div class="text-warning mb-2">
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                    </div>
+
+                    <p class="text-muted mb-0">
+                        &ldquo;Hired a carpenter for custom furniture through EasyHire. The quality exceeded my expectations. Fast, professional, and reliable.&rdquo;
                     </p>
                 </div>
             </div>
@@ -180,49 +185,49 @@
 </section>
 
 
- <!-- Professional Trust Badges -->
+<!-- Professional Trust Badges -->
 <section class="py-4 bg-white  border-bottom">
-<div class="container my-5">
-    <div class="row justify-content-center border-top pt-5">
-        <div class="col-md-8">
-            <div class="d-flex justify-content-around align-items-center">
-                
-                <!-- Chapa Badge -->
-                <div class="d-flex align-items-center">
-                    <div class="position-relative me-3">
-                        <div class="bg-success rounded-circle d-flex align-items-center justify-content-center shadow-sm" style="width: 50px; height: 50px;">
-                            <i class="fas fa-lock text-white fs-5"></i>
-                        </div>
-                        <span class="position-absolute bottom-0 end-0 bg-white rounded-circle d-flex align-items-center justify-content-center border" style="width: 20px; height: 20px;">
-                            <i class="fas fa-check text-success" style="font-size: 10px;"></i>
-                        </span>
-                    </div>
-                    <div>
-                        <h6 class="mb-0 fw-bold text-dark">Chapa Secure</h6>
-                        <small class="text-muted">Encrypted Payments</small>
-                    </div>
-                </div>
+    <div class="container my-5">
+        <div class="row justify-content-center border-top pt-5">
+            <div class="col-md-8">
+                <div class="d-flex justify-content-around align-items-center">
 
-                <!-- ID Verified Badge -->
-                <div class="d-flex align-items-center border-start ps-5">
-                    <div class="position-relative me-3">
-                        <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center shadow-sm" style="width: 50px; height: 50px; background-color: #0d6efd !important;">
-                            <i class="fas fa-user-check text-white fs-5"></i>
+                    <!-- Chapa Badge -->
+                    <div class="d-flex align-items-center">
+                        <div class="position-relative me-3">
+                            <div class="bg-success rounded-circle d-flex align-items-center justify-content-center shadow-sm" style="width: 50px; height: 50px;">
+                                <i class="fas fa-lock text-white fs-5"></i>
+                            </div>
+                            <span class="position-absolute bottom-0 end-0 bg-white rounded-circle d-flex align-items-center justify-content-center border" style="width: 20px; height: 20px;">
+                                <i class="fas fa-check text-success" style="font-size: 10px;"></i>
+                            </span>
                         </div>
-                        <span class="position-absolute bottom-0 end-0 bg-white rounded-circle d-flex align-items-center justify-content-center border" style="width: 20px; height: 20px;">
-                            <i class="fas fa-check text-primary" style="font-size: 10px;"></i>
-                        </span>
+                        <div>
+                            <h6 class="mb-0 fw-bold text-dark">Chapa Secure</h6>
+                            <small class="text-muted">Encrypted Payments</small>
+                        </div>
                     </div>
-                    <div>
-                        <h6 class="mb-0 fw-bold text-dark">ID Verified</h6>
-                        <small class="text-muted">Pro Professionals</small>
-                    </div>
-                </div>
 
+                    <!-- ID Verified Badge -->
+                    <div class="d-flex align-items-center border-start ps-5">
+                        <div class="position-relative me-3">
+                            <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center shadow-sm" style="width: 50px; height: 50px; background-color: #0d6efd !important;">
+                                <i class="fas fa-user-check text-white fs-5"></i>
+                            </div>
+                            <span class="position-absolute bottom-0 end-0 bg-white rounded-circle d-flex align-items-center justify-content-center border" style="width: 20px; height: 20px;">
+                                <i class="fas fa-check text-primary" style="font-size: 10px;"></i>
+                            </span>
+                        </div>
+                        <div>
+                            <h6 class="mb-0 fw-bold text-dark">ID Verified</h6>
+                            <small class="text-muted">Pro Professionals</small>
+                        </div>
+                    </div>
+
+                </div>
             </div>
         </div>
     </div>
-</div>
 </section>
 
 @endsection
@@ -232,45 +237,45 @@
 
 <script src="{{ asset('js/utils.js') }}"></script>
 <script>
-function searchExperts() {
-    const location = document.getElementById("location")?.value || "";
-    const service = document.getElementById("service")?.value || "";
+    function searchExperts() {
+        const location = document.getElementById("location")?.value || "";
+        const service = document.getElementById("service")?.value || "";
 
-    if (!location && !service) {
-        alert("Enter location or service");
-        return;
-    }
-
-    window.location.href = `/search?location=${location}&service=${service}`;
-}
-
-async function loadHomePlans() {
-    const container = document.getElementById('home-plans-container');
-    if (!container) return;
-
-    try {
-        const response = await fetch('/api/plans');
-        const plans = await response.json();
-        
-        if (!plans || plans.length === 0) {
-            container.innerHTML = '<div class="col-12 text-center text-muted py-4">No plans available at the moment.</div>';
+        if (!location && !service) {
+            alert("Enter location or service");
             return;
         }
 
-        container.innerHTML = plans.map((plan, index) => {
-            const isPopular = index === 1;
-            const bgStyle = isPopular 
-                ? 'background: rgba(138, 219, 174, 0.20); box-shadow: 0 8px 22px rgba(7, 19, 16, 0.14);'
-                : 'background: rgba(255, 255, 255, 0.12);';
-            const planColor = isPopular ? '#effff4' : '#c8f0d6';
-            const popularBadge = isPopular 
-                ? '<span class="small fw-bold px-2 py-1 rounded-pill" style="background: #e5f8ec; color: #1b4037;">Popular</span>'
-                : '';
-            const directRequests = plan.direct_requests_limit > 0 
-                ? `${plan.direct_requests_limit} Direct Requests`
-                : 'No Direct Requests';
+        window.location.href = `/search?location=${location}&service=${service}`;
+    }
 
-            return `
+    async function loadHomePlans() {
+        const container = document.getElementById('home-plans-container');
+        if (!container) return;
+
+        try {
+            const response = await fetch('/api/plans');
+            const plans = await response.json();
+
+            if (!plans || plans.length === 0) {
+                container.innerHTML = '<div class="col-12 text-center text-muted py-4">No plans available at the moment.</div>';
+                return;
+            }
+
+            container.innerHTML = plans.map((plan, index) => {
+                const isPopular = index === 1;
+                const bgStyle = isPopular ?
+                    'background: rgba(138, 219, 174, 0.20); box-shadow: 0 8px 22px rgba(7, 19, 16, 0.14);' :
+                    'background: rgba(255, 255, 255, 0.12);';
+                const planColor = isPopular ? '#effff4' : '#c8f0d6';
+                const popularBadge = isPopular ?
+                    '<span class="small fw-bold px-2 py-1 rounded-pill" style="background: #e5f8ec; color: #1b4037;">Popular</span>' :
+                    '';
+                const directRequests = plan.direct_requests_limit > 0 ?
+                    `${plan.direct_requests_limit} Direct Requests` :
+                    'No Direct Requests';
+
+                return `
                 <div class="col-12 col-md-4">
                     <div class="card border-0 rounded-4 h-100" style="${bgStyle}">
                         <div class="card-body p-3">
@@ -293,78 +298,84 @@ async function loadHomePlans() {
                     </div>
                 </div>
             `;
-        }).join('');
-    } catch (error) {
-        container.innerHTML = '<div class="col-12 text-center text-muted py-4">Failed to load plans. Please refresh.</div>';
-    }
-}
-
-function homeBuyPlan(planId) {
-    const token = localStorage.getItem('token');
-    if (!token) {
-        window.location.href = '/login?redirect=/';
-        return;
-    }
-
-    fetch('/api/buy-plan/' + planId, {
-        method: 'POST',
-        headers: {
-            'Authorization': 'Bearer ' + token,
-            'Content-Type': 'application/json'
+            }).join('');
+        } catch (error) {
+            container.innerHTML = '<div class="col-12 text-center text-muted py-4">Failed to load plans. Please refresh.</div>';
         }
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.redirect_url) {
-            window.location.href = data.redirect_url;
-        } else if (data.message) {
-            alert(data.message);
-        }
-    })
-    .catch(err => {
-        alert('Failed to purchase plan. Please try again.');
-    });
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-    // Hide "Get Started" button if logged in
-    const token = localStorage.getItem('token');
-    if (token) {
-        const btn = document.getElementById('home-get-started-btn');
-        if (btn) btn.style.display = 'none';
     }
 
-    // Keep browser "Back" inactive on Home page.
-    const homeStateKey = '__home_lock__';
-    window.history.replaceState({ [homeStateKey]: true }, '', window.location.href);
-    window.history.pushState({ [homeStateKey]: true }, '', window.location.href);
-
-    window.addEventListener('popstate', function () {
-        if (window.location.pathname === '/') {
-            window.history.pushState({ [homeStateKey]: true }, '', window.location.href);
+    function homeBuyPlan(planId) {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            window.location.href = '/login?redirect=/';
+            return;
         }
-    });
 
-    const locationInput = document.getElementById('location');
-    const serviceInput = document.getElementById('service');
-    if (window.EasyHireUtils?.enhanceSearchableInput) {
-        window.EasyHireUtils.enhanceSearchableInput("location", window.EasyHireUtils.ETHIOPIAN_CITIES || []);
-        window.EasyHireUtils.enhanceSearchableInput("service", window.EasyHireUtils.SKILL_OPTIONS || []);
+        fetch('/api/buy-plan/' + planId, {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer ' + token,
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.redirect_url) {
+                    window.location.href = data.redirect_url;
+                } else if (data.message) {
+                    alert(data.message);
+                }
+            })
+            .catch(err => {
+                alert('Failed to purchase plan. Please try again.');
+            });
     }
-    const bindEnterSearch = function (input) {
-        if (!input) return;
-        input.addEventListener('keydown', function (event) {
-            if (event.key === 'Enter') {
-                event.preventDefault();
-                searchExperts();
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // Hide "Get Started" button if logged in
+        const token = localStorage.getItem('token');
+        if (token) {
+            const btn = document.getElementById('home-get-started-btn');
+            if (btn) btn.style.display = 'none';
+        }
+
+        // Keep browser "Back" inactive on Home page.
+        const homeStateKey = '__home_lock__';
+        window.history.replaceState({
+            [homeStateKey]: true
+        }, '', window.location.href);
+        window.history.pushState({
+            [homeStateKey]: true
+        }, '', window.location.href);
+
+        window.addEventListener('popstate', function() {
+            if (window.location.pathname === '/') {
+                window.history.pushState({
+                    [homeStateKey]: true
+                }, '', window.location.href);
             }
         });
-    };
-    bindEnterSearch(locationInput);
-    bindEnterSearch(serviceInput);
-    
-    loadHomePlans();
-});
+
+        const locationInput = document.getElementById('location');
+        const serviceInput = document.getElementById('service');
+        if (window.EasyHireUtils?.enhanceSearchableInput) {
+            window.EasyHireUtils.enhanceSearchableInput("location", window.EasyHireUtils.ETHIOPIAN_CITIES || []);
+            window.EasyHireUtils.enhanceSearchableInput("service", window.EasyHireUtils.SKILL_OPTIONS || []);
+        }
+        const bindEnterSearch = function(input) {
+            if (!input) return;
+            input.addEventListener('keydown', function(event) {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    searchExperts();
+                }
+            });
+        };
+        bindEnterSearch(locationInput);
+        bindEnterSearch(serviceInput);
+
+        loadHomePlans();
+    });
 </script>
 
 @endsection

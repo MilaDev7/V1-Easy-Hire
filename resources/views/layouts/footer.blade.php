@@ -1,5 +1,5 @@
 <!-- Footer -->
-<footer class="bg-dark text-white pt-5 pb-4 mt-5">
+<footer class="bg-dark text-white pt-5 pb-4" style="margin-top: auto;">
     <div class="container">
         <div class="row text-center text-md-start">
             <div class="col-md-3 col-lg-3 col-xl-3 mx-auto mt-3">
@@ -43,10 +43,10 @@
         </div>
 
         <hr class="mb-4 border-secondary opacity-25">
-<div class="row">
-                <div class="col-12 text-center">
-                    <p class="small text-secondary mb-0">Baba 2026</p>
-                </div>
+        <div class="row">
+            <div class="col-12 text-center">
+                <p class="small text-secondary mb-0">Mila</p>
             </div>
+        </div>
     </div>
 </footer>

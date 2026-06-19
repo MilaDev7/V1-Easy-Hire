@@ -12,6 +12,60 @@
       body.site-dark-mode .nav-link:hover {
           color: #ffffff !important;
       }
+
+      body.site-dark-mode .text-dark,
+      body.site-dark-mode .text-body {
+          color: #f9fafb !important;
+      }
+
+      body.site-dark-mode .text-muted {
+          color: #9ca3af !important;
+      }
+
+      body.site-dark-mode .text-warning {
+          color: #facc15 !important;
+      }
+
+      body.site-dark-mode .bg-white {
+          background: #1f2937 !important;
+      }
+
+      body.site-dark-mode .bg-light {
+          background: #1f2937 !important;
+      }
+
+      body.site-dark-mode h1,
+      body.site-dark-mode h2,
+      body.site-dark-mode h3,
+      body.site-dark-mode h4,
+      body.site-dark-mode h5,
+      body.site-dark-mode h6 {
+          color: #f9fafb;
+      }
+
+      body.site-dark-mode .testimonial-card,
+      body.site-dark-mode .work-card {
+          background: #1f2937 !important;
+          color: #f9fafb;
+      }
+
+      body.site-dark-mode .border-bottom,
+      body.site-dark-mode .border-top {
+          border-color: #374151 !important;
+      }
+
+      body.site-dark-mode .hero-search-card {
+          background: #1f2937 !important;
+      }
+
+      body.site-dark-mode .hero-search-card .input-group-text {
+          background: #1f2937 !important;
+          color: #9ca3af !important;
+      }
+
+      body.site-dark-mode .hero-search-card .form-control {
+          color: #f9fafb !important;
+      }
   </style>
 
 

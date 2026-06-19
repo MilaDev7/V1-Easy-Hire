@@ -13,7 +13,6 @@
 
     <div class="mb-3">
         <img
-            src="{{ asset('images/user1.jpg') }}"
             alt="Client Profile Photo"
             id="client-sidebar-photo"
             class="rounded border object-fit-cover d-block mx-auto"
@@ -97,7 +96,7 @@
                     
                     <!-- Photo -->
                     <div class="text-center mb-4 position-relative d-inline-block" style="width: 100px; height: 100px; margin: 0 auto; display: block;">
-                        <img id="settings-profile-preview" src="{{ asset('images/user1.jpg') }}" class="rounded-circle" style="width: 100px; height: 100px; object-fit: cover;">
+                        <img id="settings-profile-preview" class="rounded-circle" style="width: 100px; height: 100px; object-fit: cover;">
                         <input type="file" id="settings-photo-input" class="d-none" accept="image/*">
                         <button type="button" class="btn btn-sm btn-outline-secondary position-absolute bottom-0 end-0 rounded-circle" style="width: 28px; height: 28px; padding: 0;" onclick="document.getElementById('settings-photo-input').click()">
                             <i class="fa-solid fa-pen fa-xs"></i>
