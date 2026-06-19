@@ -136,12 +136,21 @@
       renderAuthSection();
   }
 
+  // Track current user state to avoid redundant re-renders
+  let _lastAuthUserId = null;
+
   // Render auth section based on user state
   async function renderAuthSection() {
       const authSection = document.getElementById('auth-section');
       if (!authSection) return;
 
       const user = await window.initAuth();
+
+      // Skip re-render if user hasn't changed (prevents image flicker on repeated auth:changed events)
+      const currentId = user ? user.id : 'guest';
+      if (_lastAuthUserId === currentId && authSection.querySelector('img')) return;
+      _lastAuthUserId = currentId;
+
       const isDark = isSiteDarkModeEnabled();
 
       if (user) {
@@ -170,7 +179,9 @@
                               src="${photoUrl}"
                               alt="Profile"
                               class="rounded-circle border"
-                              style="width: 36px; height: 36px; object-fit: cover;"
+                              width="36"
+                              height="36"
+                              style="object-fit: cover;"
                               onerror="this.onerror=null;this.src='${defaultPhoto}';"
                           >
                       </button>
