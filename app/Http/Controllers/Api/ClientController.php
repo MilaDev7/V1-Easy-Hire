@@ -7,6 +7,7 @@ use App\Models\Application;
 use App\Models\Contract;
 use App\Models\JobPost;
 use App\Models\Subscription;
+use Carbon\Carbon;
 
 class ClientController extends Controller
 {
@@ -157,8 +158,15 @@ class ClientController extends Controller
             ]);
         }
 
+        $isExpired = $subscription->expires_at && Carbon::parse($subscription->expires_at)->isPast();
+
+        if ($isExpired) {
+            return response()->json([
+                'remaining' => 0,
+            ]);
+        }
+
         return response()->json([
-            // remaining_posts is already tracked as remaining quota.
             'remaining' => max((int) $subscription->remaining_posts, 0),
         ]);
     }
@@ -174,10 +182,11 @@ class ClientController extends Controller
                 return [
                     'id' => $post->id,
                     'title' => $post->title,
-                    'description' => substr($post->description, 0, 80).'...',
+                    'description' => $post->description,
                     'skill' => $post->skill,
                     'status' => $post->status ?? 'open',
                     'location' => $post->location,
+                    'budget' => $post->budget,
                     'start_date' => $post->start_date,
                     'deadline' => $post->deadline,
                     'created_at' => $post->created_at->format('Y-m-d'),
