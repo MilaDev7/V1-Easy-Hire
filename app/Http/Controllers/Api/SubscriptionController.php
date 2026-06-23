@@ -7,6 +7,7 @@ use App\Models\JobPost;
 use App\Models\Plan;
 use App\Models\Subscription;
 use App\Services\Chapa;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
@@ -95,6 +96,19 @@ class SubscriptionController extends Controller
             ], 200);
         }
 
+        $isExpired = $subscription->expires_at && Carbon::parse($subscription->expires_at)->isPast();
+
+        if ($isExpired) {
+            return response()->json([
+                'has_subscription' => false,
+                'is_expired' => true,
+                'message' => 'Subscription has expired. Please renew your plan.',
+                'remaining_jobs' => 0,
+                'direct_requests_remaining' => 0,
+                'expires_at' => $subscription->expires_at,
+            ], 200);
+        }
+
         $activeJobs = JobPost::where('client_id', $user->id)
             ->where('status', '!=', 'cancelled')
             ->count();
@@ -106,10 +120,8 @@ class SubscriptionController extends Controller
             'has_subscription' => true,
             'plan_name' => $subscription->plan->name,
             'plan' => $subscription->plan->name,
-            // Plan capacity (static for the current plan purchase).
             'job_limit' => $jobLimit,
             'active_jobs' => $activeJobs,
-            // Runtime remaining quota tracked in subscriptions.remaining_posts.
             'remaining_jobs' => $remaining,
             'direct_requests_limit' => $subscription->plan->direct_requests_limit ?? 0,
             'direct_requests_remaining' => $subscription->direct_requests_remaining ?? 0,
