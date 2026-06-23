@@ -8,6 +8,7 @@ use App\Models\Subscription;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 
 class JobPostController extends Controller
 {
@@ -80,6 +81,38 @@ class JobPostController extends Controller
             'message' => 'Job created successfully',
             'job' => $job,
         ], 201);
+    }
+
+    public function update(Request $request, $id)
+    {
+        $job = JobPost::findOrFail($id);
+
+        if ($job->client_id !== auth()->id()) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        if ($job->status !== 'open') {
+            return response()->json([
+                'message' => 'Only open jobs can be edited.',
+            ], 400);
+        }
+
+        $validated = $request->validate([
+            'title' => 'required|string',
+            'description' => 'required|string',
+            'location' => 'required|string',
+            'budget' => 'nullable|numeric',
+            'skill' => 'required|string',
+            'start_date' => 'nullable|date',
+            'deadline' => 'nullable|date|after:start_date',
+        ]);
+
+        $job->update($validated);
+
+        return response()->json([
+            'message' => 'Job updated successfully',
+            'job' => $job->fresh(),
+        ]);
     }
 
     public function complete($id)
