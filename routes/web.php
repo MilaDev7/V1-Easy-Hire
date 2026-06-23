@@ -23,7 +23,7 @@ Route::get('/search', function () {
     $location = trim(request('location', ''));
     $service = trim(request('service', ''));
 
-    $query = Professional::with('user');
+    $query = Professional::with('user')->whereHas('user', fn($q) => $q->whereNull('deleted_at'));
 
     if ($service !== '') {
         $query->where('skill', 'LIKE', '%'.$service.'%');
@@ -64,6 +64,10 @@ Route::get('/payment-failed', [ChapaController::class, 'paymentFailed']);
 
 Route::middleware('auth')->get('/professional/{id}', function ($id) {
     $professional = Professional::with('user')->findOrFail($id);
+
+    if (! $professional->user) {
+        abort(404, 'Professional not found');
+    }
     $reviewTargetIds = array_values(array_unique([
         (int) $professional->user_id,
         (int) $professional->id,
@@ -163,6 +167,55 @@ if (app()->environment('local')) {
             'expires_at' => now()->subMinutes(5),
             'used' => false,
         ]);
+
+        return response()->json(['success' => true]);
+    });
+
+    Route::post('/_test/seed-subscription', function (\Illuminate\Http\Request $request) {
+        $validated = $request->validate([
+            'user_id' => 'required|exists:users,id',
+            'plan_id' => 'required|exists:plans,id',
+            'remaining_posts' => 'required|integer|min:0',
+            'direct_requests_remaining' => 'nullable|integer|min:0',
+            'expires_at' => 'required|date',
+        ]);
+
+        $subscription = \App\Models\Subscription::updateOrCreate(
+            ['user_id' => $validated['user_id']],
+            [
+                'plan_id' => $validated['plan_id'],
+                'remaining_posts' => $validated['remaining_posts'],
+                'direct_requests_remaining' => $validated['direct_requests_remaining'] ?? 0,
+                'expires_at' => $validated['expires_at'],
+                'status' => 'active',
+            ]
+        );
+
+        return response()->json(['success' => true, 'subscription' => $subscription]);
+    });
+
+    Route::post('/_test/seed-plan', function () {
+        $plan = \App\Models\Plan::firstOrCreate(
+            ['name' => 'Test Basic'],
+            [
+                'price' => 100,
+                'job_posts_limit' => 10,
+                'direct_requests_limit' => 2,
+                'duration_days' => 30,
+                'plan_scope' => 'client',
+                'is_active' => true,
+            ]
+        );
+
+        return response()->json($plan);
+    });
+
+    Route::post('/_test/delete-subscription', function (\Illuminate\Http\Request $request) {
+        $validated = $request->validate([
+            'user_id' => 'required|exists:users,id',
+        ]);
+
+        \App\Models\Subscription::where('user_id', $validated['user_id'])->delete();
 
         return response()->json(['success' => true]);
     });

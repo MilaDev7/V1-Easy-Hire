@@ -60,6 +60,7 @@ Route::middleware(['auth:sanctum', 'check_status'])->group(function () {
     // General User Actions
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
+    Route::put('/password', [AuthController::class, 'updatePassword']);
     Route::delete('/account', [AuthController::class, 'deleteAccount']);
     Route::get('/notifications', [NotificationController::class, 'index']);
     Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
@@ -78,6 +79,7 @@ Route::middleware(['auth:sanctum', 'check_status'])->group(function () {
 
         // Job Management
         Route::post('/job-posts', [JobPostController::class, 'store']);
+        Route::put('/job-posts/{id}', [JobPostController::class, 'update']);
         Route::delete('/job-posts/{id}', [ClientController::class, 'deleteJob']);
         Route::get('/jobs/{id}/applications', [ApplicationController::class, 'jobApplications']);
         Route::post('/applications/{id}/accept', [ApplicationController::class, 'accept']);
