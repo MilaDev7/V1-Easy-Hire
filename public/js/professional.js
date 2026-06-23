@@ -1,7 +1,7 @@
 document.addEventListener("DOMContentLoaded", function () {
 (function () {
     // Professional dashboard module.
-    const { fetchJson, postJson, deleteJson, buildHeaders } = window.EasyHireApi;
+    const { fetchJson, postJson, putJson, deleteJson, buildHeaders } = window.EasyHireApi;
     const { toArray, setText, formatPrice, shortText, formatDate, ETHIOPIAN_CITIES, SKILL_OPTIONS, enhanceSearchableInput } = window.EasyHireUtils;
 
     // Professional UI rendering and actions.
@@ -329,23 +329,12 @@ function renderProfessionalJobs(jobs) {
 }
 
 function showProfessionalApplyInvalidModal(message) {
-    const pendingApprovalMessage = "You are not approved yet. The admin is reviewing your info.";
-    const normalizedMessage = (message || "").toLowerCase();
-    const isPendingApproval =
-        normalizedMessage.includes("not approved yet") ||
-        normalizedMessage.includes("admin is reviewing");
-
     const coverLetterModalElement = document.getElementById("apply-cover-letter-modal");
     if (coverLetterModalElement) {
         const coverModalInstance = bootstrap.Modal.getInstance(coverLetterModalElement);
         if (coverModalInstance) {
             coverModalInstance.hide();
         }
-    }
-
-    if (isPendingApproval) {
-        window.alert(pendingApprovalMessage);
-        return;
     }
 
     const modalElement = document.getElementById("professional-apply-invalid-modal");
@@ -689,12 +678,16 @@ function loadProfessionalStats() {
             } else {
                 setText("pro-apply-limit-badge", "No active plan");
             }
+            const dailyCount = Number(payload.daily_applications_count ?? 0);
+            const dailyLimit = Number(payload.daily_apply_limit ?? 5);
+            setText("pro-daily-applies-remaining", `Applications remaining today: ${Math.max(dailyLimit - dailyCount, 0)}/${dailyLimit}`);
         })
         .catch(() => {
             setText("pro-active-contracts-count", "--");
             setText("pro-completed-jobs-count", "--");
             setText("pro-remaining-applies-count", "--");
             setText("pro-apply-limit-badge", "--");
+            setText("pro-daily-applies-remaining", "Applications remaining today: --");
         });
 }
 
@@ -1787,7 +1780,7 @@ function bindProfessionalSettings() {
                     window.location.href = "/";
                 })
                 .catch((error) => {
-                    window.alert(error.message || "Failed to delete account.");
+                    showAccountDeletionErrorModal(error.message || "Failed to delete account.");
                 })
                 .finally(() => {
                     confirmDeleteAccountButton.disabled = false;
@@ -1798,6 +1791,152 @@ function bindProfessionalSettings() {
                 });
         });
     }
+}
+
+function bindProfessionalChangePassword() {
+    const saveBtn = document.getElementById("pro-cp-save-btn");
+    const currentInput = document.getElementById("pro-cp-current-password");
+    const newInput = document.getElementById("pro-cp-new-password");
+    const confirmInput = document.getElementById("pro-cp-confirm-password");
+    const feedback = document.getElementById("pro-cp-feedback");
+
+    document.querySelectorAll(".pro-cp-eye-btn").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+            const target = document.getElementById(this.dataset.proCpTarget);
+            const icon = this.querySelector("i");
+            if (!target) return;
+            if (target.type === "password") {
+                target.type = "text";
+                icon.classList.remove("fa-eye");
+                icon.classList.add("fa-eye-slash");
+            } else {
+                target.type = "password";
+                icon.classList.remove("fa-eye-slash");
+                icon.classList.add("fa-eye");
+            }
+        });
+    });
+
+    if (newInput) {
+        newInput.addEventListener("input", function () {
+            const value = this.value;
+            const checks = {
+                length: value.length >= 8,
+                uppercase: /[A-Z]/.test(value),
+                lowercase: /[a-z]/.test(value),
+                number: /[0-9]/.test(value),
+                special: /[^A-Za-z0-9]/.test(value),
+            };
+            const passed = Object.values(checks).filter(Boolean).length;
+            const pct = (passed / 5) * 100;
+            const bar = document.getElementById("proCpStrengthBar");
+            if (bar) {
+                bar.style.width = pct + "%";
+                bar.className = "progress-bar";
+                if (pct === 100) bar.classList.add("bg-success");
+                else if (pct >= 60) bar.classList.add("bg-warning");
+                else bar.classList.add("bg-danger");
+            }
+            for (const [key, met] of Object.entries(checks)) {
+                const el = document.getElementById("pro-cp-req-" + key);
+                if (el) {
+                    el.className = met ? "text-success" : "text-muted";
+                    const icon = el.querySelector("i");
+                    if (icon) {
+                        icon.className = met ? "fa-regular fa-circle-check me-1" : "fa-regular fa-circle me-1";
+                    }
+                }
+            }
+        });
+    }
+
+    if (saveBtn) {
+        saveBtn.addEventListener("click", function () {
+            const currentPassword = currentInput ? currentInput.value : "";
+            const newPassword = newInput ? newInput.value : "";
+            const confirmPassword = confirmInput ? confirmInput.value : "";
+
+            if (!currentPassword) {
+                if (feedback) feedback.innerHTML = '<span class="text-danger">Please enter your current password.</span>';
+                return;
+            }
+            if (newPassword.length < 8) {
+                if (feedback) feedback.innerHTML = '<span class="text-danger">New password must be at least 8 characters.</span>';
+                return;
+            }
+            if (newPassword !== confirmPassword) {
+                if (feedback) feedback.innerHTML = '<span class="text-danger">Passwords do not match.</span>';
+                return;
+            }
+
+            const checks = {
+                length: newPassword.length >= 8,
+                uppercase: /[A-Z]/.test(newPassword),
+                lowercase: /[a-z]/.test(newPassword),
+                number: /[0-9]/.test(newPassword),
+                special: /[^A-Za-z0-9]/.test(newPassword),
+            };
+            if (!Object.values(checks).every(Boolean)) {
+                if (feedback) feedback.innerHTML = '<span class="text-danger">Password must have uppercase, lowercase, number, and special character.</span>';
+                return;
+            }
+
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Updating...';
+            if (feedback) feedback.innerHTML = "";
+
+            putJson("/api/password", {
+                current_password: currentPassword,
+                password: newPassword,
+                password_confirmation: confirmPassword,
+            })
+                .then(function (data) {
+                    if (feedback) feedback.innerHTML = '<span class="text-success">' + data.message + "</span>";
+                    if (currentInput) currentInput.value = "";
+                    if (newInput) newInput.value = "";
+                    if (confirmInput) confirmInput.value = "";
+                    if (newInput) newInput.dispatchEvent(new Event("input"));
+                })
+                .catch(function (error) {
+                    if (feedback) feedback.innerHTML = '<span class="text-danger">' + error.message + "</span>";
+                })
+                .finally(function () {
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = '<i class="fa-solid fa-key me-1"></i> Update Password';
+                });
+        });
+    }
+}
+
+function showAccountDeletionErrorModal(message) {
+    let modalElement = document.getElementById("account-deletion-error-modal");
+
+    if (!modalElement) {
+        modalElement = document.createElement("div");
+        modalElement.innerHTML = `
+            <div class="modal fade" id="account-deletion-error-modal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content border-0 shadow-lg">
+                        <div class="modal-header bg-danger text-white border-0">
+                            <h5 class="modal-title fw-bold"><i class="fa-solid fa-circle-exclamation me-2"></i>Cannot Delete Account</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body text-center py-4">
+                            <i class="fa-solid fa-hand fa-4x text-danger mb-3"></i>
+                            <p class="fs-6 mb-0" id="account-deletion-error-message"></p>
+                        </div>
+                        <div class="modal-footer border-top justify-content-center">
+                            <button type="button" class="btn btn-danger px-4" data-bs-dismiss="modal">OK</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modalElement.firstElementChild);
+    }
+
+    document.getElementById("account-deletion-error-message").textContent = message;
+    bootstrap.Modal.getOrCreateInstance(document.getElementById("account-deletion-error-modal")).show();
 }
 
 function loadDirectRequests() {
@@ -2669,6 +2808,7 @@ function initializeProfessionalDashboard() {
     setProfessionalDashboardLoading(true);
     bindProfessionalSidebarNavigation();
     bindProfessionalSettings();
+    bindProfessionalChangePassword();
     bindProNotifications();
 
     Promise.allSettled([
