@@ -59,6 +59,34 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
+    function putJson(url, body) {
+        const headers = buildHeaders();
+
+        if (body !== undefined) {
+            headers["Content-Type"] = "application/json";
+        }
+
+        return fetch(url, {
+            method: "PUT",
+            headers,
+            body: body !== undefined ? JSON.stringify(body) : undefined,
+        }).then(async (response) => {
+            let payload = null;
+
+            try {
+                payload = await response.json();
+            } catch (error) {
+                payload = null;
+            }
+
+            if (!response.ok) {
+                throw new Error(payload?.message || "Request failed");
+            }
+
+            return payload;
+        });
+    }
+
     function deleteJson(url) {
         return fetch(url, {
             method: "DELETE",
@@ -84,6 +112,7 @@ document.addEventListener("DOMContentLoaded", function () {
         buildHeaders,
         fetchJson,
         postJson,
+        putJson,
         deleteJson,
     };
 })();
