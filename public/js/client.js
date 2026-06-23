@@ -1,7 +1,7 @@
 document.addEventListener("DOMContentLoaded", function () {
 (function () {
     // Client dashboard module.
-    const { fetchJson, postJson, deleteJson, buildHeaders } = window.EasyHireApi;
+    const { fetchJson, postJson, putJson, deleteJson, buildHeaders } = window.EasyHireApi;
     const {
         ETHIOPIAN_CITIES,
         SKILL_OPTIONS,
@@ -93,6 +93,31 @@ function renderJobPosts(jobPosts) {
             const deadline = jobPost.deadline ? formatDate(jobPost.deadline) : "Not set";
             const jobId = jobPost.id;
             const canDelete = status === 'open' || status === 'expired';
+            const isOpen = status === 'open';
+
+            const jobDataAttr = `data-job-id="${jobId}" data-job-title="${title.replace(/"/g, '&quot;')}" data-job-description="${(jobPost.description || '').replace(/"/g, '&quot;')}" data-job-skill="${skill.replace(/"/g, '&quot;')}" data-job-location="${location.replace(/"/g, '&quot;')}" data-job-budget="${jobPost.budget || ''}" data-job-start-date="${jobPost.start_date || ''}" data-job-deadline="${jobPost.deadline || ''}"`;
+
+            let actionsHtml = '';
+            if (isOpen) {
+                actionsHtml = `
+                    <div class="d-flex gap-1">
+                        <button type="button" class="btn btn-sm btn-outline-primary edit-job-btn" ${jobDataAttr} data-testid="client-edit-job-${jobId}">
+                            <i class="fa-solid fa-pen"></i> Edit
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-danger delete-job-btn" data-job-id="${jobId}" data-job-title="${title.replace(/"/g, '&quot;')}" data-testid="client-delete-job-${jobId}">
+                            <i class="fa-solid fa-trash"></i> Delete
+                        </button>
+                    </div>
+                `;
+            } else if (canDelete) {
+                actionsHtml = `
+                    <button type="button" class="btn btn-sm btn-outline-danger delete-job-btn" data-job-id="${jobId}" data-job-title="${title.replace(/"/g, '&quot;')}" data-testid="client-delete-job-${jobId}">
+                        <i class="fa-solid fa-trash"></i> Delete
+                    </button>
+                `;
+            } else {
+                actionsHtml = '<span class="text-muted small">No action</span>';
+            }
 
             return `
                 <tr data-testid="client-job-row-${jobId}">
@@ -102,11 +127,7 @@ function renderJobPosts(jobPosts) {
                     <td>${location}</td>
                     <td>${startDate}</td>
                     <td>${deadline}</td>
-                    <td>
-                        ${canDelete ? `<button type="button" class="btn btn-sm btn-outline-danger delete-job-btn" data-job-id="${jobId}" data-job-title="${title}" data-testid="client-delete-job-${jobId}">
-                            <i class="fa-solid fa-trash"></i> Delete
-                        </button>` : '<span class="text-muted small">No action</span>'}
-                    </td>
+                    <td>${actionsHtml}</td>
                 </tr>
             `;
         })
@@ -132,6 +153,7 @@ function renderJobPosts(jobPosts) {
     `;
     
     bindDeleteJobButtons();
+    bindEditJobButtons();
 }
 
 function renderJobPostsError() {
@@ -938,6 +960,205 @@ function bindDeleteJobButtons() {
                 });
         };
     }
+}
+
+function ensureEditJobModal() {
+    let modalElement = document.getElementById("edit-job-modal");
+
+    if (modalElement) {
+        return modalElement;
+    }
+
+    const locationOptions = ETHIOPIAN_CITIES.map(
+        (city) => `<option value="${city}">${city}</option>`
+    ).join("");
+    const skillOptions = SKILL_OPTIONS.map(
+        (skill) => `<option value="${skill}">${skill}</option>`
+    ).join("");
+
+    modalElement = document.createElement("div");
+    modalElement.innerHTML = `
+        <div class="modal fade" id="edit-job-modal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content border-0 shadow-lg">
+                    <div class="modal-header bg-primary text-white border-0">
+                        <h5 class="modal-title fw-bold"><i class="fa-solid fa-pen me-2"></i>Edit Job</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <form id="edit-job-form" class="row g-3">
+                            <input type="hidden" id="edit-job-id">
+                            <div class="col-12">
+                                <label for="edit-job-title" class="form-label fw-semibold">Title</label>
+                                <input id="edit-job-title" name="title" type="text" class="form-control" required>
+                            </div>
+                            <div class="col-12">
+                                <label for="edit-job-description" class="form-label fw-semibold">Description</label>
+                                <textarea id="edit-job-description" name="description" class="form-control" rows="5" required></textarea>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="edit-job-budget" class="form-label fw-semibold">Budget (Optional)</label>
+                                <input id="edit-job-budget" name="budget" type="number" min="0" step="0.01" class="form-control">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="edit-job-location" class="form-label fw-semibold">Location</label>
+                                <select id="edit-job-location" name="location" class="form-select" required>
+                                    <option value="">Select city</option>
+                                    ${locationOptions}
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="edit-job-skill" class="form-label fw-semibold">Skill</label>
+                                <select id="edit-job-skill" name="skill" class="form-select" required>
+                                    <option value="">Select skill</option>
+                                    ${skillOptions}
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="edit-job-start-date" class="form-label fw-semibold">Start Date (Optional)</label>
+                                <input id="edit-job-start-date" name="start_date" type="date" class="form-control">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="edit-job-deadline" class="form-label fw-semibold">Deadline (Optional)</label>
+                                <input id="edit-job-deadline" name="deadline" type="date" class="form-control">
+                            </div>
+                            <div class="col-12">
+                                <div id="edit-job-feedback"></div>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer border-top">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" form="edit-job-form" id="submit-edit-job-button" class="btn btn-primary px-4" data-testid="client-edit-job-submit">
+                            <i class="fa-solid fa-save me-1"></i> Save Changes
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modalElement.firstElementChild);
+    bindEditJobForm();
+
+    return document.getElementById("edit-job-modal");
+}
+
+function openEditJobModal(jobData) {
+    const modalElement = ensureEditJobModal();
+    if (!modalElement) return;
+
+    document.getElementById("edit-job-id").value = jobData.id || "";
+    document.getElementById("edit-job-title").value = jobData.title || "";
+    document.getElementById("edit-job-description").value = jobData.description || "";
+    document.getElementById("edit-job-budget").value = jobData.budget || "";
+
+    const locationSelect = document.getElementById("edit-job-location");
+    if (locationSelect) {
+        locationSelect.value = jobData.location || "";
+    }
+
+    const skillSelect = document.getElementById("edit-job-skill");
+    if (skillSelect) {
+        skillSelect.value = jobData.skill || "";
+    }
+
+    document.getElementById("edit-job-start-date").value = jobData.start_date || "";
+    document.getElementById("edit-job-deadline").value = jobData.deadline || "";
+
+    const feedback = document.getElementById("edit-job-feedback");
+    if (feedback) feedback.innerHTML = "";
+
+    const submitButton = document.getElementById("submit-edit-job-button");
+    if (submitButton) submitButton.disabled = false;
+
+    const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
+    modal.show();
+}
+
+function bindEditJobForm() {
+    const form = document.getElementById("edit-job-form");
+    if (!form) return;
+
+    form.addEventListener("submit", function (event) {
+        event.preventDefault();
+
+        const jobId = document.getElementById("edit-job-id")?.value;
+        const feedback = document.getElementById("edit-job-feedback");
+        const submitButton = document.getElementById("submit-edit-job-button");
+        const modalElement = document.getElementById("edit-job-modal");
+
+        if (!jobId || !feedback || !submitButton || !modalElement) return;
+
+        const formData = new FormData(form);
+        const payload = {
+            title: (formData.get("title") || "").toString().trim(),
+            description: (formData.get("description") || "").toString().trim(),
+            location: (formData.get("location") || "").toString().trim(),
+            skill: (formData.get("skill") || "").toString().trim(),
+        };
+        const budgetValue = (formData.get("budget") || "").toString().trim();
+        const startDate = (formData.get("start_date") || "").toString().trim();
+        const deadline = (formData.get("deadline") || "").toString().trim();
+
+        if (budgetValue) {
+            payload.budget = budgetValue;
+        }
+        if (startDate) {
+            payload.start_date = startDate;
+        }
+        if (deadline) {
+            payload.deadline = deadline;
+        }
+
+        submitButton.disabled = true;
+        feedback.innerHTML = '<div class="text-muted">Saving changes...</div>';
+
+        fetch(`/api/job-posts/${jobId}`, {
+            method: "PUT",
+            headers: Object.assign(buildHeaders(), { "Content-Type": "application/json" }),
+            body: JSON.stringify(payload),
+        })
+            .then(async (response) => {
+                const data = await response.json().catch(() => ({}));
+
+                if (!response.ok) {
+                    throw new Error(data?.message || "Unable to update job.");
+                }
+
+                feedback.innerHTML = '<div class="alert alert-success mb-0">Job updated successfully.</div>';
+
+                setTimeout(() => {
+                    const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
+                    modal.hide();
+                    loadJobPosts();
+                    loadStats();
+                }, 800);
+            })
+            .catch((error) => {
+                submitButton.disabled = false;
+                feedback.innerHTML =
+                    `<div class="alert alert-danger mb-0">${error.message || "Unable to update job."}</div>`;
+            });
+    });
+}
+
+function bindEditJobButtons() {
+    document.querySelectorAll(".edit-job-btn").forEach((button) => {
+        button.addEventListener("click", function () {
+            const jobData = {
+                id: this.dataset.jobId,
+                title: this.dataset.jobTitle,
+                description: this.dataset.jobDescription,
+                skill: this.dataset.jobSkill,
+                location: this.dataset.jobLocation,
+                budget: this.dataset.jobBudget,
+                start_date: this.dataset.jobStartDate,
+                deadline: this.dataset.jobDeadline,
+            };
+            openEditJobModal(jobData);
+        });
+    });
 }
 
 function getContractProfessionalName(contract) {
@@ -2223,6 +2444,121 @@ function bindClientProfileForm() {
     });
 }
 
+function bindChangePassword() {
+    const saveBtn = document.getElementById("cp-save-btn");
+    const currentInput = document.getElementById("cp-current-password");
+    const newInput = document.getElementById("cp-new-password");
+    const confirmInput = document.getElementById("cp-confirm-password");
+    const feedback = document.getElementById("cp-feedback");
+
+    document.querySelectorAll(".cp-eye-btn").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+            const target = document.getElementById(this.dataset.cpTarget);
+            const icon = this.querySelector("i");
+            if (!target) return;
+            if (target.type === "password") {
+                target.type = "text";
+                icon.classList.remove("fa-eye");
+                icon.classList.add("fa-eye-slash");
+            } else {
+                target.type = "password";
+                icon.classList.remove("fa-eye-slash");
+                icon.classList.add("fa-eye");
+            }
+        });
+    });
+
+    if (newInput) {
+        newInput.addEventListener("input", function () {
+            const value = this.value;
+            const checks = {
+                length: value.length >= 8,
+                uppercase: /[A-Z]/.test(value),
+                lowercase: /[a-z]/.test(value),
+                number: /[0-9]/.test(value),
+                special: /[^A-Za-z0-9]/.test(value),
+            };
+            const passed = Object.values(checks).filter(Boolean).length;
+            const pct = (passed / 5) * 100;
+            const bar = document.getElementById("cpStrengthBar");
+            if (bar) {
+                bar.style.width = pct + "%";
+                bar.className = "progress-bar";
+                if (pct === 100) bar.classList.add("bg-success");
+                else if (pct >= 60) bar.classList.add("bg-warning");
+                else bar.classList.add("bg-danger");
+            }
+            for (const [key, met] of Object.entries(checks)) {
+                const el = document.getElementById("cp-req-" + key);
+                if (el) {
+                    el.className = met ? "text-success" : "text-muted";
+                    const icon = el.querySelector("i");
+                    if (icon) {
+                        icon.className = met ? "fa-regular fa-circle-check me-1" : "fa-regular fa-circle me-1";
+                    }
+                }
+            }
+        });
+    }
+
+    if (saveBtn) {
+        saveBtn.addEventListener("click", function () {
+            const currentPassword = currentInput ? currentInput.value : "";
+            const newPassword = newInput ? newInput.value : "";
+            const confirmPassword = confirmInput ? confirmInput.value : "";
+
+            if (!currentPassword) {
+                if (feedback) feedback.innerHTML = '<span class="text-danger">Please enter your current password.</span>';
+                return;
+            }
+            if (newPassword.length < 8) {
+                if (feedback) feedback.innerHTML = '<span class="text-danger">New password must be at least 8 characters.</span>';
+                return;
+            }
+            if (newPassword !== confirmPassword) {
+                if (feedback) feedback.innerHTML = '<span class="text-danger">Passwords do not match.</span>';
+                return;
+            }
+
+            const checks = {
+                length: newPassword.length >= 8,
+                uppercase: /[A-Z]/.test(newPassword),
+                lowercase: /[a-z]/.test(newPassword),
+                number: /[0-9]/.test(newPassword),
+                special: /[^A-Za-z0-9]/.test(newPassword),
+            };
+            if (!Object.values(checks).every(Boolean)) {
+                if (feedback) feedback.innerHTML = '<span class="text-danger">Password must have uppercase, lowercase, number, and special character.</span>';
+                return;
+            }
+
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Updating...';
+            if (feedback) feedback.innerHTML = "";
+
+            putJson("/api/password", {
+                current_password: currentPassword,
+                password: newPassword,
+                password_confirmation: confirmPassword,
+            })
+                .then(function (data) {
+                    if (feedback) feedback.innerHTML = '<span class="text-success">' + data.message + "</span>";
+                    if (currentInput) currentInput.value = "";
+                    if (newInput) newInput.value = "";
+                    if (confirmInput) confirmInput.value = "";
+                    if (newInput) newInput.dispatchEvent(new Event("input"));
+                })
+                .catch(function (error) {
+                    if (feedback) feedback.innerHTML = '<span class="text-danger">' + error.message + "</span>";
+                })
+                .finally(function () {
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = '<i class="fa-solid fa-key me-1"></i> Update Password';
+                });
+        });
+    }
+}
+
 function bindDashboardTools() {
     const darkModeToggle = document.getElementById("dark-mode-toggle");
     const topbarDarkModeToggle = document.getElementById("client-topbar-dark-mode");
@@ -2315,7 +2651,7 @@ function bindDashboardTools() {
                     window.location.href = "/";
                 })
                 .catch((error) => {
-                    window.alert(error.message || "Failed to delete account.");
+                    showAccountDeletionErrorModal(error.message || "Failed to delete account.");
                 })
                 .finally(() => {
                     confirmDeleteAccountButton.disabled = false;
@@ -2323,6 +2659,37 @@ function bindDashboardTools() {
                 });
         });
     }
+}
+
+function showAccountDeletionErrorModal(message) {
+    let modalElement = document.getElementById("account-deletion-error-modal");
+
+    if (!modalElement) {
+        modalElement = document.createElement("div");
+        modalElement.innerHTML = `
+            <div class="modal fade" id="account-deletion-error-modal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content border-0 shadow-lg">
+                        <div class="modal-header bg-danger text-white border-0">
+                            <h5 class="modal-title fw-bold"><i class="fa-solid fa-circle-exclamation me-2"></i>Cannot Delete Account</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body text-center py-4">
+                            <i class="fa-solid fa-hand fa-4x text-danger mb-3"></i>
+                            <p class="fs-6 mb-0" id="account-deletion-error-message"></p>
+                        </div>
+                        <div class="modal-footer border-top justify-content-center">
+                            <button type="button" class="btn btn-danger px-4" data-bs-dismiss="modal">OK</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modalElement.firstElementChild);
+    }
+
+    document.getElementById("account-deletion-error-message").textContent = message;
+    bootstrap.Modal.getOrCreateInstance(document.getElementById("account-deletion-error-modal")).show();
 }
 
 function loadClientIdentity() {
@@ -2754,6 +3121,7 @@ function bindCoverLetterButtons(applications) {
         bindSidebarNavigation();
         bindJobPostsReload();
         bindDashboardTools();
+        bindChangePassword();
         bindClientNotifications();
         bindClientProfileForm();
         handleSubscriptionAction();
