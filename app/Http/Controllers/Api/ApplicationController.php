@@ -13,6 +13,8 @@ use Illuminate\Http\Request;
 
 class ApplicationController extends Controller
 {
+    const DAILY_APPLY_LIMIT = 5;
+
     public function __construct(
         private ApplyCreditService $applyCreditService,
         private NotificationService $notificationService
@@ -60,6 +62,17 @@ class ApplicationController extends Controller
         if ($alreadyApplied) {
             return response()->json([
                 'message' => 'You already applied to this job',
+            ], 400);
+        }
+
+        // Daily limit check
+        $todayApps = \App\Models\Application::where('professional_id', $user->id)
+            ->whereDate('created_at', today())
+            ->count();
+
+        if ($todayApps >= self::DAILY_APPLY_LIMIT) {
+            return response()->json([
+                'message' => 'You have reached the maximum limit of 5 job applications for today. Please try again tomorrow.',
             ], 400);
         }
 
