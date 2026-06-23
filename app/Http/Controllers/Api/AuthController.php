@@ -3,8 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Contract;
+use App\Models\JobPost;
 use App\Models\Professional;
 use App\Models\User;
+use App\Rules\StrongPassword;
 use App\Services\AdminNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -51,7 +54,7 @@ class AuthController extends Controller
             'name' => 'required|string',
             'email' => 'required|email|unique:users',
             'phone' => 'required|digits:10|unique:users,phone',
-            'password' => 'required|string|min:6|confirmed',
+            'password' => ['required', 'string', new StrongPassword, 'confirmed'],
         ]);
 
         $this->ensureBaseRoles();
@@ -100,7 +103,7 @@ class AuthController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'phone' => 'required|digits:10|unique:users,phone',
-            'password' => 'required|string|min:6|confirmed', // password_confirmation needed
+            'password' => ['required', 'string', new StrongPassword, 'confirmed'],
         ]);
 
         $this->ensureBaseRoles();
@@ -236,12 +239,67 @@ class AuthController extends Controller
         ]);
     }
 
+    // Change password
+
+    public function updatePassword(Request $request)
+    {
+        $request->validate([
+            'current_password' => ['required', 'string'],
+            'password' => ['required', 'string', new StrongPassword, 'confirmed'],
+        ]);
+
+        $user = $request->user();
+
+        if (!Hash::check($request->current_password, $user->password)) {
+            return response()->json([
+                'message' => 'Current password is incorrect.',
+            ], 400);
+        }
+
+        $user->password = Hash::make($request->password);
+        $user->save();
+
+        return response()->json([
+            'message' => 'Password updated successfully.',
+        ]);
+    }
+
     // delet accout
 
     public function deleteAccount()
     {
         $user = auth()->user();
 
+        // Check for active contracts
+        $activeContracts = Contract::where(function ($query) use ($user) {
+            $query->where('client_id', $user->id)
+                ->orWhere('professional_id', $user->id);
+        })
+        ->whereIn('status', ['active', 'pending_completion'])
+        ->exists();
+
+        if ($activeContracts) {
+            return response()->json([
+                'message' => 'You cannot delete your account while you have active contracts. Please complete or cancel them first.',
+            ], 400);
+        }
+
+        // Cancel all open job posts if user is a client
+        if ($user->role === 'client') {
+            JobPost::where('client_id', $user->id)
+                ->where('status', 'open')
+                ->update(['status' => 'cancelled']);
+        }
+
+        // Remove professional from public listings if user is a professional
+        if ($user->role === 'professional') {
+            Professional::where('user_id', $user->id)->update(['status' => 'rejected']);
+        }
+
+        // Revoke all Sanctum tokens
+        $user->tokens()->delete();
+
+        // Soft delete the user
         $user->delete();
 
         return response()->json([
