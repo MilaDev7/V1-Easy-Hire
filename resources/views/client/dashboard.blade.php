@@ -111,6 +111,20 @@
             background: rgba(255, 255, 255, 0.92);
             backdrop-filter: blur(2px);
         }
+        .eye-btn {
+            top: 50%;
+            transform: translateY(-50%);
+            right: 10px;
+            background: none;
+            border: none;
+            color: #94a3b8;
+            cursor: pointer;
+            padding: 6px 10px;
+            font-size: 1.1rem;
+        }
+        .eye-btn:hover {
+            color: #475569;
+        }
     </style>
 </head>
 <body class="bg-light" style="background-color: #f8fafc;">

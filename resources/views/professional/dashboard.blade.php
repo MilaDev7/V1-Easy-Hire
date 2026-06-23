@@ -323,6 +323,20 @@
             background: rgba(255, 255, 255, 0.92);
             backdrop-filter: blur(2px);
         }
+        .eye-btn {
+            top: 50%;
+            transform: translateY(-50%);
+            right: 10px;
+            background: none;
+            border: none;
+            color: #94a3b8;
+            cursor: pointer;
+            padding: 6px 10px;
+            font-size: 1.1rem;
+        }
+        .eye-btn:hover {
+            color: #475569;
+        }
     </style>
 </head>
 <body class="bg-light" style="background-color: #eef2f7;">
@@ -569,6 +583,55 @@
                             </button>
                         </div>
                     </div>
+
+                    <div class="mb-4">
+                        <h6 class="fw-bold mb-3"><i class="fa-solid fa-lock me-2"></i>Change Password</h6>
+                        <div class="mb-3">
+                            <label class="form-label text-muted small mb-0">Current Password</label>
+                            <div class="position-relative">
+                                <input type="password" class="form-control" id="pro-cp-current-password" placeholder="Enter current password">
+                                <button type="button" class="eye-btn position-absolute pro-cp-eye-btn" data-pro-cp-target="pro-cp-current-password">
+                                    <i class="fa-solid fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-muted small mb-0">New Password</label>
+                            <div class="position-relative">
+                                <input type="password" class="form-control" id="pro-cp-new-password" placeholder="Min. 8 characters">
+                                <button type="button" class="eye-btn position-absolute pro-cp-eye-btn" data-pro-cp-target="pro-cp-new-password">
+                                    <i class="fa-solid fa-eye"></i>
+                                </button>
+                            </div>
+                            <div class="password-strength mt-2">
+                                <div class="progress" style="height: 4px;">
+                                    <div id="proCpStrengthBar" class="progress-bar" role="progressbar" style="width: 0%;"></div>
+                                </div>
+                                <div class="d-flex flex-wrap gap-2 small mt-2 mb-0" id="proCpPasswordRequirements">
+                                    <span id="pro-cp-req-length" class="text-muted"><i class="fa-regular fa-circle me-1"></i> 8+ chars</span>
+                                    <span id="pro-cp-req-uppercase" class="text-muted"><i class="fa-regular fa-circle me-1"></i> Uppercase</span>
+                                    <span id="pro-cp-req-lowercase" class="text-muted"><i class="fa-regular fa-circle me-1"></i> Lowercase</span>
+                                    <span id="pro-cp-req-number" class="text-muted"><i class="fa-regular fa-circle me-1"></i> Number</span>
+                                    <span id="pro-cp-req-special" class="text-muted"><i class="fa-regular fa-circle me-1"></i> Special char</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-muted small mb-0">Confirm New Password</label>
+                            <div class="position-relative">
+                                <input type="password" class="form-control" id="pro-cp-confirm-password" placeholder="Repeat new password">
+                                <button type="button" class="eye-btn position-absolute pro-cp-eye-btn" data-pro-cp-target="pro-cp-confirm-password">
+                                    <i class="fa-solid fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div id="pro-cp-feedback" class="small mb-2"></div>
+                        <button type="button" class="btn btn-primary btn-sm" id="pro-cp-save-btn">
+                            <i class="fa-solid fa-key me-1"></i> Update Password
+                        </button>
+                    </div>
+
+                    <hr class="my-4">
 
                     <div class="rounded-3 border border-danger-subtle p-3">
                         <h6 class="text-danger mb-1">Delete Account</h6>

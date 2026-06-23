@@ -22,22 +22,17 @@
                 </div>
             </div>
 
-            <div class="col-md-3 col-lg-2 col-xl-2 mx-auto mt-3">
-                <h6 class="text-uppercase mb-4 fw-bold">About</h6>
-                <ul class="list-unstyled small">
-                    <li class="mb-2"><a href="#" class="text-secondary text-decoration-none hover-white">About us</a></li>
-                    <li class="mb-2"><a href="#" class="text-secondary text-decoration-none hover-white">Professionals</a></li>
-                    <li class="mb-2"><a href="#" class="text-secondary text-decoration-none hover-white">About</a></li>
-                </ul>
-            </div>
+         
 
             <div class="col-md-3 col-lg-2 col-xl-2 mx-auto mt-3">
                 <h6 class="text-uppercase mb-4 fw-bold">Team</h6>
                 <ul class="list-unstyled small text-secondary">
-                    <li class="mb-2">MILA</li>
-                    <li class="mb-2">Sentayhu</li>
-                    <li class="mb-2">Filimon</li>
-                    <li class="mb-2">Samual</li>
+                    <li class="mb-2">Natineal mekonen</li>
+                    <li class="mb-2">Sentayhu terda</li>
+                    <li class="mb-2">Milion Sahle</li>
+                    <li class="mb-2">Filimon t/bruk</li>
+                    <li class="mb-2">Samual mesefin</li>
+                    <li class="mb-2">samual  tamrat</li>
                 </ul>
             </div>
         </div>
@@ -45,7 +40,7 @@
         <hr class="mb-4 border-secondary opacity-25">
         <div class="row">
             <div class="col-12 text-center">
-                <p class="small text-secondary mb-0">Mila</p>
+                <p class="small text-secondary mb-0">Admas Universty</p>
             </div>
         </div>
     </div>

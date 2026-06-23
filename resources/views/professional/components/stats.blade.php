@@ -30,6 +30,7 @@
                         <h2 class="mb-0 fw-bold" id="pro-remaining-applies-count">Loading...</h2>
                         <span class="badge text-bg-light border ms-2" id="pro-apply-limit-badge">Monthly</span>
                     </div>
+                    <small class="text-muted mt-1 d-block" id="pro-daily-applies-remaining">Applications remaining today: --</small>
                 </div>
             </div>
         </div>

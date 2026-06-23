@@ -131,12 +131,24 @@
           <div class="mb-3">
             <label for="regPassword" class="form-label-custom">Password</label>
             <div class="position-relative">
-              <input id="regPassword" type="password" class="form-control form-control-lg-custom pe-5" placeholder="Min. 6 characters">
+              <input id="regPassword" type="password" class="form-control form-control-lg-custom pe-5" placeholder="Min. 8 characters" oninput="checkRegisterPasswordStrength(this.value)">
               <button type="button" class="eye-btn position-absolute" onclick="togglePassword('regPassword', this)">
                 <i class="fa-solid fa-eye"></i>
               </button>
             </div>
             <div id="passwordError" class="invalid-feedback"></div>
+            <div class="password-strength mt-2">
+              <div class="progress" style="height: 4px;">
+                <div id="regStrengthBar" class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+              </div>
+              <div class="d-flex flex-wrap gap-2 small mt-2 mb-0" id="regPasswordRequirements">
+                <span id="reg-req-length" class="text-muted"><i class="fa-regular fa-circle me-1"></i> 8+ chars</span>
+                <span id="reg-req-uppercase" class="text-muted"><i class="fa-regular fa-circle me-1"></i> Uppercase</span>
+                <span id="reg-req-lowercase" class="text-muted"><i class="fa-regular fa-circle me-1"></i> Lowercase</span>
+                <span id="reg-req-number" class="text-muted"><i class="fa-regular fa-circle me-1"></i> Number</span>
+                <span id="reg-req-special" class="text-muted"><i class="fa-regular fa-circle me-1"></i> Special char</span>
+              </div>
+            </div>
           </div>
           <div class="mb-3">
             <label for="regConfirm" class="form-label-custom">Confirm Password</label>
@@ -229,8 +241,9 @@
             return;
         }
 
-        if (password.length < 6) {
-            showRegisterError('Password must be at least 6 characters.');
+        const strength = checkPasswordStrength(password);
+        if (!Object.values(strength).every(Boolean)) {
+            showRegisterError('Password must be at least 8 characters with uppercase, lowercase, number, and special character.');
             setFieldValidity('regPassword', false);
             document.getElementById('regPassword').focus();
             return;
@@ -330,6 +343,44 @@
             icon.classList.remove('fa-eye-slash');
             icon.classList.add('fa-eye');
         }
+    }
+
+    function checkPasswordStrength(password) {
+        const checks = {
+            length: password.length >= 8,
+            uppercase: /[A-Z]/.test(password),
+            lowercase: /[a-z]/.test(password),
+            number: /[0-9]/.test(password),
+            special: /[^A-Za-z0-9]/.test(password),
+        };
+        return checks;
+    }
+
+    function updateStrengthUI(prefix, checks) {
+        const passed = Object.values(checks).filter(Boolean).length;
+        const pct = (passed / 5) * 100;
+        const bar = document.getElementById(prefix + 'StrengthBar');
+        if (bar) {
+            bar.style.width = pct + '%';
+            bar.className = 'progress-bar';
+            if (pct === 100) bar.classList.add('bg-success');
+            else if (pct >= 60) bar.classList.add('bg-warning');
+            else bar.classList.add('bg-danger');
+        }
+        for (const [key, met] of Object.entries(checks)) {
+            const el = document.getElementById(prefix + 'req-' + key);
+            if (el) {
+                el.className = met ? 'text-success' : 'text-muted';
+                const icon = el.querySelector('i');
+                if (icon) {
+                    icon.className = met ? 'fa-regular fa-circle-check me-1' : 'fa-regular fa-circle me-1';
+                }
+            }
+        }
+    }
+
+    function checkRegisterPasswordStrength(value) {
+        updateStrengthUI('reg-', checkPasswordStrength(value));
     }
 </script>
 @endsection

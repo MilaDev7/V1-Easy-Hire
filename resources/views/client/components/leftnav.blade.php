@@ -145,6 +145,55 @@
 
                 <hr class="my-4">
 
+                <div class="mb-4">
+                    <h6 class="fw-bold mb-3"><i class="fa-solid fa-lock me-2"></i>Change Password</h6>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small mb-0">Current Password</label>
+                        <div class="position-relative">
+                            <input type="password" class="form-control" id="cp-current-password" placeholder="Enter current password">
+                            <button type="button" class="eye-btn position-absolute cp-eye-btn" data-cp-target="cp-current-password">
+                                <i class="fa-solid fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small mb-0">New Password</label>
+                        <div class="position-relative">
+                            <input type="password" class="form-control" id="cp-new-password" placeholder="Min. 8 characters">
+                            <button type="button" class="eye-btn position-absolute cp-eye-btn" data-cp-target="cp-new-password">
+                                <i class="fa-solid fa-eye"></i>
+                            </button>
+                        </div>
+                        <div class="password-strength mt-2">
+                            <div class="progress" style="height: 4px;">
+                                <div id="cpStrengthBar" class="progress-bar" role="progressbar" style="width: 0%;"></div>
+                            </div>
+                            <div class="d-flex flex-wrap gap-2 small mt-2 mb-0" id="cpPasswordRequirements">
+                                <span id="cp-req-length" class="text-muted"><i class="fa-regular fa-circle me-1"></i> 8+ chars</span>
+                                <span id="cp-req-uppercase" class="text-muted"><i class="fa-regular fa-circle me-1"></i> Uppercase</span>
+                                <span id="cp-req-lowercase" class="text-muted"><i class="fa-regular fa-circle me-1"></i> Lowercase</span>
+                                <span id="cp-req-number" class="text-muted"><i class="fa-regular fa-circle me-1"></i> Number</span>
+                                <span id="cp-req-special" class="text-muted"><i class="fa-regular fa-circle me-1"></i> Special char</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small mb-0">Confirm New Password</label>
+                        <div class="position-relative">
+                            <input type="password" class="form-control" id="cp-confirm-password" placeholder="Repeat new password">
+                            <button type="button" class="eye-btn position-absolute cp-eye-btn" data-cp-target="cp-confirm-password">
+                                <i class="fa-solid fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="cp-feedback" class="small mb-2"></div>
+                    <button type="button" class="btn btn-primary btn-sm" id="cp-save-btn">
+                        <i class="fa-solid fa-key me-1"></i> Update Password
+                    </button>
+                </div>
+
+                <hr class="my-4">
+
                 <div class="rounded-3 border border-danger-subtle p-3">
                     <h6 class="text-danger mb-1">Delete Account</h6>
                     <p class="text-muted small mb-3">This action will permanently remove your account.</p>
