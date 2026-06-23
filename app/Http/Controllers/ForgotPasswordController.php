@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Rules\StrongPassword;
 use App\Services\PasswordResetService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -81,7 +82,7 @@ class ForgotPasswordController extends Controller
     {
         $validated = $request->validate([
             'email' => ['required', 'email', 'max:255'],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'password' => ['required', 'string', new StrongPassword, 'confirmed'],
         ]);
 
         if (session('otp_verified_email') !== $validated['email']) {
