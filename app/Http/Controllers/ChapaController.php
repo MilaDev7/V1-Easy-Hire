@@ -82,13 +82,26 @@ class ChapaController extends Controller
             $subscription = Subscription::where('user_id', $userId)->lockForUpdate()->first();
 
             if ($subscription) {
-                $subscription->update([
-                    'remaining_posts' => $subscription->remaining_posts + $plan->job_posts_limit,
-                    'direct_requests_remaining' => ($subscription->direct_requests_remaining ?? 0) + $plan->direct_requests_limit,
-                    'expires_at' => now()->addDays($plan->duration_days),
-                    'status' => 'active',
-                    'tx_ref' => $txRef,
-                ]);
+                $isExpired = $subscription->expires_at && now()->gt($subscription->expires_at);
+
+                if ($isExpired) {
+                    $subscription->update([
+                        'plan_id' => $planId,
+                        'remaining_posts' => $plan->job_posts_limit,
+                        'direct_requests_remaining' => $plan->direct_requests_limit,
+                        'expires_at' => now()->addDays($plan->duration_days),
+                        'status' => 'active',
+                        'tx_ref' => $txRef,
+                    ]);
+                } else {
+                    $subscription->update([
+                        'remaining_posts' => $subscription->remaining_posts + $plan->job_posts_limit,
+                        'direct_requests_remaining' => ($subscription->direct_requests_remaining ?? 0) + $plan->direct_requests_limit,
+                        'expires_at' => now()->addDays($plan->duration_days),
+                        'status' => 'active',
+                        'tx_ref' => $txRef,
+                    ]);
+                }
             } else {
                 Subscription::create([
                     'user_id' => $userId,
