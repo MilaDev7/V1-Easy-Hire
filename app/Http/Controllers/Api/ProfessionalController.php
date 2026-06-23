@@ -18,6 +18,8 @@ use Illuminate\Http\Request;
 
 class ProfessionalController extends Controller
 {
+    const DAILY_APPLY_LIMIT = 5;
+
     public function __construct(
         private ApplyCreditService $applyCreditService,
         private NotificationService $notificationService
@@ -110,7 +112,9 @@ class ProfessionalController extends Controller
 
     public function index(Request $request)
     {
-        $query = Professional::with('user')->where('status', 'approved');
+        $query = Professional::with('user')
+            ->where('status', 'approved')
+            ->whereHas('user', fn($q) => $q->whereNull('deleted_at'));
 
         if ($request->skill) {
             $query->where('skill', 'LIKE', '%'.$request->skill.'%');
@@ -164,7 +168,7 @@ class ProfessionalController extends Controller
     {
         $professional = Professional::with('user')->find($id);
 
-        if (! $professional) {
+        if (! $professional || ! $professional->user) {
             return response()->json(['message' => 'Professional not found'], 404);
         }
 
@@ -224,9 +228,9 @@ class ProfessionalController extends Controller
 
     public function publicProfileSummary($id)
     {
-        $professional = Professional::find($id);
+        $professional = Professional::with('user')->find($id);
 
-        if (! $professional) {
+        if (! $professional || ! $professional->user) {
             return response()->json(['message' => 'Professional not found'], 404);
         }
 
@@ -349,6 +353,16 @@ class ProfessionalController extends Controller
 
         if ($exists) {
             return response()->json(['message' => 'Already applied'], 400);
+        }
+
+        $todayApps = Application::where('professional_id', $userId)
+            ->whereDate('created_at', today())
+            ->count();
+
+        if ($todayApps >= self::DAILY_APPLY_LIMIT) {
+            return response()->json([
+                'message' => 'You have reached the maximum limit of 5 job applications for today. Please try again tomorrow.',
+            ], 400);
         }
 
         $professional = Professional::where('user_id', $userId)->first();
@@ -525,6 +539,10 @@ class ProfessionalController extends Controller
 
         $wallet = $this->applyCreditService->walletState($userId);
 
+        $dailyApps = Application::where('professional_id', $userId)
+            ->whereDate('created_at', today())
+            ->count();
+
         return response()->json([
             'active_contracts' => $active,
             'completed_jobs' => $completed,
@@ -533,6 +551,8 @@ class ProfessionalController extends Controller
             'monthly_limit' => $wallet['monthly_limit'] ?? 0,
             'expiry_date' => $wallet['expiry_date'] ?? null,
             'days_left' => $wallet['days_left'] ?? 0,
+            'daily_applications_count' => $dailyApps,
+            'daily_apply_limit' => self::DAILY_APPLY_LIMIT,
         ]);
     }
 
